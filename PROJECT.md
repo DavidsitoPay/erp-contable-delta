@@ -30,7 +30,7 @@ Fase 1: uso interno. Fase 2 (futura): comercialización SaaS B2B a PyMEs guatema
 
 - `docs/architecture.md` — Arquitectura de 3 capas (entregado 05/09)
 - `docs/data-dictionary.md` — Diccionario de datos completo, 22 tablas (entregado 05/09)
-- `docs/business-rules.md` — Reglas de negocio RN-01 a RN-12 (entregado 15/08 + correcciones)
+- `docs/business-rules.md` — Reglas de negocio RN-01 a RN-11, con la columna "Dónde se aplica" (entregado 15/08 + corrección oficial v2 12/09)
 - `docs/diagrams/` — Diagramas de clases (1/2 y 2/2), componentes, secuencia, contexto, arquitectura
 
 ## Módulos funcionales (Product Backlog de alto nivel)
@@ -70,8 +70,8 @@ Objetivo: dejar el repositorio y la infraestructura base listos para empezar a p
 
 ### Etapa 2 — Base de datos (entregable 12/09, en paralelo/ya vencido)
 - [ ] `database/01_tables.sql` — DDL de las 22 tablas del diccionario de datos
-- [ ] `database/02_functions.sql` — funciones (ej. recálculo de `saldo_pendiente`)
-- [ ] `database/03_triggers.sql` — disparadores (bitácora de auditoría, recálculo de saldos)
+- [ ] `database/02_functions.sql` — funciones de apoyo de propósito general (ej. validación de consistencia de M9 Importación)
+- [ ] `database/03_triggers.sql` — disparadores (partida doble, bloqueo de periodo cerrado, no eliminación de asientos, límites de pago, e inmutabilidad de `BitacoraAuditoria` y `SaldoCuentaPeriodo`)
 - [ ] `database/04_procedures.sql` — procedimientos almacenados (cierre de periodo)
 - [ ] `database/05_views.sql` — vistas (ej. saldo de cuenta contable en tiempo real)
 
@@ -92,7 +92,7 @@ transacciones → CxC/CxP → reportes. Cada pantalla consume un endpoint ya pro
 
 ### Etapa 5 — DevOps 2 (entregable 26/09)
 Integración continua real, plan de pruebas completo, pruebas automatizadas de las
-reglas de negocio críticas (RN-01, RN-02, RN-12).
+reglas de negocio críticas (RN-01, RN-02, RN-05, RN-08).
 
 ### Etapa 6 — Manual de usuario (03/10) y cierre (10/10 – 24/10)
 Documentación de usuario final, código terminado, documento integrado y presentación.
@@ -102,7 +102,8 @@ Documentación de usuario final, código terminado, documento integrado y presen
 - **RN-01:** todo asiento contable debe cumplir partida doble antes de registrarse.
 - **RN-02:** no se permite modificar asientos en un periodo cerrado.
 - **RN-08:** toda operación relevante genera un registro en `BitacoraAuditoria`, **insertado por la API** (no por trigger, según corrección de auditoría — ver `docs/architecture.md`).
-- **RN-12:** `saldo_pendiente` de `DocumentoCxC`/`DocumentoCxP` es un campo derivado, recalculado por trigger a partir de `AplicacionPagoCliente`/`AplicacionPagoProveedor`, nunca editable directamente por la API.
+- **RN-05:** la aplicación de un pago a una factura no puede exceder el saldo pendiente de esa factura (`trg_limite_pago_cxc` / `trg_limite_pago_cxp`).
+- **Nota sobre saldos:** `saldo_pendiente` (CxC/CxP), `saldo` (CuentaContable, CuentaBancaria) **no existen como columnas editables** — se calculan en vistas (`vw_saldodocumentocxc`, `vw_saldodocumentocxp`, `vw_balance_saldos`, `vw_saldocuentabancaria`). La única excepción es `SaldoCuentaPeriodo`, escrita una sola vez al cierre y luego inmutable.
 
 ## Convenciones del repositorio
 
