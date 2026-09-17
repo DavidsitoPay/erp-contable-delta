@@ -1,47 +1,83 @@
 # Arquitectura — Delta ERP Contable
 
+> Fuente: Diagrama Modelo Relacional de Base de Datos (documento oficial, v2, 12/09/2026).
+> Este documento sustituye la versión anterior de este archivo.
+
 ## Arquitectura general del sistema
 
 Delta ERP Contable (DEC) se estructura en tres capas desacopladas:
 
-**Capa de presentación.** SPA en React, ejecutada en el navegador. Responsable únicamente
-de la interacción con el usuario y la validación de forma. No contiene reglas de negocio
-ni acceso directo a la base de datos.
+**Capa de presentación.** SPA en React. Responsable únicamente de la interacción con
+el usuario y la validación de forma. No contiene reglas de negocio ni acceso directo
+a la base de datos.
 
-**Capa de lógica y servicios.** API REST en C# sobre ASP.NET Core. Concentra la totalidad
-de las reglas de negocio (RN-01 a RN-12). Expone recursos en JSON, autenticación por token.
+**Capa de lógica y servicios.** API REST en C# sobre ASP.NET Core. Concentra las
+reglas de negocio (RN-01 partida doble, RN-02 bloqueo de periodos cerrados, RN-03
+reversión en vez de eliminación, RN-05 límites de aplicación de pagos, RN-08 registro
+en bitácora de auditoría, RN-09 control de acceso por perfil, entre otras). Autenticación
+por token.
 
-**Capa de datos.** PostgreSQL. Integridad referencial declarativa, procedimientos
-almacenados para cierre de periodo, y disparadores limitados a validaciones que **no**
-dependen del usuario final (ver nota de auditoría abajo).
+**Capa de datos.** PostgreSQL. Incluye integridad referencial declarativa, restricciones
+de dominio, procedimientos almacenados para cierre de periodo y reversión de asientos,
+y **disparadores responsables de hacer cumplir las reglas de integridad que no pueden
+delegarse en la aplicación**: validación de partida doble, bloqueo de periodos cerrados,
+prohibición de eliminar asientos ya registrados, límites en la aplicación de pagos, e
+inmutabilidad tanto de la bitácora de auditoría como de los saldos consolidados por
+periodo.
+
+## Responsabilidad de la trazabilidad (RN-08)
+
+El registro de **quién** ejecutó cada operación corresponde a la capa de lógica, no a
+la capa de datos — la API se conecta a PostgreSQL mediante un usuario de aplicación
+y un pool de conexiones, así que el motor no tiene contexto sobre qué usuario final
+originó la transacción, y un disparador no puede extraer el usuario desde un token
+que nunca llega a la base de datos.
+
+Por eso la API es la única responsable de alimentar `BitacoraAuditoria`, pero **no
+mediante un INSERT directo**: lo hace invocando `sp_registrar_auditoria` (ver
+`04_procedures.sql`) dentro de la misma transacción de la operación que se está
+registrando, de modo que si la operación se revierte, su registro de auditoría también.
+El identificador de usuario proviene del token ya validado por la API.
+
+La base de datos conserva lo que sí le corresponde: exigir por llave foránea que el
+usuario exista y esté activo, e impedir — mediante trigger — que cualquiera, incluido
+el administrador, modifique o elimine registros de auditoría ya escritos.
 
 ## Relación con el modelo de datos
 
 - Núcleo contable (M2, M3) → `AsientoContable`, `LineaAsiento`, `CuentaContable`, `CentroCosto`.
 - CxC/CxP (M4, M5) → `DocumentoCxC`, `DocumentoCxP`, `AplicacionPagoCliente`, `AplicacionPagoProveedor`.
 - Tesorería (M6) → `CuentaBancaria`, `MovimientoTesoreria`, `ConciliacionBancaria`.
-- Seguridad y auditoría (M8) → `Usuario`, `Perfil`, `BitacoraAuditoria`.
+- Seguridad y auditoría (M8) → `Usuario`, `Perfil`, `BitacoraAuditoria` (poblada por la API, no por trigger).
+- Cierre contable → `PeriodoContable` y `SaldoCuentaPeriodo` (saldos consolidados e inmutables por periodo).
+
+Ningún módulo del frontend accede directamente a la base de datos; todo pasa por la
+API.
 
 ## Arquitectura de despliegue
 
 Contenedores Docker independientes por capa (frontend, backend, base de datos), sobre
-infraestructura propia, con ruta de migración futura a la nube (Azure) sin cambiar código.
-CI/CD gestionado con Azure DevOps (Pipelines, Repos, Boards, Test Plans).
+infraestructura propia, con ruta de migración futura a la nube (Azure) sin cambiar
+código. CI/CD gestionado con Azure DevOps.
 
 Comunicación: navegador → frontend (HTTPS) → backend (HTTPS/JSON) → base de datos
 (SQL vía Npgsql/EF Core); backend → SMTP externo (notificaciones).
 
-## Nota crítica de auditoría (corrección aplicada)
-
-El registro de `BitacoraAuditoria` **no puede generarse mediante un trigger de base de
-datos**, porque la conexión entre la API y PostgreSQL usa un único usuario de aplicación
-(o connection pool) que no conserva el contexto del usuario final autenticado por JWT.
-Por lo tanto, la inserción en `BitacoraAuditoria` es responsabilidad explícita de la
-**capa de lógica (API)**: al validar el token de cada solicitud, la API obtiene el
-`usuario_id` y lo inserta en la misma transacción de negocio.
-
 ## Consideraciones de seguridad
 
-Autenticación por token en la API; cada solicitud se valida contra `Perfil` antes de
-ejecutar cualquier operación. Toda transacción relevante queda en `BitacoraAuditoria`
-de forma inmutable.
+La seguridad es una **responsabilidad compartida** entre la capa de lógica y la capa
+de datos:
+
+- La API autentica por token y valida perfil/permisos antes de cada operación, y
+  registra en `BitacoraAuditoria` al responsable de cada transacción.
+- La base de datos garantiza que ese registro no pueda alterarse después (trigger de
+  inmutabilidad), almacena contraseñas cifradas con función de derivación y salt
+  (nunca en texto claro), y no permite eliminación física de usuarios ni de cuentas
+  contables con movimiento — solo desactivación (`activo`/`activa`).
+- Operaciones sensibles (reapertura de un periodo cerrado, finalización de una
+  conciliación bancaria) verifican el perfil del usuario **dentro del propio
+  procedimiento almacenado** (`sp_reabrir_periodo`, `sp_finalizar_conciliacion`).
+- La API se conecta con un rol de base de datos con permisos de **ejecución** sobre
+  procedimientos y de **lectura** sobre vistas, pero sin permisos directos de
+  modificación sobre las tablas transaccionales — toda operación pasa
+  necesariamente por las reglas implementadas.

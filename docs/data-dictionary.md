@@ -1,5 +1,7 @@
 # Diccionario de Datos — Delta ERP Contable
 
+> Actualizado según el documento oficial v2 (12/09/2026).
+
 ## 1. Seguridad y Auditoría
 
 ### Perfil
@@ -14,9 +16,9 @@
 | id | SERIAL | No | PK | Identificador único |
 | nombre | VARCHAR(150) | No | | Nombre completo |
 | email | VARCHAR(150) | No | | Correo, único |
-| password_hash | VARCHAR(255) | No | | Contraseña encriptada |
+| password_hash | VARCHAR(255) | No | | Contraseña cifrada (derivación con salt) |
 | perfil_id | INT | No | FK -> Perfil(id) | Perfil asignado |
-| activo | BOOLEAN | No | | Usuario activo |
+| activo | BOOLEAN | No | | Usuario activo (sin eliminación física — ver triggers) |
 
 ### BitacoraAuditoria
 | Campo | Tipo | Nulo | Llave | Descripción |
@@ -28,40 +30,14 @@
 | tabla_afectada | VARCHAR(100) | No | | Tabla afectada |
 | detalle | TEXT | Sí | | Detalle adicional |
 
+Se puebla exclusivamente vía `sp_registrar_auditoria`, invocado por la API. Inmutable
+(trigger bloquea UPDATE/DELETE).
+
 ## 2. Catálogo y Configuración General
 
-### Moneda
-| Campo | Tipo | Nulo | Llave | Descripción |
-|---|---|---|---|---|
-| id | SERIAL | No | PK | Identificador único |
-| codigo | VARCHAR(10) | No | | GTQ, USD, etc. |
-| nombre | VARCHAR(100) | No | | Nombre de la moneda |
-
-### HistorialTipoCambio
-| Campo | Tipo | Nulo | Llave | Descripción |
-|---|---|---|---|---|
-| id | SERIAL | No | PK | Identificador único |
-| moneda_id | INT | No | FK -> Moneda(id) | Moneda |
-| fecha | DATE | No | | Fecha de la tasa |
-| tasa | DECIMAL(12,6) | No | | Tipo de cambio |
-
-### PeriodoContable
-| Campo | Tipo | Nulo | Llave | Descripción |
-|---|---|---|---|---|
-| id | SERIAL | No | PK | Identificador único |
-| nombre | VARCHAR(100) | No | | Ej. Enero 2026 |
-| fecha_inicio | DATE | No | | Inicio del periodo |
-| fecha_fin | DATE | No | | Cierre del periodo |
-| estado | VARCHAR(20) | No | | Abierto / Cerrado |
-
-### Contraparte
-| Campo | Tipo | Nulo | Llave | Descripción |
-|---|---|---|---|---|
-| id | SERIAL | No | PK | Identificador único |
-| tipo | VARCHAR(20) | No | | Cliente / Proveedor |
-| nombre | VARCHAR(200) | No | | Razón social |
-| nit | VARCHAR(30) | Sí | | NIT |
-| direccion | VARCHAR(255) | Sí | | Dirección |
+### Moneda / HistorialTipoCambio / PeriodoContable / Contraparte
+Sin cambios respecto a la versión anterior — ver estructura completa en el documento
+oficial (05/09, sección 2).
 
 ### CuentaContable
 | Campo | Tipo | Nulo | Llave | Descripción |
@@ -72,45 +48,18 @@
 | tipo | VARCHAR(30) | No | | Activo/Pasivo/Capital/Ingreso/Gasto |
 | naturaleza | VARCHAR(20) | No | | Deudora / Acreedora |
 | cuenta_padre_id | INT | Sí | FK -> CuentaContable(id) | Jerarquía |
-| activa | BOOLEAN | No | | Cuenta activa |
+| activa | BOOLEAN | No | | Sin eliminación física — ver triggers |
 
-> **Nota:** esta tabla NO almacena un campo `saldo`. El saldo se deriva siempre de
-> `SUM(debito) − SUM(credito)` de `LineaAsiento`, nunca se guarda como columna mutable.
+**Sin columna `saldo`.** Se calcula en `vw_balance_saldos` (periodo en curso /
+histórico) y se consolida de forma inmutable en `SaldoCuentaPeriodo` al cerrar cada periodo.
 
 ### CentroCosto
-| Campo | Tipo | Nulo | Llave | Descripción |
-|---|---|---|---|---|
-| id | SERIAL | No | PK | Identificador único |
-| codigo | VARCHAR(20) | No | | Código |
-| nombre | VARCHAR(150) | No | | Nombre |
-| activo | BOOLEAN | No | | Activo |
+Sin cambios.
 
 ## 3. Transacciones y Asientos Contables
 
-### AsientoContable
-| Campo | Tipo | Nulo | Llave | Descripción |
-|---|---|---|---|---|
-| id | SERIAL | No | PK | Identificador único |
-| numero | VARCHAR(30) | No | | Número correlativo |
-| fecha | DATE | No | | Fecha del asiento |
-| periodo_id | INT | No | FK -> PeriodoContable(id) | Periodo |
-| monto | DECIMAL(14,2) | No | | Monto total |
-| estado | VARCHAR(20) | No | | Borrador/Confirmado/Anulado |
-| usuario_id | INT | No | FK -> Usuario(id) | Usuario que registró |
-| tipo_cambio_aplicado | DECIMAL(12,6) | Sí | | Si aplica moneda extranjera |
-
-### LineaAsiento
-| Campo | Tipo | Nulo | Llave | Descripción |
-|---|---|---|---|---|
-| id | SERIAL | No | PK | Identificador único |
-| asiento_id | INT | No | FK -> AsientoContable(id) | Asiento |
-| cuenta_id | INT | No | FK -> CuentaContable(id) | Cuenta afectada |
-| centro_costo_id | INT | Sí | FK -> CentroCosto(id) | Centro de costo |
-| debito | DECIMAL(14,2) | No | | Monto al débito |
-| credito | DECIMAL(14,2) | No | | Monto al crédito |
-
-### PlantillaAsiento / LineaPlantillaAsiento
-Plantillas predefinidas para asientos recurrentes (ver estructura análoga a AsientoContable/LineaAsiento).
+### AsientoContable / LineaAsiento / PlantillaAsiento / LineaPlantillaAsiento
+Sin cambios estructurales respecto a la versión anterior.
 
 ## 4. Cuentas por Cobrar (CxC)
 
@@ -122,23 +71,26 @@ Plantillas predefinidas para asientos recurrentes (ver estructura análoga a Asi
 | tipo_documento | VARCHAR(20) | No | | Factura/NotaCredito/NotaDebito |
 | cliente_id | INT | No | FK -> Contraparte(id) | Cliente |
 | fecha | DATE | No | | Fecha de emisión |
+| **fecha_vencimiento** | DATE | No | | **Nuevo** — fecha en que vence el cobro, según condiciones de crédito |
 | monto_total | DECIMAL(14,2) | No | | Monto total |
-| saldo_pendiente | DECIMAL(14,2) | No | | **Derivado — ver RN-12, no editable por la API** |
-| estado | VARCHAR(20) | No | | Pendiente/Pagado/Anulado |
+| tipo_cambio_aplicado | DECIMAL(12,6) | Sí | | Si aplica moneda extranjera |
+| estado | VARCHAR(20) | No | | **Vigente / Anulado** (antes: Pendiente/Pagado/Anulado) |
 | asiento_id | INT | Sí | FK -> AsientoContable(id) | Asiento generado |
 
+**Sin columna `saldo_pendiente`.** Se calcula en `vw_saldodocumentocxc`
+(`monto_total − SUM(monto_aplicado)`).
+
 ### LineaDocumentoCxC, ReciboPagoCliente, AplicacionPagoCliente
-Ver estructura completa entregada el 05/09 (líneas de detalle, recibo cabecera, aplicación
-de pagos a documentos — misma lógica que su contraparte CxP).
+Sin cambios estructurales.
 
 ## 5. Cuentas por Pagar (CxP)
 
 ### DocumentoCxP
-Análogo a DocumentoCxC, con `proveedor_id` en vez de `cliente_id`. `saldo_pendiente`
-sujeto a la misma regla RN-12.
+Análogo a DocumentoCxC: gana `fecha_vencimiento`, `estado` se simplifica a
+Vigente/Anulado, y **sin columna `saldo_pendiente`** (ver `vw_saldodocumentocxp`).
 
 ### LineaDocumentoCxP, PagoProveedorCabecera, AplicacionPagoProveedor
-Estructura análoga a su contraparte de CxC.
+Sin cambios estructurales.
 
 ## 6. Tesorería
 
@@ -150,29 +102,39 @@ Estructura análoga a su contraparte de CxC.
 | numero | VARCHAR(50) | No | | Número de cuenta |
 | tipo | VARCHAR(30) | No | | Monetaria/Ahorro |
 
-> **Corrección aplicada:** se elimina `saldo` como columna libremente editable. El saldo
-> en tiempo real se calcula bajo demanda; el saldo de cierre se consolida en
-> `SaldoCuentaPeriodo` (nueva tabla, inmutable).
+**Sin columna `saldo`.** Se calcula en `vw_saldocuentabancaria`.
 
-### SaldoCuentaPeriodo *(nueva — corrección de observación de auditoría)*
+### MovimientoTesoreria, ConciliacionBancaria, DetalleConciliacion
+Sin cambios estructurales.
+
+## 7. Consolidación de Saldos
+
+### SaldoCuentaPeriodo
+Fotografía inalterable del saldo de cada cuenta contable al momento del cierre
+contable. Se escribe una sola vez desde `sp_cerrar_periodo`; un trigger impide
+cualquier modificación o borrado posterior. La combinación de periodo y cuenta es
+única.
+
 | Campo | Tipo | Nulo | Llave | Descripción |
 |---|---|---|---|---|
 | id | SERIAL | No | PK | Identificador único |
-| cuenta_bancaria_id | INT | No | FK -> CuentaBancaria(id) | Cuenta |
-| periodo_id | INT | No | FK -> PeriodoContable(id) | Periodo |
-| saldo_inicial | DECIMAL(14,2) | No | | Heredado del cierre anterior |
-| saldo_final | DECIMAL(14,2) | No | | Resultado del periodo |
-| fecha_calculo | TIMESTAMP | No | | Fecha/hora del cálculo |
-| generado_por | INT | No | FK -> Usuario(id) | Usuario que ejecutó el cierre |
+| periodo_id | INT | No | FK -> PeriodoContable(id) | Periodo al que corresponde |
+| cuenta_id | INT | No | FK -> CuentaContable(id) | Cuenta consolidada |
+| total_debito | DECIMAL(14,2) | No | | Suma de débitos del periodo |
+| total_credito | DECIMAL(14,2) | No | | Suma de créditos del periodo |
+| saldo_final | DECIMAL(14,2) | No | | Saldo al cierre, según naturaleza de la cuenta |
 
-### MovimientoTesoreria
-| Campo | Tipo | Nulo | Llave | Descripción |
-|---|---|---|---|---|
-| id | SERIAL | No | PK | Identificador único |
-| cuenta_bancaria_id | INT | No | FK -> CuentaBancaria(id) | Cuenta afectada |
-| fecha | DATE | No | | Fecha |
-| tipo | VARCHAR(30) | No | | Ingreso/Egreso |
-| monto | DECIMAL(14,2) | No | | Monto |
+Distinción clave: un saldo almacenado y editable es un riesgo (puede desincronizarse
+de los movimientos); un saldo consolidado **e inalterable** por periodo es una
+práctica contable estándar — equivale al saldo de cierre que se asienta en libros. El
+saldo del periodo en curso se sigue calculando siempre en tiempo real
+(`vw_balance_saldos`), esta tabla solo aplica a periodos ya cerrados.
 
-### ConciliacionBancaria / DetalleConciliacion
-Ver estructura entregada el 05/09.
+## Vistas (reemplazan las columnas de saldo eliminadas)
+
+| Vista | Reemplaza a | Descripción |
+|---|---|---|
+| `vw_balance_saldos` | `CuentaContable.saldo` (nunca existió como columna) | Saldo en tiempo real por cuenta contable |
+| `vw_saldocuentabancaria` | `CuentaBancaria.saldo` | Saldo en tiempo real por cuenta bancaria |
+| `vw_saldodocumentocxc` | `DocumentoCxC.saldo_pendiente` | Saldo pendiente por documento de CxC |
+| `vw_saldodocumentocxp` | `DocumentoCxP.saldo_pendiente` | Saldo pendiente por documento de CxP |
