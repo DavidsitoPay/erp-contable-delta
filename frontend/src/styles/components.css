@@ -1,0 +1,481 @@
+/*
+  Delta ERP Contable — reusable component classes
+  Built on top of the tokens in theme.css.
+*/
+
+/* ---------- Layout shell ---------- */
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  flex: 1;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--space-lg) var(--space-xl) var(--space-xl);
+}
+
+/* ---------- Brand mark (Δ badge + wordmark) ---------- */
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/*
+  The gradient + triangle are drawn by the LogoMark SVG itself (see
+  src/components/LogoMark.jsx). This wrapper just sizes the mark and
+  applies the ambient glow shadow.
+*/
+.logo-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(79, 127, 255, 0.35);
+}
+
+.wordmark {
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: 0.14em;
+  color: var(--color-heading);
+  text-transform: uppercase;
+}
+
+/* ---------- Top bar ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding: var(--space-md) var(--space-xl);
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(10, 14, 26, 0.6);
+  backdrop-filter: var(--blur-glass);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-wrap: wrap;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.35em 0.8em;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+  background: var(--color-surface);
+}
+
+.status-pill::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-muted);
+}
+
+.status-pill[data-status="ok"] {
+  color: var(--color-success);
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+}
+
+.status-pill[data-status="ok"]::before {
+  background: var(--color-success);
+  box-shadow: 0 0 6px var(--color-success);
+}
+
+.status-pill[data-status="error"] {
+  color: var(--color-danger);
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-bg);
+}
+
+.status-pill[data-status="error"]::before {
+  background: var(--color-danger);
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 0.85rem;
+  color: var(--color-body);
+}
+
+.user-role {
+  color: var(--color-muted);
+}
+
+/* ---------- Tab nav ---------- */
+
+.tab-nav {
+  display: flex;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-xl) 0;
+  flex-wrap: wrap;
+}
+
+.tab-link {
+  text-decoration: none;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.55em 1.1em;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.tab-link:hover {
+  color: var(--color-heading);
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.tab-link.active {
+  color: var(--color-on-accent);
+  background: var(--gradient-cta);
+  border-color: transparent;
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.35);
+}
+
+/* ---------- Eyebrow label ---------- */
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent-cyan);
+  margin-bottom: var(--space-xs);
+}
+
+.eyebrow::before {
+  content: "";
+  width: 18px;
+  height: 2px;
+  background: var(--color-accent-cyan);
+  display: inline-block;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 0.6em 1.3em;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.1s ease, filter 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: var(--gradient-cta);
+  color: var(--color-on-accent);
+  box-shadow: 0 4px 18px rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--gradient-cta-hover);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--color-heading);
+  border-color: var(--color-border-strong);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--color-surface);
+  border-color: var(--color-heading);
+}
+
+.btn-danger-outline {
+  background: transparent;
+  color: var(--color-danger);
+  border-color: var(--color-danger-border);
+}
+
+.btn-danger-outline:hover:not(:disabled) {
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger);
+}
+
+.btn-sm {
+  font-size: 0.78rem;
+  padding: 0.4em 0.9em;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* ---------- Forms ---------- */
+
+.catalog-form {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-lg);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+  margin-bottom: var(--space-md);
+  text-align: left;
+}
+
+.form-field label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--color-muted);
+  text-transform: uppercase;
+}
+
+.input,
+.select {
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  color: var(--color-heading);
+  border-radius: var(--radius-sm);
+  padding: 0.6em 0.85em;
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input::placeholder {
+  color: var(--color-muted);
+}
+
+.input:focus,
+.select:focus {
+  border-color: var(--color-accent-cyan);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18);
+}
+
+.select {
+  min-width: 10rem;
+}
+
+/* ---------- Error / status messages ---------- */
+
+.error-chip {
+  display: inline-block;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-sm);
+  padding: 0.55em 0.9em;
+  font-size: 0.85rem;
+  margin: 0 0 var(--space-md);
+}
+
+.success-chip {
+  display: inline-block;
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  border-radius: var(--radius-sm);
+  padding: 0.55em 0.9em;
+  font-size: 0.85rem;
+  margin: 0 0 var(--space-md);
+}
+
+/* ---------- Asientos: líneas dinámicas (M2) ---------- */
+
+.lineas-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: var(--space-sm) 0 var(--space-lg);
+}
+
+.data-table .select {
+  min-width: 8rem;
+}
+
+.input-money {
+  width: 7.5rem;
+  text-align: right;
+}
+
+.partida-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 0.6em 1em;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-body);
+  margin-bottom: var(--space-md);
+}
+
+.partida-indicator[data-balance="ok"] {
+  color: var(--color-success);
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+}
+
+.partida-indicator[data-balance="off"] {
+  color: var(--color-danger);
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-bg);
+}
+
+/* ---------- Tables ---------- */
+
+.table-wrap {
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+/* Inner scroll layer: keeps the outer wrapper's rounded-corner clipping
+   while still letting wide tables scroll horizontally on narrow viewports. */
+.table-scroll {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.data-table thead th {
+  text-align: left;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  font-weight: 700;
+  padding: 0.85em 1em;
+  background: rgba(148, 163, 184, 0.08);
+  border-bottom: 1px solid var(--color-card-border);
+}
+
+.data-table tbody td {
+  padding: 0.75em 1em;
+  color: var(--color-body);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr:nth-child(even) {
+  background: rgba(148, 163, 184, 0.03);
+}
+
+.data-table tbody tr:hover {
+  background: var(--color-surface-hover);
+}
+
+/* ---------- Login page ---------- */
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl) var(--space-lg);
+  box-shadow: var(--shadow-card), var(--shadow-glow);
+  backdrop-filter: var(--blur-glass);
+  text-align: center;
+}
+
+.login-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.login-brand .brand {
+  flex-direction: column;
+}
+
+/* First-impression brand moment: noticeably larger than the topbar mark.
+   Matches the size={64} passed to <LogoMark> in Login.jsx. */
+.login-brand .logo-badge {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 6px 22px rgba(79, 127, 255, 0.4);
+}
+
+.login-subtitle {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  margin-bottom: var(--space-lg);
+}
+
+.login-form {
+  text-align: left;
+}
