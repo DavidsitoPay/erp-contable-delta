@@ -66,7 +66,7 @@ CREATE TABLE contraparte (
 
 CREATE TABLE cuentacontable (
     id               SERIAL PRIMARY KEY,
-    codigo           VARCHAR(20) NOT NULL,
+    codigo           VARCHAR(20) NOT NULL UNIQUE,
     nombre           VARCHAR(150) NOT NULL,
     tipo             VARCHAR(30) NOT NULL,   -- Activo|Pasivo|Capital|Ingreso|Gasto
     naturaleza       VARCHAR(20) NOT NULL,   -- Deudora|Acreedora
@@ -78,7 +78,7 @@ CREATE TABLE cuentacontable (
 
 CREATE TABLE centrocosto (
     id      SERIAL PRIMARY KEY,
-    codigo  VARCHAR(20) NOT NULL,
+    codigo  VARCHAR(20) NOT NULL UNIQUE,
     nombre  VARCHAR(150) NOT NULL,
     activo  BOOLEAN NOT NULL DEFAULT TRUE
 );

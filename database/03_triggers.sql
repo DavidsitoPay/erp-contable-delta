@@ -14,8 +14,26 @@ CREATE OR REPLACE FUNCTION fn_validar_partida_doble() RETURNS TRIGGER AS $$
 DECLARE
     v_total_debito  DECIMAL(14,2);
     v_total_credito DECIMAL(14,2);
+    v_debe_validar  BOOLEAN;
 BEGIN
-    IF NEW.estado = 'Confirmado' AND (OLD.estado IS DISTINCT FROM 'Confirmado') THEN
+    -- En INSERT no existe OLD (es NULL para triggers de INSERT en Postgres), así que
+    -- la comparación de transición OLD.estado solo aplica en UPDATE. Un INSERT que ya
+    -- nace 'Confirmado' (el único flujo real hoy: AsientosController.Registrar hace un
+    -- solo INSERT, sin borrador->confirmación por UPDATE) debe validarse igual.
+    --
+    -- Este trigger corre AFTER INSERT ... DEFERRABLE INITIALLY DEFERRED (no BEFORE):
+    -- EF Core inserta primero la fila de asientocontable (para obtener el id generado)
+    -- y luego, en la MISMA transacción, las filas de lineaasiento que referencian ese
+    -- id. Un BEFORE INSERT vería lineaasiento vacío para este asiento_id (0 filas ->
+    -- 0 = 0 -> "balanceado" siempre, sin importar el contenido real) y nunca detectaría
+    -- un desbalance. Al diferir la validación al COMMIT, ya existen las líneas.
+    IF TG_OP = 'INSERT' THEN
+        v_debe_validar := NEW.estado = 'Confirmado';
+    ELSE
+        v_debe_validar := NEW.estado = 'Confirmado' AND (OLD.estado IS DISTINCT FROM 'Confirmado');
+    END IF;
+
+    IF v_debe_validar THEN
         SELECT COALESCE(SUM(debito), 0), COALESCE(SUM(credito), 0)
         INTO v_total_debito, v_total_credito
         FROM lineaasiento
@@ -30,8 +48,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_validar_partida_doble
-BEFORE UPDATE ON asientocontable
+CREATE CONSTRAINT TRIGGER trg_validar_partida_doble
+AFTER INSERT OR UPDATE ON asientocontable
+DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION fn_validar_partida_doble();
 
 -- --- RN-02: bloqueo de periodo cerrado --------------------------------------

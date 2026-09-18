@@ -30,7 +30,7 @@ automatizar desde el repositorio. Marcar conforme se completen.
 ## 5. Azure Test Plans
 - [ ] Crear un Test Plan vacío llamado "Delta ERP Contable — Plan de Pruebas"
 - [ ] (DevOps 2, 26/09) Completar con los casos de prueba reales, empezando por RN-01,
-      RN-02 y RN-12 (las reglas de negocio más críticas)
+      RN-02 y RN-05 (las reglas de negocio más críticas)
 
 ## 6. Documentar en el informe de DevOps 1
 Según la guía del curso, el entregable de esta etapa debe incluir un documento que

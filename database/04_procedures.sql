@@ -26,8 +26,8 @@ $$;
 -- de forma inmutable (ver trg_saldoperiodo_inmutable), y cierra el periodo.
 -- p_usuario_id se usa para la auditoría; la verificación de perfil
 -- (solo un usuario autorizado puede cerrar/reabrir un periodo) se hace aquí
--- mismo, consultando perfil.nombre — ajustar el nombre de perfil real del
--- proyecto antes de usar en producción.
+-- mismo, consultando perfil.nombre — perfiles reales del proyecto, ver
+-- 06_seed_dev.sql (Administrador del sistema, Contador, Vendedor, Técnico).
 
 CREATE OR REPLACE PROCEDURE sp_cerrar_periodo(p_periodo_id INT, p_usuario_id INT)
 LANGUAGE plpgsql
@@ -39,7 +39,7 @@ BEGIN
     FROM usuario u JOIN perfil p ON p.id = u.perfil_id
     WHERE u.id = p_usuario_id;
 
-    IF v_perfil_nombre IS DISTINCT FROM 'Gerencia' AND v_perfil_nombre IS DISTINCT FROM 'Administrador del sistema' THEN
+    IF v_perfil_nombre IS DISTINCT FROM 'Contador' AND v_perfil_nombre IS DISTINCT FROM 'Administrador del sistema' THEN
         RAISE EXCEPTION 'El usuario % no tiene perfil autorizado para cerrar un periodo.', p_usuario_id;
     END IF;
 
@@ -132,7 +132,7 @@ BEGIN
     FROM usuario u JOIN perfil p ON p.id = u.perfil_id
     WHERE u.id = p_usuario_id;
 
-    IF v_perfil_nombre IS DISTINCT FROM 'Personal administrativo' AND v_perfil_nombre IS DISTINCT FROM 'Gerencia' THEN
+    IF v_perfil_nombre IS DISTINCT FROM 'Contador' AND v_perfil_nombre IS DISTINCT FROM 'Administrador del sistema' THEN
         RAISE EXCEPTION 'El usuario % no tiene perfil autorizado para finalizar una conciliación.', p_usuario_id;
     END IF;
 

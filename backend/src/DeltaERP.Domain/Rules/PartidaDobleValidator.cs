@@ -17,6 +17,21 @@ public static class PartidaDobleValidator
             return false;
         }
 
+        for (var i = 0; i < asiento.Lineas.Count; i++)
+        {
+            var linea = asiento.Lineas[i];
+            if (linea.Debito < 0 || linea.Credito < 0)
+            {
+                mensajeError = $"La línea {i + 1} tiene un monto negativo: débito {linea.Debito:F2}, crédito {linea.Credito:F2}. Los montos no pueden ser negativos.";
+                return false;
+            }
+            if (linea.Debito > 0 && linea.Credito > 0)
+            {
+                mensajeError = $"La línea {i + 1} tiene débito y crédito simultáneamente ({linea.Debito:F2} / {linea.Credito:F2}); cada línea debe tener débito O crédito, no ambos.";
+                return false;
+            }
+        }
+
         var totalDebito = asiento.Lineas.Sum(l => l.Debito);
         var totalCredito = asiento.Lineas.Sum(l => l.Credito);
 

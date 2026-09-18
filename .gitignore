@@ -15,3 +15,12 @@ dist/
 # IDE
 .vs/
 .vscode/
+
+# graphify
+graphify-out/
+
+# entregables del curso
+docs/entregables/
+
+# Claude
+.claude/

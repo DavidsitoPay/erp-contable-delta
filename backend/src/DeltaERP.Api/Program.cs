@@ -1,14 +1,46 @@
+using System.Text;
+using DeltaERP.Api.Auth;
 using DeltaERP.Infrastructure.Data;
+using EFCore.NamingConventions;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Capa de datos: PostgreSQL vía Npgsql / EF Core
+// Capa de datos: PostgreSQL vía Npgsql / EF Core.
+// UseSnakeCaseNamingConvention traduce columnas (PeriodoId -> periodo_id, etc.)
+// para que coincidan con database/01_tables.sql sin mapearlas una por una.
+// Los nombres de tabla (concatenados sin guion bajo) se mantienen explícitos
+// en DeltaErpDbContext.OnModelCreating, que se aplica después y tiene prioridad.
 builder.Services.AddDbContext<DeltaErpDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Default"))
+           .UseSnakeCaseNamingConvention());
 
-// TODO (Etapa 1 DevOps -> Etapa 3 Backend): configurar autenticación JWT (M8 Seguridad).
-// La API es responsable de extraer el usuario_id del token para RN-08 (BitacoraAuditoria).
+// M8 Seguridad: autenticación JWT. Los controladores resuelven el usuario
+// autenticado desde el token (ver AsientosController) en vez de confiar en un
+// usuarioId enviado por el cliente — esto es lo que hace correcta a RN-08.
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+builder.Services.AddSingleton<TokenService>();
+
+var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
+    ?? throw new InvalidOperationException("Falta la sección Jwt en la configuración.");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidAudience = jwtOptions.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
+        };
+    });
+
 builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
@@ -34,6 +66,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
