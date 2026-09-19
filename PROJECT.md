@@ -37,14 +37,14 @@ Fase 1: uso interno. Fase 2 (futura): comercialización SaaS B2B a PyMEs guatema
 
 | Código | Módulo | Prioridad | Estado |
 |---|---|---|---|
-| M1 | Catálogo y parametrización contable | Alta | Diseñado |
-| M2 | Registro de transacciones | Alta | Diseñado |
+| M1 | Catálogo y parametrización contable | Alta | Implementado (cuentas contables, centros de costo, periodos — CRUD + backend) |
+| M2 | Registro de transacciones | Alta | Implementado (registro de asientos con RN-01/RN-02/RN-08; falta listado `GET /api/asientos`) |
 | M3 | Libros y auxiliares | Alta | Diseñado |
 | M4 | Cuentas por cobrar | Alta | Diseñado |
 | M5 | Cuentas por pagar | Alta | Diseñado |
 | M6 | Tesorería y bancos | Media | Diseñado |
 | M7 | Reportes y estados financieros | Alta | Diseñado |
-| M8 | Seguridad y auditoría | Alta | Diseñado |
+| M8 | Seguridad y auditoría | Alta | Implementado (login, JWT, roles, usuarios seed) |
 | M9 | Carga inicial e importación | Media | Diseñado |
 
 ## Etapas del ciclo de desarrollo (SDLC) aplicadas al proyecto
@@ -58,37 +58,45 @@ datos y arquitectura. Ver `/docs`.
 ### Etapa 1 — DevOps 1 (entregable 19/09) ← **estamos aquí**
 Objetivo: dejar el repositorio y la infraestructura base listos para empezar a programar.
 
-- [ ] Repositorio Git inicializado con esta estructura (`git init`, primer commit, push a GitHub)
-- [ ] `devops/docker-compose.yml` — 3 servicios: `frontend`, `backend`, `db` (igual al diagrama de arquitectura)
-- [ ] `devops/Dockerfile.backend` y `devops/Dockerfile.frontend`
-- [ ] Proyecto backend inicial (ASP.NET Core Web API) con estructura por capas (Api / Domain / Infrastructure)
-- [ ] Proyecto frontend inicial (React) con estructura de carpetas
-- [ ] Azure Boards: crear el Product Backlog con los 9 módulos (M1–M9) como Epics/Features
-- [ ] Azure Repos o espejo del repo de GitHub conectado a Azure Pipelines
-- [ ] `azure-pipelines.yml` — pipeline mínimo de build (compilar backend + frontend)
-- [ ] Azure Test Plans: crear el plan de pruebas vacío (se llena en DevOps 2)
+- [x] Repositorio Git inicializado con esta estructura (`git init`, primer commit, push a GitHub)
+- [x] `devops/docker-compose.yml` — 3 servicios: `frontend`, `backend`, `db` (igual al diagrama de arquitectura)
+- [x] `devops/Dockerfile.backend` y `devops/Dockerfile.frontend`
+- [x] Proyecto backend inicial (ASP.NET Core Web API) con estructura por capas (Api / Domain / Infrastructure) — ya con M1/M2/M8 funcionando, no solo el esqueleto
+- [x] Proyecto frontend inicial (React) con estructura de carpetas — ya con login, catálogo y registro de asientos funcionando, no solo el esqueleto
+- [ ] Azure Boards: crear el Product Backlog con los 9 módulos (M1–M9) como Epics/Features — pendiente, paso manual en el portal (ver `docs/azure-devops-checklist.md`)
+- [ ] Azure Repos o espejo del repo de GitHub conectado a Azure Pipelines — pendiente, paso manual en el portal
+- [x] `azure-pipelines.yml` — pipeline mínimo de build (compilar backend + frontend)
+- [ ] Azure Test Plans: crear el plan de pruebas vacío (se llena en DevOps 2) — pendiente, paso manual en el portal
 
 ### Etapa 2 — Base de datos (entregable 12/09, en paralelo/ya vencido)
-- [ ] `database/01_tables.sql` — DDL de las 22 tablas del diccionario de datos
-- [ ] `database/02_functions.sql` — funciones de apoyo de propósito general (ej. validación de consistencia de M9 Importación)
-- [ ] `database/03_triggers.sql` — disparadores (partida doble, bloqueo de periodo cerrado, no eliminación de asientos, límites de pago, e inmutabilidad de `BitacoraAuditoria` y `SaldoCuentaPeriodo`)
-- [ ] `database/04_procedures.sql` — procedimientos almacenados (cierre de periodo)
-- [ ] `database/05_views.sql` — vistas (ej. saldo de cuenta contable en tiempo real)
+- [x] `database/01_tables.sql` — DDL de las 22 tablas del diccionario de datos
+- [x] `database/02_functions.sql` — funciones de apoyo de propósito general (ej. validación de consistencia de M9 Importación)
+- [x] `database/03_triggers.sql` — disparadores (partida doble, bloqueo de periodo cerrado, no eliminación de asientos, límites de pago, e inmutabilidad de `BitacoraAuditoria` y `SaldoCuentaPeriodo`)
+- [x] `database/04_procedures.sql` — procedimientos almacenados (cierre de periodo)
+- [x] `database/05_views.sql` — vistas (ej. saldo de cuenta contable en tiempo real)
+- [x] `database/06_seed_dev.sql` — usuarios de desarrollo (admin, contador, vendedor, técnico) para probar el login localmente
 
 ### Etapa 3 — Backend (núcleo contable primero, por dependencia de datos)
 Orden recomendado, siguiendo la dependencia real entre módulos (ver diagrama de componentes):
-1. **M8 Seguridad** (Usuario, Perfil, autenticación por token) — todo lo demás depende de esto
-2. **M1 Catálogo** (CuentaContable, CentroCosto, PeriodoContable)
-3. **M2 Transacciones** (AsientoContable, LineaAsiento + validación de partida doble RN-01)
-4. **M3 Libros** (reportes de LineaAsiento)
-5. **M4 / M5 CxC y CxP** (DocumentoCxC/CxP + aplicaciones de pago)
-6. **M6 Tesorería** (CuentaBancaria, MovimientoTesoreria, conciliación)
-7. **M7 Reportes**
-8. **M9 Importación**
+
+1. ✅ **M8 Seguridad** (Usuario, Perfil, autenticación por token) — todo lo demás depende de esto. Implementado: `AuthController`, JWT, roles (`Administrador`, `Contador`, `Vendedor`, `Tecnico`).
+2. ✅ **M1 Catálogo** (CuentaContable, CentroCosto, PeriodoContable). Implementado: CRUD completo de los tres controladores, con validación de jerarquía y naturaleza contable.
+3. ✅ **M2 Transacciones** (AsientoContable, LineaAsiento + validación de partida doble RN-01). Implementado: `AsientosController.Registrar` con RN-01/RN-02/RN-08 y monto calculado server-side. **Pendiente:** endpoint de listado/consulta (`GET /api/asientos`).
+4. **M3 Libros** (reportes de LineaAsiento) — no iniciado
+5. **M4 / M5 CxC y CxP** (DocumentoCxC/CxP + aplicaciones de pago) — no iniciado
+6. **M6 Tesorería** (CuentaBancaria, MovimientoTesoreria, conciliación) — no iniciado
+7. **M7 Reportes** — no iniciado
+8. **M9 Importación** — no iniciado
 
 ### Etapa 4 — Frontend
 En paralelo al backend, por módulo: login/autenticación → catálogo → registro de
 transacciones → CxC/CxP → reportes. Cada pantalla consume un endpoint ya probado del backend.
+
+✅ Implementado: login, catálogo de cuentas contables (búsqueda, filtro por tipo, orden por
+columna, jerarquía con sangría), centros de costo, periodos contables, registro de asientos.
+Rediseño visual completo (tema sobrio, paleta de marca) con modo oscuro conmutable persistido
+por navegador. **Pendiente conocido:** las pantallas de catálogo no ocultan aún sus botones de
+edición a perfiles sin permiso (el backend sí devuelve 403; es solo inconsistencia de UX).
 
 ### Etapa 5 — DevOps 2 (entregable 26/09)
 Integración continua real, plan de pruebas completo, pruebas automatizadas de las

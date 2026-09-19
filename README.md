@@ -18,6 +18,18 @@ docker compose up --build
 - Backend (Swagger): http://localhost:5000/swagger
 - Base de datos: localhost:5432 (delta_erp / delta_app)
 
+## Usuarios de prueba (seed de desarrollo)
+
+`database/06_seed_dev.sql` se ejecuta automáticamente al levantar el contenedor de base de
+datos por primera vez. Incluye un usuario por perfil, solo para desarrollo local:
+
+| Perfil | Email | Contraseña |
+|---|---|---|
+| Administrador del sistema | `admin@delta.com.gt` | `AdminDelta26*` |
+| Contador | `contador@delta.com.gt` | `ContadorDelta26*` |
+| Vendedor | `vendedor@delta.com.gt` | `VendedorDelta26*` |
+| Técnico | `tecnico@delta.com.gt` | `TecnicoDelta26*` |
+
 ## Estructura del repositorio
 
 ```
