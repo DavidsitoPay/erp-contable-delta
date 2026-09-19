@@ -26,6 +26,11 @@ function redondear(n) {
   return Math.round(n * 100) / 100;
 }
 
+const formatoMoneda = new Intl.NumberFormat("es-GT", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 function RegistrarAsiento() {
   const [form, setForm] = useState(vacio);
   const [lineas, setLineas] = useState(lineasVacias());
@@ -120,7 +125,6 @@ function RegistrarAsiento() {
 
   return (
     <div>
-      <span className="eyebrow">Módulo M2</span>
       <h2>Registrar asiento contable</h2>
 
       <form onSubmit={handleSubmit}>
@@ -128,6 +132,7 @@ function RegistrarAsiento() {
           <input
             className="input"
             placeholder="Número de asiento"
+            aria-label="Número de asiento"
             value={form.numero}
             onChange={(e) => setForm({ ...form, numero: e.target.value })}
             maxLength={30}
@@ -136,12 +141,14 @@ function RegistrarAsiento() {
           <input
             type="date"
             className="input"
+            aria-label="Fecha"
             value={form.fecha}
             onChange={(e) => setForm({ ...form, fecha: e.target.value })}
             required
           />
           <select
             className="select"
+            aria-label="Periodo"
             value={form.periodoId}
             onChange={(e) => setForm({ ...form, periodoId: e.target.value })}
             required
@@ -200,7 +207,7 @@ function RegistrarAsiento() {
                         ))}
                       </select>
                     </td>
-                    <td>
+                    <td className="numeric">
                       <input
                         type="number"
                         className="input input-money"
@@ -218,7 +225,7 @@ function RegistrarAsiento() {
                         }}
                       />
                     </td>
-                    <td>
+                    <td className="numeric">
                       <input
                         type="number"
                         className="input input-money"
@@ -261,8 +268,8 @@ function RegistrarAsiento() {
 
         <p className="partida-indicator" data-balance={cuadrado ? "ok" : "off"}>
           {cuadrado
-            ? `Débitos: ${totalDebito.toFixed(2)} · Créditos: ${totalCredito.toFixed(2)} ✓ Cuadrado`
-            : `Débitos: ${totalDebito.toFixed(2)} · Créditos: ${totalCredito.toFixed(2)} · Diferencia: ${Math.abs(diferencia).toFixed(2)}`}
+            ? `Débitos: ${formatoMoneda.format(totalDebito)} · Créditos: ${formatoMoneda.format(totalCredito)} ✓ Cuadrado`
+            : `Débitos: ${formatoMoneda.format(totalDebito)} · Créditos: ${formatoMoneda.format(totalCredito)} · Diferencia: ${formatoMoneda.format(Math.abs(diferencia))}`}
         </p>
 
         {error && <p className="error-chip">{error}</p>}

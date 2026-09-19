@@ -41,12 +41,11 @@ function CentrosCosto() {
 
   return (
     <div>
-      <span className="eyebrow">Módulo M1</span>
       <h2>Centros de costo</h2>
 
       <form onSubmit={handleSubmit} className="catalog-form">
-        <input className="input" placeholder="Código" value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value })} required />
-        <input className="input" placeholder="Nombre" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
+        <input className="input" placeholder="Código" aria-label="Código" value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value })} required />
+        <input className="input" placeholder="Nombre" aria-label="Nombre" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
         <button type="submit" disabled={cargando} className="btn btn-primary">Agregar</button>
       </form>
       {error && <p className="error-chip">{error}</p>}

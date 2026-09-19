@@ -1,71 +1,72 @@
 /*
-  Delta ERP Contable — design tokens
-  Extracted from delta.com.gt brand identity: dark-navy, glassmorphic,
-  cyan/blue-violet accents, glow gradients.
+  Delta ERP Contable — light-mode design tokens
+  Sober, formal, data-dense interface. Restrained, functional, zero decoration.
 */
 
 :root {
-  /* Surfaces */
-  --color-bg: #0a0e1a;
-  --color-bg-alt: #0d1220;
-  --color-surface: rgba(148, 163, 184, 0.06);
-  --color-surface-hover: rgba(148, 163, 184, 0.1);
-  --color-surface-strong: rgba(148, 163, 184, 0.1);
-  --color-card-border: rgba(148, 163, 184, 0.14);
+  /* Superficies */
+  --color-bg: #FFFFFF;
+  --color-bg-subtle: #F5F7FA;
+  --color-surface: #FFFFFF;
+  --color-row-alt: #FAFBFC;
+  --color-row-hover: #EFF6FF;
 
-  /* Text */
-  --color-heading: #f8fafc;
-  --color-body: #cbd5e1;
-  --color-muted: #94a3b8;
-  /* Used as the text color on top of --gradient-cta. See the contrast note
-     above --gradient-cta before changing either value. */
-  --color-on-accent: #0a0e1a;
+  /* Bordes */
+  --color-border: #E2E8F0;
+  --color-border-strong: #CBD5E1;
 
-  /* Brand accents */
-  --color-accent-cyan: #22d3ee;
-  --color-accent-blue: #3b82f6;
-  --color-accent-violet: #8b5cf6;
+  /* Texto */
+  --color-text-heading: #0F172A;
+  --color-text-body: #1E293B;
+  --color-text-muted: #64748B;
+  /* WCAG AA contrast fix: #64748B on #F5F7FA measures only 4.15:1 (fails 4.5:1 requirement for small/uppercase text).
+     Use this stronger variant for table headers and similar small text on subtle backgrounds. */
+  --color-text-strong-muted: #475569;
+  --color-text-disabled: #94A3B8;
 
-  /* Gradients (from the real delta.com.gt hero) */
-  /* CONTRAST CONSTRAINT: --color-on-accent (#0a0e1a) text is rendered on top
-     of this gradient (see .btn-primary, .tab-link.active). Verified WCAG AA
-     at its darkest stop (#3b82f6): ~5.24:1, a thin margin above the 4.5:1
-     minimum for normal text. Do not darken the #3b82f6 stop (or any stop)
-     without re-checking that contrast stays >= 4.5:1 against #0a0e1a. */
-  --gradient-cta: linear-gradient(135deg, #7dd3fc 0%, #67e8f9 35%, #3b82f6 100%);
-  --gradient-cta-hover: linear-gradient(135deg, #93e2ff 0%, #7dd3fc 35%, #4f8bff 100%);
+  /* Acción primaria (único color de marca en UI) */
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-primary-active: #1E40AF;
+  --color-primary-disabled: #BFDBFE;
+  --color-on-primary: #FFFFFF;
 
-  /* Borders */
-  --color-border: rgba(148, 163, 184, 0.18);
-  --color-border-strong: rgba(148, 163, 184, 0.32);
+  /* CONTRAST NOTE: #2563EB with #FFFFFF text = ~5.2:1 WCAG AA pass.
+     Do NOT lighten this blue. #3B82F6 only reaches ~3.7:1 and would fail. */
 
-  /* Status */
-  --color-danger: #f87171;
-  --color-danger-bg: rgba(248, 113, 113, 0.12);
-  --color-danger-border: rgba(248, 113, 113, 0.35);
-  --color-success: #34d399;
-  --color-success-bg: rgba(52, 211, 153, 0.12);
-  --color-success-border: rgba(52, 211, 153, 0.35);
+  /* Semánticos */
+  --color-success: #047857;
+  --color-success-bg: #ECFDF5;
+  --color-success-border: #A7F3D0;
+  --color-danger: #B91C1C;
+  --color-danger-bg: #FEF2F2;
+  --color-danger-border: #FECACA;
+  --color-warning: #B45309;
+  --color-warning-bg: #FFFBEB;
+  --color-warning-border: #FDE68A;
 
-  /* Radius scale */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  /* Radios */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
   --radius-pill: 999px;
 
-  /* Spacing scale */
-  --space-xs: 0.5rem;
-  --space-sm: 0.75rem;
+  /* Espaciado */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
   --space-md: 1rem;
   --space-lg: 1.5rem;
-  --space-xl: 2.5rem;
+  --space-xl: 2rem;
 
-  /* Effects */
-  --shadow-glow: 0 0 60px rgba(79, 127, 255, 0.12);
-  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.35);
-  --blur-glass: blur(14px);
+  /* Tipografía */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
-  --font-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  /* Sombras: sutiles y neutras, nunca de color */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 1px 3px rgba(15, 23, 42, 0.10);
+
+  /* Selección */
+  --color-selection-bg: rgba(37, 99, 235, 0.15);
 }
 
 *,
@@ -82,33 +83,55 @@ body,
 
 body {
   margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text-body);
   font-family: var(--font-sans);
-  color: var(--color-body);
-  background-color: var(--color-bg);
-  background-image:
-    radial-gradient(ellipse 900px 520px at 12% -8%, rgba(79, 127, 255, 0.16), transparent 60%),
-    radial-gradient(ellipse 700px 520px at 92% 6%, rgba(139, 92, 246, 0.14), transparent 60%),
-    radial-gradient(ellipse 800px 600px at 50% 110%, rgba(34, 211, 238, 0.06), transparent 60%);
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  min-height: 100vh;
+  font-size: 0.9375rem; /* 15px */
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
-h1,
-h2,
-h3,
+/* Modo claro explícito */
+:root[data-theme="claro"] {
+  color-scheme: light;
+}
+
+h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-heading);
+  line-height: 1.3;
+  margin: 0 0 var(--space-sm);
+}
+
+h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text-heading);
+  line-height: 1.3;
+  margin: 0 0 var(--space-sm);
+}
+
+h3 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-text-heading);
+  line-height: 1.3;
+  margin: 0 0 var(--space-sm);
+}
+
 h4 {
-  color: var(--color-heading);
+  color: var(--color-text-heading);
   margin: 0 0 var(--space-sm);
 }
 
 p {
   margin: 0 0 var(--space-sm);
-  color: var(--color-body);
+  color: var(--color-text-body);
 }
 
 a {
-  color: var(--color-accent-cyan);
+  color: var(--color-primary);
 }
 
 button {
@@ -116,6 +139,87 @@ button {
 }
 
 ::selection {
-  background: rgba(34, 211, 238, 0.28);
-  color: var(--color-heading);
+  background: var(--color-selection-bg);
+  color: var(--color-text-heading);
+}
+
+/* Modo oscuro */
+:root[data-theme="oscuro"] {
+  /* Superficies */
+  --color-bg: #1A1F2E;
+  --color-bg-subtle: #232A3A;
+  --color-surface: #1E2433;
+  --color-row-alt: #252C3C;
+  --color-row-hover: #2E3950;
+
+  /* Bordes */
+  --color-border: #4F5C70;
+  --color-border-strong: #7A8BA2;
+
+  /* Texto */
+  --color-text-heading: #F0F4F8;
+  --color-text-body: #E2E8F0;
+  --color-text-muted: #94A3B8;
+  --color-text-strong-muted: #CBD5E1;
+  --color-text-disabled: #64748B;
+
+  /* Acción primaria */
+  --color-primary: #60A5FA;
+  --color-primary-hover: #7DB6FB;
+  --color-primary-active: #93C5FD;
+  --color-primary-disabled: #2D3E5F;
+  --color-on-primary: #0F172A;
+
+  /* Semánticos */
+  --color-success: #34D399;
+  --color-success-bg: #06291F;
+  --color-success-border: #0F5F47;
+  --color-danger: #F87171;
+  --color-danger-bg: #3A1212;
+  --color-danger-border: #7F2323;
+  --color-warning: #FBBF24;
+  --color-warning-bg: #35200A;
+  --color-warning-border: #7A4E12;
+
+  /* Sombras */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40);
+  --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.50);
+
+  /* Selección */
+  --color-selection-bg: rgba(96, 165, 250, 0.25);
+
+  color-scheme: dark;
+}
+
+:root[data-theme="oscuro"] ::selection {
+  background: var(--color-selection-bg);
+  color: var(--color-text-heading);
+}
+
+/* NOTA sobre --color-row-alt y --color-row-hover en oscuro:
+   En claro, la separación entre filas (alt/hover) es apenas perceptible (1.036:1 y 1.088:1).
+   En oscuro, aunque el reportante los ve "casi pegados", la diferencia ya es 1.11:1 y 1.34:1 — mayor.
+   Además, --color-row-hover (#2E3950) está al techo de posibilidad: con ese fondo, el texto
+   atenuado queda en 4.51:1 y el primario en 4.55:1 — casi en el límite de AA.
+   Aclarar el fondo violaría esos contrastes de texto. No se cambian. */
+
+/* Impresión: fuerza paleta clara independientemente del tema activo */
+@media print {
+  :root[data-theme="oscuro"] {
+    --color-bg: #FFFFFF;
+    --color-text-body: #1E293B;
+    --color-text-heading: #0F172A;
+    --color-surface: #FFFFFF;
+    --color-row-alt: #FAFBFC;
+    --color-border: #E2E8F0;
+    --color-border-strong: #CBD5E1;
+    --color-text-muted: #64748B;
+    --color-text-strong-muted: #475569;
+    --color-primary: #2563EB;
+    color-scheme: light;
+  }
+
+  .toggle-tema {
+    display: none;
+  }
 }

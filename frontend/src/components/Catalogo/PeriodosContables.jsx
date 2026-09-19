@@ -57,13 +57,12 @@ function PeriodosContables() {
 
   return (
     <div>
-      <span className="eyebrow">Cierre y control</span>
       <h2>Periodos contables</h2>
 
       <form onSubmit={handleSubmit} className="catalog-form">
-        <input className="input" placeholder="Nombre" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
-        <input type="date" className="input" value={form.fechaInicio} onChange={(e) => setForm({ ...form, fechaInicio: e.target.value })} required />
-        <input type="date" className="input" value={form.fechaFin} onChange={(e) => setForm({ ...form, fechaFin: e.target.value })} required />
+        <input className="input" placeholder="Nombre" aria-label="Nombre" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
+        <input type="date" className="input" aria-label="Fecha de inicio" value={form.fechaInicio} onChange={(e) => setForm({ ...form, fechaInicio: e.target.value })} required />
+        <input type="date" className="input" aria-label="Fecha de fin" value={form.fechaFin} onChange={(e) => setForm({ ...form, fechaFin: e.target.value })} required />
         <button type="submit" disabled={cargando} className="btn btn-primary">Agregar</button>
       </form>
       {error && <p className="error-chip">{error}</p>}

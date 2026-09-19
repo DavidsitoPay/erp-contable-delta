@@ -1,14 +1,13 @@
-import { useId } from "react";
-
 /**
- * Delta brand triangle mark, rendered as an inline SVG using the same
- * gradient rounded-rect + triangle path as the favicon in index.html.
- * Replaces the old CSS border-triangle hack so the mark is pixel-consistent
- * and crisp at any zoom level, wherever it's used.
+ * Delta brand triangle mark, rendered as an inline SVG using CSS variables
+ * for consistent theming. Replaces the old CSS border-triangle hack so the mark
+ * is pixel-consistent and crisp at any zoom level, wherever it's used.
+ *
+ * The rectangle uses --color-primary (#2563EB in light, #60A5FA in dark) and
+ * the triangle uses --color-on-primary (white in light, #0F172A in dark) for
+ * optimal contrast and legibility in both themes.
  */
 function LogoMark({ size = 36 }) {
-  const gradientId = useId();
-
   return (
     <svg
       width={size}
@@ -18,14 +17,8 @@ function LogoMark({ size = 36 }) {
       role="img"
       aria-label="Delta"
     >
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#4f7fff" />
-          <stop offset="100%" stopColor="#8b5cf6" />
-        </linearGradient>
-      </defs>
-      <rect width="64" height="64" rx="16" fill={`url(#${gradientId})`} />
-      <path d="M32 16 L48 46 L16 46 Z" fill="#f8fafc" />
+      <rect width="64" height="64" rx="16" fill="var(--color-primary)" />
+      <path d="M32 16 L48 46 L16 46 Z" fill="var(--color-on-primary)" />
     </svg>
   );
 }

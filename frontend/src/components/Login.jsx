@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { login } from "../services/api";
 import LogoMark from "./LogoMark";
+import ToggleTema from "./ToggleTema";
 
 function Login({ onLoginExitoso }) {
   const [email, setEmail] = useState("");
@@ -28,6 +29,9 @@ function Login({ onLoginExitoso }) {
   return (
     <div className="login-page">
       <div className="login-card">
+        <div className="login-toolbar">
+          <ToggleTema />
+        </div>
         <div className="login-brand">
           <div className="brand">
             <div className="logo-badge">

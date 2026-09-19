@@ -3,6 +3,7 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import { checkHealth } from "./services/api";
 import Login from "./components/Login";
 import LogoMark from "./components/LogoMark";
+import ToggleTema from "./components/ToggleTema";
 import CuentasContables from "./components/Catalogo/CuentasContables";
 import CentrosCosto from "./components/Catalogo/CentrosCosto";
 import PeriodosContables from "./components/Catalogo/PeriodosContables";
@@ -57,6 +58,7 @@ function App() {
 
         <div className="topbar-right">
           <span className="status-pill" data-status={statusVariant}>{status}</span>
+          <ToggleTema />
           <div className="user-chip">
             <span>
               <strong>{usuario.nombre}</strong> <span className="user-role">({usuario.perfil})</span>
