@@ -29,14 +29,6 @@ jobs:
   update-alias:
     runs-on: ubuntu-latest
     steps:
-      - name: Instalar Vercel CLI
-        # Versión fija (no @latest, sin reproducibilidad y expuesto a que se
-        # publique una versión comprometida) y --ignore-scripts (sin scripts
-        # de ciclo de vida de npm ejecutando código arbitrario en la
-        # instalación). Verificado localmente: el CLI arranca igual con
-        # --ignore-scripts. SonarCloud githubactions:S8543 / S6505.
-        run: npm install --global vercel@59.26.0 --ignore-scripts
-
       # Vercel dispara su propio build por webhook casi al mismo tiempo que
       # este workflow arranca por el push — hay que esperar a que termine
       # (no asumir que ya existe) antes de alias-earlo. Busca, por API, el
@@ -77,9 +69,20 @@ jobs:
           echo "Se agotó el tiempo de espera (5 min) esperando el deployment de Vercel." >&2
           exit 1
 
+      # Vía REST directa (POST /v2/deployments/{id}/aliases), no el CLI: el
+      # comando `vercel alias set` falla con este token ("Not able to load
+      # user... User not found (404)") — es un chequeo interno del CLI que
+      # no funciona bien con tokens de scope restringido, aunque ese mismo
+      # token sí autentica perfecto contra la API REST (como en el paso de
+      # arriba). Ver https://vercel.com/docs/rest-api/aliases/assign-an-alias.
       - name: Re-apuntar delta-erp-contable.vercel.app al deployment nuevo
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          vercel alias set "${{ steps.wait.outputs.url }}" "$ALIAS" \
-            --token "$VERCEL_TOKEN" --scope davidsito-team
+          set -euo pipefail
+          RESP=$(curl -sf -X POST \
+            "https://api.vercel.com/v2/deployments/${{ steps.wait.outputs.url }}/aliases?teamId=${VERCEL_ORG_ID}" \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"alias\": \"${ALIAS}\"}")
+          echo "$RESP" | jq .
