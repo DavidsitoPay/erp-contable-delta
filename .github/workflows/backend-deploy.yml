@@ -32,6 +32,11 @@ jobs:
         run: |
           echo "name=$(echo '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
+      - name: Configurar Docker Buildx
+        # Necesario para el driver docker-container: el driver "docker" por
+        # defecto no soporta el cache export de GHA (type=gha) usado abajo.
+        uses: docker/setup-buildx-action@v3
+
       - name: Login en GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -73,3 +78,4 @@ jobs:
       - name: Logout de Azure
         if: always()
         run: az logout
+        continue-on-error: true # no marcar el run en rojo si nunca hubo sesión que cerrar
