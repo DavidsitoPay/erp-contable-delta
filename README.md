@@ -20,15 +20,9 @@ docker compose up --build
 
 ## Usuarios de prueba (seed de desarrollo)
 
-`database/06_seed_dev.sql` se ejecuta automáticamente al levantar el contenedor de base de
-datos por primera vez. Incluye un usuario por perfil, solo para desarrollo local:
-
-| Perfil | Email | Contraseña |
-|---|---|---|
-| Administrador del sistema | `admin@delta.com.gt` | `AdminDelta26*` |
-| Contador | `contador@delta.com.gt` | `ContadorDelta26*` |
-| Vendedor | `vendedor@delta.com.gt` | `VendedorDelta26*` |
-| Técnico | `tecnico@delta.com.gt` | `TecnicoDelta26*` |
+`database/06_seed_dev.sql` puebla un usuario por perfil, solo para desarrollo/demo. Las
+credenciales están en `CREDENTIALS.md` (no se sube al repo — pídeselas a un compañero
+o revisa el archivo si ya lo tienes localmente).
 
 ## Estructura del repositorio
 

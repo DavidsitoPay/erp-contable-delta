@@ -1,0 +1,75 @@
+name: Backend — build y despliegue a Azure Container Apps
+
+# Solo corre cuando cambia algo que afecte al backend o a su imagen; un push
+# que solo toque frontend/docs no dispara un build+deploy innecesario.
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "backend/**"
+      - "devops/Dockerfile.backend"
+      - ".github/workflows/backend-deploy.yml"
+  workflow_dispatch: {} # permite correrlo a mano desde la pestaña Actions
+
+permissions:
+  contents: read
+  packages: write # necesario para publicar en GitHub Container Registry (ghcr.io)
+  id-token: write # necesario para el login OIDC contra Azure (sin secreto de larga duración)
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}-backend
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Normalizar nombre de imagen a minúsculas
+        id: image
+        run: |
+          echo "name=$(echo '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Login en GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build y push de la imagen del backend
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: devops/Dockerfile.backend
+          push: true
+          tags: |
+            ${{ steps.image.outputs.name }}:${{ github.sha }}
+            ${{ steps.image.outputs.name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Login sin secreto de larga duración: usa la identidad federada
+      # (id-github-deploy) creada en Azure, con confianza acotada a este repo
+      # y a las ramas main/dev (ver Azure > Managed Identities > Federated credentials).
+      - name: Login en Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Actualizar Azure Container App con la nueva imagen
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az containerapp update \
+              --name ca-delta-erp-backend \
+              --resource-group rg-delta-erp \
+              --image ${{ steps.image.outputs.name }}:${{ github.sha }}
+
+      - name: Logout de Azure
+        if: always()
+        run: az logout

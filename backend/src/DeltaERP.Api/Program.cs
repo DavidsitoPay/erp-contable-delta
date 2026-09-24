@@ -47,11 +47,17 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Orígenes permitidos configurables (Cors:AllowedOrigins, separados por coma) para no
+// tener que recompilar al cambiar de entorno. Default: solo el frontend local de Vite.
+var corsOrigins = builder.Configuration.GetValue<string>("Cors:AllowedOrigins")
+    ?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    ?? new[] { "http://localhost:3000" };
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins(corsOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
