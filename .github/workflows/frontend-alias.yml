@@ -30,7 +30,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Instalar Vercel CLI
-        run: npm install --global vercel@latest
+        # Versión fija (no @latest, sin reproducibilidad y expuesto a que se
+        # publique una versión comprometida) y --ignore-scripts (sin scripts
+        # de ciclo de vida de npm ejecutando código arbitrario en la
+        # instalación). Verificado localmente: el CLI arranca igual con
+        # --ignore-scripts. SonarCloud githubactions:S8543 / S6505.
+        run: npm install --global vercel@59.26.0 --ignore-scripts
 
       # Vercel dispara su propio build por webhook casi al mismo tiempo que
       # este workflow arranca por el push — hay que esperar a que termine
