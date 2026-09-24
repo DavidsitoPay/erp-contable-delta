@@ -21,8 +21,43 @@
 # =====================================================================
 set -euo pipefail
 
-CONN_STRING="${1:?Uso: run_migrations.sh \"<connection string>\"}"
+RAW_CONN_STRING="${1:?Uso: run_migrations.sh \"<connection string>\"}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# El resto del proyecto (appsettings.json, secrets de la Container App) usa
+# el formato de connection string de Npgsql/.NET: "Host=...;Database=...;
+# Username=...;Password=...;Ssl Mode=Require". psql no entiende ese formato
+# (espera una URI libpq: postgresql://user:pass@host/db?sslmode=require, o
+# pares host=... dbname=... en minúsculas). En vez de mantener el mismo
+# valor duplicado en dos formatos distintos como dos secrets separados
+# (se desincronizan tarde o temprano), este script convierte automáticamente
+# si detecta el formato Npgsql; si ya viene como URI postgresql://, la usa
+# tal cual.
+if [[ "$RAW_CONN_STRING" == postgresql://* || "$RAW_CONN_STRING" == postgres://* ]]; then
+    CONN_STRING="$RAW_CONN_STRING"
+else
+    HOST="" DBNAME="" DBUSER="" DBPASSWORD="" SSLMODE="prefer"
+    IFS=';' read -ra PAIRS <<< "$RAW_CONN_STRING"
+    for PAIR in "${PAIRS[@]}"; do
+        [ -z "$PAIR" ] && continue
+        KEY="${PAIR%%=*}"
+        VAL="${PAIR#*=}"
+        # normaliza la clave: minúsculas y sin espacios ("Ssl Mode" -> "sslmode")
+        KEY_NORM="$(echo "$KEY" | tr '[:upper:]' '[:lower:]' | tr -d ' ')"
+        case "$KEY_NORM" in
+            host) HOST="$VAL" ;;
+            database) DBNAME="$VAL" ;;
+            username) DBUSER="$VAL" ;;
+            password) DBPASSWORD="$VAL" ;;
+            sslmode) SSLMODE="$(echo "$VAL" | tr '[:upper:]' '[:lower:]')" ;;
+        esac
+    done
+    if [ -z "$HOST" ] || [ -z "$DBNAME" ] || [ -z "$DBUSER" ]; then
+        echo "Error: no se pudo interpretar la connection string (¿formato inesperado?)." >&2
+        exit 1
+    fi
+    CONN_STRING="postgresql://${DBUSER}:${DBPASSWORD}@${HOST}/${DBNAME}?sslmode=${SSLMODE}"
+fi
 
 echo "== Verificando tabla schema_migrations =="
 psql "$CONN_STRING" -v ON_ERROR_STOP=1 -c "
