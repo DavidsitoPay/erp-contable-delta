@@ -1,0 +1,85 @@
+name: Frontend — mantener alias corto de Vercel
+
+# Vercel despliega el frontend por su propia integración con GitHub (no por
+# este workflow) — build automático en push a main/dev. Ese despliegue
+# genera solo el dominio largo delta-erp-contable-davidsito-team.vercel.app
+# (y el de rama). El alias corto delta-erp-contable.vercel.app no lo puede
+# gestionar Vercel como "dominio de proyecto" (vercel domains add lo
+# rechaza para subdominios *.vercel.app: "invalid_domain") — solo se puede
+# apuntar manualmente con `vercel alias set`, que fija un deployment
+# puntual y no sigue solo al siguiente deploy de producción. Este workflow
+# hace ese re-apuntado automáticamente después de cada deploy real.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-alias.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_ORG_ID: team_4FIZ4HAjSE6dEfEvJBFFceXM
+  VERCEL_PROJECT_ID: prj_Ud5Bwv3ttuXWnrTSSnVhUi9sBXA0
+  ALIAS: delta-erp-contable.vercel.app
+
+jobs:
+  update-alias:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar Vercel CLI
+        # Versión fija (no @latest, sin reproducibilidad y expuesto a que se
+        # publique una versión comprometida) y --ignore-scripts (sin scripts
+        # de ciclo de vida de npm ejecutando código arbitrario en la
+        # instalación). Verificado localmente: el CLI arranca igual con
+        # --ignore-scripts. SonarCloud githubactions:S8543 / S6505.
+        run: npm install --global vercel@59.26.0 --ignore-scripts
+
+      # Vercel dispara su propio build por webhook casi al mismo tiempo que
+      # este workflow arranca por el push — hay que esperar a que termine
+      # (no asumir que ya existe) antes de alias-earlo. Busca, por API, el
+      # deployment de producción cuyo commit coincide con este push y
+      # espera a que su readyState sea READY (o falle) antes de continuar.
+      - name: Esperar el deployment de producción de este commit
+        id: wait
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          SHA="${{ github.sha }}"
+          # GET /v7/deployments soporta filtrar directamente por sha (ver
+          # https://vercel.com/docs/rest-api/reference/endpoints/deployments/list-deployments),
+          # más confiable que filtrar a mano por un campo de meta sin tipar.
+          for i in $(seq 1 30); do
+            RESP=$(curl -sf -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v7/deployments?teamId=${VERCEL_ORG_ID}&projectId=${VERCEL_PROJECT_ID}&target=production&sha=${SHA}&limit=1")
+
+            STATE=$(echo "$RESP" | jq -r '.deployments[0].readyState // empty')
+            URL=$(echo "$RESP" | jq -r '.deployments[0].url // empty')
+
+            if [ -n "$STATE" ]; then
+              echo "Intento $i: deployment encontrado, estado=$STATE"
+              if [ "$STATE" = "READY" ]; then
+                echo "url=$URL" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              if [ "$STATE" = "ERROR" ] || [ "$STATE" = "CANCELED" ] || [ "$STATE" = "DELETED" ]; then
+                echo "El deployment de Vercel para este commit terminó en $STATE." >&2
+                exit 1
+              fi
+            else
+              echo "Intento $i: aún no aparece el deployment de este commit en Vercel"
+            fi
+            sleep 10
+          done
+          echo "Se agotó el tiempo de espera (5 min) esperando el deployment de Vercel." >&2
+          exit 1
+
+      - name: Re-apuntar delta-erp-contable.vercel.app al deployment nuevo
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          vercel alias set "${{ steps.wait.outputs.url }}" "$ALIAS" \
+            --token "$VERCEL_TOKEN" --scope davidsito-team
