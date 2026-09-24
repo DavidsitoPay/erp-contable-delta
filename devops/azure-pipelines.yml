@@ -42,14 +42,19 @@ stages:
               npm run build
             displayName: "Instalar dependencias y compilar frontend"
 
-  - stage: Build_Images
-    displayName: "Build de imágenes Docker"
+  # Build_Images (docker compose) se retiró: el proyecto migró de Docker Compose
+  # local a despliegue en la nube (Neon + Azure Container Apps + Vercel). La
+  # imagen real de producción (devops/Dockerfile.backend) ahora se construye y
+  # despliega desde GitHub Actions (.github/workflows/backend-deploy.yml), no
+  # desde este pipeline. Este pipeline sigue cubriendo el requisito de DevOps 1
+  # de "compilar correctamente backend y frontend" con las dos etapas de arriba.
+  - stage: Build_Backend_Image
+    displayName: "Build de la imagen Docker del backend"
     dependsOn:
       - Build_Backend
-      - Build_Frontend
     jobs:
       - job: DockerBuild
         steps:
           - script: |
-              docker compose -f devops/docker-compose.yml build
-            displayName: "docker compose build"
+              docker build -f devops/Dockerfile.backend -t delta-erp-backend:ci backend
+            displayName: "docker build (Dockerfile.backend)"
