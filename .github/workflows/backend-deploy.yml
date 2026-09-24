@@ -1,0 +1,108 @@
+name: Backend — build y despliegue a Azure Container Apps
+
+# Solo corre en main: dev es la rama de trabajo y no debe tocar Azure/Neon
+# (el recurso real, compartido). El deploy real ocurre únicamente al mergear
+# a main, y solo cuando cambia algo que afecte al backend, la base de datos
+# o la imagen.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "database/**"
+      - "devops/Dockerfile.backend"
+      - ".github/workflows/backend-deploy.yml"
+  workflow_dispatch: {} # permite correrlo a mano desde la pestaña Actions (cualquier rama)
+
+permissions:
+  contents: read # baseline mínimo; cada job amplía solo lo que de verdad necesita
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}-backend
+
+jobs:
+  # Corre database/run_migrations.sh contra la branch "production" de Neon:
+  # es la única base de datos ligada a main y al backend desplegado. La
+  # branch "development" de Neon queda para trabajo local de cada dev (no
+  # la toca este pipeline). Si un script SQL falla, este job falla y
+  # build-and-deploy ni siquiera arranca: no se despliega código nuevo sobre
+  # un esquema que no pudo actualizarse.
+  migrate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # solo necesita leer el repo (checkout) para correr los scripts SQL
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar cliente de PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Aplicar migraciones pendientes
+        run: bash database/run_migrations.sh "${{ secrets.NEON_PROD_CONNECTION_STRING }}"
+
+  build-and-deploy:
+    needs: migrate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # necesario para publicar en GitHub Container Registry (ghcr.io)
+      id-token: write # necesario para el login OIDC contra Azure (sin secreto de larga duración)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Normalizar nombre de imagen a minúsculas
+        id: image
+        run: |
+          echo "name=$(echo '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Configurar Docker Buildx
+        # Necesario para el driver docker-container: el driver "docker" por
+        # defecto no soporta el cache export de GHA (type=gha) usado abajo.
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Login en GitHub Container Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build y push de la imagen del backend
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: backend
+          file: devops/Dockerfile.backend
+          push: true
+          tags: |
+            ${{ steps.image.outputs.name }}:${{ github.sha }}
+            ${{ steps.image.outputs.name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Login sin secreto de larga duración: usa la identidad federada
+      # (id-github-deploy) creada en Azure, con confianza acotada a este repo.
+      # Solo corre en main (ver el trigger arriba); la credencial federada para
+      # dev sigue existiendo en Azure pero no se usa desde este workflow.
+      - name: Login en Azure (OIDC)
+        uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Actualizar Azure Container App con la nueva imagen
+        uses: azure/CLI@9f7ce6f37c31b777ec6c6b6d1dfe7db79f497956 # v2
+        with:
+          inlineScript: |
+            az containerapp update \
+              --name ca-delta-erp-backend \
+              --resource-group rg-delta-erp \
+              --image ${{ steps.image.outputs.name }}:${{ github.sha }}
+
+      - name: Logout de Azure
+        if: always()
+        run: az logout
+        continue-on-error: true # no marcar el run en rojo si nunca hubo sesión que cerrar

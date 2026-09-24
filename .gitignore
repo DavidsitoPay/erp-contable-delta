@@ -26,3 +26,8 @@ docs/entregables/
 .claude/
 CLAUDE.md
 .neon
+
+# Credenciales (dev/demo) — ver CREDENTIALS.md
+CREDENTIALS.md
+
+.vercel
