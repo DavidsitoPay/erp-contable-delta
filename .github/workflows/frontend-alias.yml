@@ -12,10 +12,14 @@ name: Frontend — mantener alias corto de Vercel
 on:
   push:
     branches: [main]
-    paths:
-      - "frontend/**"
-      - ".github/workflows/frontend-alias.yml"
   workflow_dispatch: {}
+# Sin filtro de "paths": Vercel despliega a producción en TODO push a main,
+# sin importar qué carpeta cambió (su integración con GitHub no respeta paths
+# en el plan Hobby). Un filtro por frontend/** hizo que este workflow se
+# saltara pushes que solo tocaban backend/ o docs/ — Vercel igual desplegaba
+# una versión nueva, pero delta-erp-contable.vercel.app se quedaba apuntando
+# al deployment anterior porque nada volvía a correr el re-apuntado. Real:
+# pasó con el PR #7 del 24/09 (solo cambió devops/ y docs/).
 
 permissions:
   contents: read
