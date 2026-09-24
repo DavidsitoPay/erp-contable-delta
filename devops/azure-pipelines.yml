@@ -1,12 +1,19 @@
 # azure-pipelines.yml — Delta ERP Contable
-# Pipeline de build (DevOps 1). La integración/entrega continua completa
-# y el plan de pruebas se amplían en DevOps 2 (entregable 26/09).
+# Pipeline de build (DevOps 1) — cubre el requisito de compilar backend y
+# frontend correctamente. El CI/CD real (deploy a Azure/Neon/Vercel) vive
+# en GitHub Actions (.github/workflows/backend-deploy.yml); este pipeline
+# NO participa en eso. pr: none es deliberado: sin esto, la integración de
+# Azure Pipelines con GitHub corre automáticamente en cada Pull Request y
+# aparece como check pendiente/en progreso bloqueando el merge en GitHub,
+# duplicando lo que ya valida el workflow de Actions.
 
 trigger:
   branches:
     include:
       - main
       - develop
+
+pr: none
 
 pool:
   vmImage: "ubuntu-latest"
