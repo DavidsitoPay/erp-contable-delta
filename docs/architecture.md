@@ -56,12 +56,32 @@ API.
 
 ## Arquitectura de despliegue
 
-Contenedores Docker independientes por capa (frontend, backend, base de datos), sobre
-infraestructura propia, con ruta de migración futura a la nube (Azure) sin cambiar
-código. CI/CD gestionado con Azure DevOps.
+> Actualizado el 23/09/2026 tras la migración a la nube (DevOps 2). La versión
+> anterior de esta sección describía la arquitectura planeada en la etapa de
+> DevOps 1: contenedores Docker locales con una ruta de migración futura a Azure.
+> Esa migración ya ocurrió, y no exactamente como se planeó originalmente — ver
+> `docs/devops2-implementacion.md` para el detalle y la justificación de cada
+> sustitución.
+
+Cada capa se despliega en un servicio administrado independiente, sin infraestructura
+propia que mantener. El backend se empaqueta como imagen Docker (`devops/Dockerfile.backend`,
+dos etapas: compilación y ejecución) y corre en Azure Container Apps. El frontend, al
+ser una aplicación de una sola página sin estado de servidor, se despliega directamente
+en Vercel a partir del código fuente, sin pasar por una imagen de contenedor. La base
+de datos PostgreSQL corre en Neon (proveedor sin servidor), con una rama `production`
+—la única que usa el backend desplegado— separada de la rama `development` de uso
+local.
+
+La integración y el despliegue continuo se implementaron en GitHub Actions, no en
+Azure DevOps: cada push a la rama principal del repositorio dispara la validación y
+aplicación del esquema de base de datos, seguida de la construcción y el despliegue
+de la nueva versión del backend, sin intervención manual. Azure Pipelines se conserva
+con un alcance reducido, limitado a verificar que el backend y el frontend compilen
+correctamente, como remanente de la configuración inicial de DevOps 1.
 
 Comunicación: navegador → frontend (HTTPS) → backend (HTTPS/JSON) → base de datos
-(SQL vía Npgsql/EF Core); backend → SMTP externo (notificaciones).
+(SQL vía Npgsql/EF Core); backend → SMTP externo (notificaciones, diseñado, no
+implementado todavía).
 
 ## Consideraciones de seguridad
 
