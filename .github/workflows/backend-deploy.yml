@@ -1,15 +1,18 @@
 name: Backend — build y despliegue a Azure Container Apps
 
-# Solo corre cuando cambia algo que afecte al backend o a su imagen; un push
-# que solo toque frontend/docs no dispara un build+deploy innecesario.
+# Solo corre en main: dev es la rama de trabajo y no debe tocar Azure/Neon
+# (el recurso real, compartido). El deploy real ocurre únicamente al mergear
+# a main, y solo cuando cambia algo que afecte al backend, la base de datos
+# o la imagen.
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
     paths:
       - "backend/**"
+      - "database/**"
       - "devops/Dockerfile.backend"
       - ".github/workflows/backend-deploy.yml"
-  workflow_dispatch: {} # permite correrlo a mano desde la pestaña Actions
+  workflow_dispatch: {} # permite correrlo a mano desde la pestaña Actions (cualquier rama)
 
 permissions:
   contents: read
@@ -21,7 +24,26 @@ env:
   IMAGE_NAME: ${{ github.repository }}-backend
 
 jobs:
+  # Corre database/run_migrations.sh contra la branch "production" de Neon:
+  # es la única base de datos ligada a main y al backend desplegado. La
+  # branch "development" de Neon queda para trabajo local de cada dev (no
+  # la toca este pipeline). Si un script SQL falla, este job falla y
+  # build-and-deploy ni siquiera arranca: no se despliega código nuevo sobre
+  # un esquema que no pudo actualizarse.
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar cliente de PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Aplicar migraciones pendientes
+        run: bash database/run_migrations.sh "${{ secrets.NEON_PROD_CONNECTION_STRING }}"
+
   build-and-deploy:
+    needs: migrate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -57,8 +79,9 @@ jobs:
           cache-to: type=gha,mode=max
 
       # Login sin secreto de larga duración: usa la identidad federada
-      # (id-github-deploy) creada en Azure, con confianza acotada a este repo
-      # y a las ramas main/dev (ver Azure > Managed Identities > Federated credentials).
+      # (id-github-deploy) creada en Azure, con confianza acotada a este repo.
+      # Solo corre en main (ver el trigger arriba); la credencial federada para
+      # dev sigue existiendo en Azure pero no se usa desde este workflow.
       - name: Login en Azure (OIDC)
         uses: azure/login@v2
         with:
