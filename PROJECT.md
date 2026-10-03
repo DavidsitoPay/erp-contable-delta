@@ -39,7 +39,7 @@ Fase 1: uso interno. Fase 2 (futura): comercialización SaaS B2B a PyMEs guatema
 |---|---|---|---|
 | M1 | Catálogo y parametrización contable | Alta | Implementado (cuentas contables, centros de costo, periodos — CRUD + backend) |
 | M2 | Registro de transacciones | Alta | Implementado (registro de asientos con RN-01/RN-02/RN-08; falta listado `GET /api/asientos`) |
-| M3 | Libros y auxiliares | Alta | Diseñado |
+| M3 | Libros y auxiliares | Alta | Implementado (balance de saldos, libro diario y libro mayor, los tres calculados en tiempo real — `LibrosController`) |
 | M4 | Cuentas por cobrar | Alta | Diseñado |
 | M5 | Cuentas por pagar | Alta | Diseñado |
 | M6 | Tesorería y bancos | Media | Diseñado |
@@ -82,7 +82,7 @@ Orden recomendado, siguiendo la dependencia real entre módulos (ver diagrama de
 1. ✅ **M8 Seguridad** (Usuario, Perfil, autenticación por token) — todo lo demás depende de esto. Implementado: `AuthController`, JWT, roles (`Administrador`, `Contador`, `Vendedor`, `Tecnico`).
 2. ✅ **M1 Catálogo** (CuentaContable, CentroCosto, PeriodoContable). Implementado: CRUD completo de los tres controladores, con validación de jerarquía y naturaleza contable.
 3. ✅ **M2 Transacciones** (AsientoContable, LineaAsiento + validación de partida doble RN-01). Implementado: `AsientosController.Registrar` con RN-01/RN-02/RN-08 y monto calculado server-side. **Pendiente:** endpoint de listado/consulta (`GET /api/asientos`).
-4. **M3 Libros** (reportes de LineaAsiento) — no iniciado
+4. ✅ **M3 Libros** (reportes de LineaAsiento). Implementado: `LibrosController` — balance de saldos (`vw_balance_saldos`), libro diario por periodo y libro mayor por cuenta con saldo acumulado, los tres calculados en tiempo real, sin tablas ni columnas precalculadas.
 5. **M4 / M5 CxC y CxP** (DocumentoCxC/CxP + aplicaciones de pago) — no iniciado
 6. **M6 Tesorería** (CuentaBancaria, MovimientoTesoreria, conciliación) — no iniciado
 7. **M7 Reportes** — no iniciado
@@ -93,7 +93,8 @@ En paralelo al backend, por módulo: login/autenticación → catálogo → regi
 transacciones → CxC/CxP → reportes. Cada pantalla consume un endpoint ya probado del backend.
 
 ✅ Implementado: login, catálogo de cuentas contables (búsqueda, filtro por tipo, orden por
-columna, jerarquía con sangría), centros de costo, periodos contables, registro de asientos.
+columna, jerarquía con sangría), centros de costo, periodos contables, registro de asientos,
+balance de saldos, libro diario y libro mayor.
 Rediseño visual completo (tema sobrio, paleta de marca) con modo oscuro conmutable persistido
 por navegador. **Pendiente conocido:** las pantallas de catálogo no ocultan aún sus botones de
 edición a perfiles sin permiso (el backend sí devuelve 403; es solo inconsistencia de UX).
