@@ -8,6 +8,9 @@ import CuentasContables from "./components/Catalogo/CuentasContables";
 import CentrosCosto from "./components/Catalogo/CentrosCosto";
 import PeriodosContables from "./components/Catalogo/PeriodosContables";
 import RegistrarAsiento from "./components/Asientos/RegistrarAsiento";
+import BalanceSaldos from "./components/Libros/BalanceSaldos";
+import LibroDiario from "./components/Libros/LibroDiario";
+import LibroMayor from "./components/Libros/LibroMayor";
 
 function App() {
   const [status, setStatus] = useState("Verificando conexión con la API...");
@@ -83,6 +86,15 @@ function App() {
         <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/catalogo/periodos">
           Periodos
         </NavLink>
+        <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/libros/balance">
+          Balance de saldos
+        </NavLink>
+        <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/libros/diario">
+          Libro diario
+        </NavLink>
+        <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/libros/mayor">
+          Libro mayor
+        </NavLink>
       </nav>
 
       <main className="content">
@@ -101,6 +113,9 @@ function App() {
           <Route path="/catalogo/cuentas" element={<CuentasContables />} />
           <Route path="/catalogo/centros-costo" element={<CentrosCosto />} />
           <Route path="/catalogo/periodos" element={<PeriodosContables />} />
+          <Route path="/libros/balance" element={<BalanceSaldos />} />
+          <Route path="/libros/diario" element={<LibroDiario />} />
+          <Route path="/libros/mayor" element={<LibroMayor />} />
         </Routes>
       </main>
     </div>

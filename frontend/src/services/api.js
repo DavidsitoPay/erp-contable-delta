@@ -51,4 +51,13 @@ export const asientosApi = {
   crear: (asiento) => api.post("/asientos", asiento),
 };
 
+// M3 Libros y auxiliares: balance de saldos, libro diario, libro mayor.
+// Las tres son consultas de solo lectura, sin crear/actualizar/eliminar.
+export const librosApi = {
+  balanceSaldos: () => api.get("/libros/balance-saldos"),
+  diario: (periodoId) => api.get("/libros/diario", { params: { periodoId } }),
+  mayor: (cuentaId, periodoId) =>
+    api.get("/libros/mayor", { params: { cuentaId, periodoId: periodoId || undefined } }),
+};
+
 export default api;
