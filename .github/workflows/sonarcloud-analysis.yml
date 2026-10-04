@@ -67,12 +67,17 @@ jobs:
           mkdir -p ./.sonar/scanner
           dotnet tool install dotnet-sonarscanner --tool-path ./.sonar/scanner
 
-      # begin/end envuelve el build real: así el analizador de C# recibe el
-      # modelo semántico completo (referencias, tipos resueltos), no solo texto.
-      # El mismo paso, al correr en el mismo working directory, también
-      # recoge JS/SQL/YAML igual que hacía Automatic Analysis — no hace
-      # falta un scanner aparte por lenguaje.
-      - name: SonarCloud — begin
+      # begin, build y end van en UN SOLO step (no 3), sin "cd" de por medio y
+      # sin "dotnet restore" separado: el scanner de .NET engancha el build vía
+      # una variable de entorno que `begin` deja escrita, y "no se construyó
+      # ningún proyecto" (el error que dio esta corrida) casi siempre es por
+      # romper ese enganche — pasos separados, carpeta de trabajo distinta al
+      # invocar el build, o un restore/build previo que deja todo "ya
+      # compilado" e incremental lo salta. Este es el patrón oficial exacto de
+      # SonarSource para GitHub Actions + .NET. El mismo build, al correr desde
+      # la raíz del repo, también recoge JS/SQL/YAML — no hace falta un
+      # scanner aparte por lenguaje.
+      - name: SonarCloud — begin, build y end
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
@@ -83,19 +88,9 @@ jobs:
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.exclusions="frontend/node_modules/**,frontend/dist/**,**/bin/**,**/obj/**,graphify-out/**"
 
-      # Mismo comando que devops/azure-pipelines.yml (Build_Backend): construir
-      # DeltaERP.Api basta, porque referencia a Domain e Infrastructure por
-      # ProjectReference y arrastra el build de los tres.
-      - name: Build backend (.NET)
-        run: |
-          cd backend/src/DeltaERP.Api
-          dotnet restore
-          dotnet build --configuration Release --no-incremental
+          dotnet build backend/src/DeltaERP.Api/DeltaERP.Api.csproj --configuration Release
 
-      - name: SonarCloud — end
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
+          ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
 
       # NOTA: todavía no hay coverage aquí a propósito — el proyecto no tiene
       # ningún test automatizado (ni *.Tests.csproj en backend, ni *.test.jsx
