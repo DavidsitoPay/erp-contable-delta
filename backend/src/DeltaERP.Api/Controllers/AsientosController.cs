@@ -31,83 +31,16 @@ public class AsientosController : ControllerBase
             return BadRequest(new { error });
         }
 
-        // Valida existencia/estado activo/cuenta-hoja en un solo pase para dar un
-        // 400 claro en vez de un 500 por FK violation.
-        var idsCuentaUsados = asiento.Lineas.Select(l => l.CuentaId).Distinct().ToList();
-        var cuentasUsadas = await _db.CuentasContables
-            .Where(c => idsCuentaUsados.Contains(c.Id))
-            .ToDictionaryAsync(c => c.Id);
-        var idsConHijos = (await _db.CuentasContables
-            .Where(c => c.CuentaPadreId != null && idsCuentaUsados.Contains(c.CuentaPadreId!.Value))
-            .Select(c => c.CuentaPadreId!.Value)
-            .Distinct()
-            .ToListAsync())
-            .ToHashSet();
-
-        var cuentasInexistentes = new List<string>();
-        var cuentasInactivas = new List<string>();
-        var cuentasDeMayorAfectadas = new List<string>();
-        foreach (var cuentaId in idsCuentaUsados)
+        var errorCuentas = await ValidarCuentasAsync(asiento);
+        if (errorCuentas is not null)
         {
-            if (!cuentasUsadas.TryGetValue(cuentaId, out var cuenta))
-            {
-                cuentasInexistentes.Add(cuentaId.ToString());
-                continue;
-            }
-            if (!cuenta.Activa)
-            {
-                cuentasInactivas.Add(cuenta.Codigo);
-            }
-            if (idsConHijos.Contains(cuentaId))
-            {
-                cuentasDeMayorAfectadas.Add(cuenta.Codigo);
-            }
-        }
-        if (cuentasInexistentes.Count > 0)
-        {
-            return BadRequest(new
-            {
-                error = $"Las siguientes cuentas no existen: {string.Join(", ", cuentasInexistentes)}."
-            });
-        }
-        if (cuentasInactivas.Count > 0)
-        {
-            return BadRequest(new
-            {
-                error = $"Las siguientes cuentas están inactivas y no pueden recibir movimientos: {string.Join(", ", cuentasInactivas)}."
-            });
-        }
-        if (cuentasDeMayorAfectadas.Count > 0)
-        {
-            return BadRequest(new
-            {
-                error = $"Las siguientes cuentas son de mayor (tienen subcuentas) y no pueden recibir movimientos directos: {string.Join(", ", cuentasDeMayorAfectadas)}."
-            });
+            return BadRequest(new { error = errorCuentas });
         }
 
-        // Mismo criterio que cuentaId: evitar un 500 por FK violation en centroCostoId.
-        var idsCentroCostoUsados = asiento.Lineas
-            .Where(l => l.CentroCostoId is not null)
-            .Select(l => l.CentroCostoId!.Value)
-            .Distinct()
-            .ToList();
-        if (idsCentroCostoUsados.Count > 0)
+        var errorCentros = await ValidarCentrosCostoAsync(asiento);
+        if (errorCentros is not null)
         {
-            var idsCentroCostoExistentes = (await _db.CentrosCosto
-                .Where(c => idsCentroCostoUsados.Contains(c.Id))
-                .Select(c => c.Id)
-                .ToListAsync())
-                .ToHashSet();
-            var centrosCostoInexistentes = idsCentroCostoUsados
-                .Where(id => !idsCentroCostoExistentes.Contains(id))
-                .ToList();
-            if (centrosCostoInexistentes.Count > 0)
-            {
-                return BadRequest(new
-                {
-                    error = $"Los siguientes centros de costo no existen: {string.Join(", ", centrosCostoInexistentes)}."
-                });
-            }
+            return BadRequest(new { error = errorCentros });
         }
 
         // RN-02: pre-chequeo amigable; trg_bloquear_periodo_cerrado_linea ya lo
@@ -139,7 +72,7 @@ public class AsientosController : ControllerBase
         // RN-08: alta del asiento y registro de auditoría deben ser atómicos, por eso
         // BeginTransactionAsync en vez de dejar que SaveChangesAsync use su propia
         // transacción implícita. No se atrapa la excepción: si el CALL falla, debe
-        // fallar todo el request.
+        // fallar la operación completa.
         await using var transaction = await _db.Database.BeginTransactionAsync();
 
         _db.AsientosContables.Add(asiento);
@@ -151,5 +84,77 @@ public class AsientosController : ControllerBase
         await transaction.CommitAsync();
 
         return CreatedAtAction(nameof(Registrar), new { id = asiento.Id }, asiento);
+    }
+
+    private async Task<string?> ValidarCuentasAsync(AsientoContable asiento)
+    {
+        var idsCuentaUsados = asiento.Lineas.Select(l => l.CuentaId).Distinct().ToList();
+        var cuentasUsadas = await _db.CuentasContables
+            .Where(c => idsCuentaUsados.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id);
+        var idsConHijos = (await _db.CuentasContables
+            .Where(c => c.CuentaPadreId != null && idsCuentaUsados.Contains(c.CuentaPadreId.Value))
+            .Select(c => c.CuentaPadreId!.Value)
+            .Distinct()
+            .ToListAsync())
+            .ToHashSet();
+
+        var cuentasInexistentes = new List<string>();
+        var cuentasInactivas = new List<string>();
+        var cuentasDeMayorAfectadas = new List<string>();
+        foreach (var cuentaId in idsCuentaUsados)
+        {
+            if (!cuentasUsadas.TryGetValue(cuentaId, out var cuenta))
+            {
+                cuentasInexistentes.Add(cuentaId.ToString());
+                continue;
+            }
+            if (!cuenta.Activa)
+            {
+                cuentasInactivas.Add(cuenta.Codigo);
+            }
+            if (idsConHijos.Contains(cuentaId))
+            {
+                cuentasDeMayorAfectadas.Add(cuenta.Codigo);
+            }
+        }
+        if (cuentasInexistentes.Count > 0)
+        {
+            return $"Las siguientes cuentas no existen: {string.Join(", ", cuentasInexistentes)}.";
+        }
+        if (cuentasInactivas.Count > 0)
+        {
+            return $"Las siguientes cuentas están inactivas y no pueden recibir movimientos: {string.Join(", ", cuentasInactivas)}.";
+        }
+        if (cuentasDeMayorAfectadas.Count > 0)
+        {
+            return $"Las siguientes cuentas son de mayor (tienen subcuentas) y no pueden recibir movimientos directos: {string.Join(", ", cuentasDeMayorAfectadas)}.";
+        }
+        return null;
+    }
+
+    private async Task<string?> ValidarCentrosCostoAsync(AsientoContable asiento)
+    {
+        var idsCentroCostoUsados = asiento.Lineas
+            .Where(l => l.CentroCostoId is not null)
+            .Select(l => l.CentroCostoId!.Value)
+            .Distinct()
+            .ToList();
+        if (idsCentroCostoUsados.Count > 0)
+        {
+            var idsCentroCostoExistentes = (await _db.CentrosCosto
+                .Where(c => idsCentroCostoUsados.Contains(c.Id))
+                .Select(c => c.Id)
+                .ToListAsync())
+                .ToHashSet();
+            var centrosCostoInexistentes = idsCentroCostoUsados
+                .Where(id => !idsCentroCostoExistentes.Contains(id))
+                .ToList();
+            if (centrosCostoInexistentes.Count > 0)
+            {
+                return $"Los siguientes centros de costo no existen: {string.Join(", ", centrosCostoInexistentes)}.";
+            }
+        }
+        return null;
     }
 }

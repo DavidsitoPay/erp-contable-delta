@@ -30,7 +30,7 @@ function CuentasContables() {
     let profundidad = 0;
     let actual = cuentas.find((c) => c.id === cuentaId);
     let iteraciones = 0;
-    while (actual && actual.cuentaPadreId && iteraciones < maxIteraciones) {
+    while (actual?.cuentaPadreId && iteraciones < maxIteraciones) {
       actual = cuentas.find((c) => c.id === actual.cuentaPadreId);
       if (actual) profundidad++;
       iteraciones++;
@@ -156,7 +156,7 @@ function CuentasContables() {
             checked={incluirInactivas}
             onChange={(e) => setIncluirInactivas(e.target.checked)}
           />
-          Incluir inactivas
+          <span>Incluir inactivas</span>
         </label>
       </div>
 

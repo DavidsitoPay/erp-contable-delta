@@ -131,27 +131,22 @@ public class CuentasContablesController : ControllerBase
         {
             return BadRequest(new { error = "Una cuenta no puede ser su propia cuenta padre." });
         }
-        if (cuenta.CuentaPadreId is not null)
+        return await ValidarPadreAsync(cuenta, esCreacion);
+    }
+
+    private async Task<IActionResult?> ValidarPadreAsync(CuentaContable cuenta, bool esCreacion)
+    {
+        if (cuenta.CuentaPadreId is not { } padreId) return null;
+        var padre = await _db.CuentasContables.FindAsync(padreId);
+        if (padre is null)
         {
-            var padre = await _db.CuentasContables.FindAsync(cuenta.CuentaPadreId.Value);
-            if (padre is null)
-            {
-                return BadRequest(new { error = "La cuenta padre indicada no existe." });
-            }
-            if (padre.Tipo != cuenta.Tipo)
-            {
-                return BadRequest(new { error = $"La cuenta padre debe ser del mismo tipo ({cuenta.Tipo})." });
-            }
-            if (!esCreacion)
-            {
-                var errorCiclo = await ValidarSinCicloAsync(cuenta.Id, cuenta.CuentaPadreId.Value);
-                if (errorCiclo is not null)
-                {
-                    return errorCiclo;
-                }
-            }
+            return BadRequest(new { error = "La cuenta padre indicada no existe." });
         }
-        return null;
+        if (padre.Tipo != cuenta.Tipo)
+        {
+            return BadRequest(new { error = $"La cuenta padre debe ser del mismo tipo ({cuenta.Tipo})." });
+        }
+        return esCreacion ? null : await ValidarSinCicloAsync(cuenta.Id, padreId);
     }
 
     private async Task<IActionResult?> ValidarSinCicloAsync(int idCuentaEditada, int padreIdPropuesto)
