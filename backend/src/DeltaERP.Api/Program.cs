@@ -79,4 +79,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "Delta ERP
 await app.RunAsync();
 
 // Expone Program a WebApplicationFactory<Program> en las pruebas de integración.
-public partial class Program;
+public partial class Program
+{
+    protected Program() { }
+}

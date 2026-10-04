@@ -11,6 +11,7 @@ on:
       - "frontend/**"
       - "database/**"
       - ".github/workflows/backend-build-check.yml"
+      - ".github/requirements-ci.txt"
 
 permissions:
   contents: read
@@ -58,7 +59,7 @@ jobs:
 
       - name: Instalar dependencias del frontend
         working-directory: frontend
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Pruebas del frontend
         working-directory: frontend
@@ -66,7 +67,7 @@ jobs:
 
       - name: Pruebas backend
         if: ${{ !cancelled() }}
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
         with:
           name: Pruebas backend
           path: backend/tests/DeltaERP.Tests/TestResults/*.trx
@@ -76,7 +77,7 @@ jobs:
 
       - name: Pruebas frontend
         if: ${{ !cancelled() }}
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
         with:
           name: Pruebas frontend
           path: frontend/test-results/junit.xml
@@ -86,7 +87,7 @@ jobs:
 
       - name: Gate de coverage (líneas cambiadas vs main)
         run: |
-          pip install diff-cover
+          pip install --only-binary :all: --require-hashes -r .github/requirements-ci.txt
           diff-cover backend/tests/DeltaERP.Tests/TestResults/*/coverage.cobertura.xml frontend/coverage/cobertura-coverage.xml --compare-branch=origin/main --fail-under=80 --format markdown:diff-cover.md --exclude '**/Program.cs' --exclude '**/DeltaErpDbContext.cs' --exclude '**/Entities/*' --exclude 'frontend/src/main.jsx' --exclude '*.css' --exclude '*.config.js' --exclude '*.test.*' --exclude '*/src/test/*'
 
       - name: Agregar reporte de coverage a GitHub
@@ -96,7 +97,7 @@ jobs:
 
       - name: Gate de duplicación (jscpd)
         if: ${{ !cancelled() }}
-        run: npx --yes jscpd@4 --min-tokens 80 --exitCode 1 --format "csharp,javascript,jsx,sql" --reporters "console,markdown" --output jscpd-report --ignore "**/bin/**,**/obj/**,**/node_modules/**,**/dist/**,**/coverage/**,**/test-results/**,database/04_procedures.sql,backend/tests/**,**/*.test.*,frontend/src/test/**" backend/src frontend/src database
+        run: npx --yes --ignore-scripts jscpd@4.2.4 --min-tokens 80 --exitCode 1 --format "csharp,javascript,jsx,sql" --reporters "console,markdown" --output jscpd-report --ignore "**/bin/**,**/obj/**,**/node_modules/**,**/dist/**,**/coverage/**,**/test-results/**,database/04_procedures.sql,backend/tests/**,**/*.test.*,frontend/src/test/**" backend/src frontend/src database
 
       - name: Agregar reporte de duplicación a GitHub
         if: ${{ !cancelled() }}

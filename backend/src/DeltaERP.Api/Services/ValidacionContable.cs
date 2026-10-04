@@ -74,7 +74,7 @@ public class ValidacionContable
         var idsCuenta = documento.Lineas.Select(l => l.CuentaContableId).Append(documento.CuentaControlId).Distinct().ToList();
         var cuentasPorId = await _db.CuentasContables.Where(c => idsCuenta.Contains(c.Id)).ToDictionaryAsync(c => c.Id);
         var idsConSubcuentas = (await _db.CuentasContables
-            .Where(c => c.CuentaPadreId != null && idsCuenta.Contains(c.CuentaPadreId!.Value))
+            .Where(c => c.CuentaPadreId != null && idsCuenta.Contains(c.CuentaPadreId.Value))
             .Select(c => c.CuentaPadreId!.Value)
             .Distinct()
             .ToListAsync())

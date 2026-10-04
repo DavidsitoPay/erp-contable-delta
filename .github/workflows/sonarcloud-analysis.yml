@@ -81,7 +81,7 @@ jobs:
       - name: Pruebas del frontend con cobertura
         working-directory: frontend
         run: |
-          npm ci
+          npm ci --ignore-scripts
           npm run test:ci
           sed -i 's#^SF:src/#SF:frontend/src/#' coverage/lcov.info
 
@@ -109,7 +109,7 @@ jobs:
 
       - name: Pruebas backend
         if: ${{ !cancelled() }}
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
         with:
           name: Pruebas backend
           path: backend/tests/DeltaERP.Tests/TestResults/*.trx
@@ -119,7 +119,7 @@ jobs:
 
       - name: Pruebas frontend
         if: ${{ !cancelled() }}
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
         with:
           name: Pruebas frontend
           path: frontend/test-results/junit.xml

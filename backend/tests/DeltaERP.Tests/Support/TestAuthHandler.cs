@@ -8,7 +8,7 @@ namespace DeltaERP.Tests.Support;
 
 public sealed class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
-    public const string Scheme = "Test";
+    public const string SchemeName = "Test";
     public const string UserIdHeader = "X-Test-User-Id";
     public const string RoleHeader = "X-Test-Role";
 
@@ -34,7 +34,7 @@ public sealed class TestAuthHandler : AuthenticationHandler<AuthenticationScheme
             claims.Add(new Claim(ClaimTypes.Role, role.ToString()));
         }
 
-        var ticket = new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(claims, Scheme)), Scheme);
+        var ticket = new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName)), SchemeName);
         return Task.FromResult(AuthenticateResult.Success(ticket));
     }
 }

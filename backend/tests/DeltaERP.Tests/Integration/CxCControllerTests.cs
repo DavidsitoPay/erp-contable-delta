@@ -330,7 +330,7 @@ public class CxCControllerTests
         aplicaciones = new object[] { new { documentoId, montoAplicado = monto } },
     };
 
-    private async Task<int> CrearFacturaAsync(HttpClient client, Escenario e, int clienteId)
+    private static async Task<int> CrearFacturaAsync(HttpClient client, Escenario e, int clienteId)
     {
         var response = await client.PostAsJsonAsync("/api/cxc/facturas", PayloadFactura(e, $"F-{TestData.Sufijo()}", clienteId, e.CuentaIngreso, null));
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);

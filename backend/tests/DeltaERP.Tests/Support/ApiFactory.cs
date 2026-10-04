@@ -25,10 +25,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         {
             services.AddAuthentication(options =>
             {
-                options.DefaultScheme = TestAuthHandler.Scheme;
-                options.DefaultAuthenticateScheme = TestAuthHandler.Scheme;
-                options.DefaultChallengeScheme = TestAuthHandler.Scheme;
-            }).AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.Scheme, _ => { });
+                options.DefaultScheme = TestAuthHandler.SchemeName;
+                options.DefaultAuthenticateScheme = TestAuthHandler.SchemeName;
+                options.DefaultChallengeScheme = TestAuthHandler.SchemeName;
+            }).AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
         });
     }
 }

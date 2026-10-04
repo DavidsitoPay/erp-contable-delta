@@ -4,6 +4,9 @@ namespace DeltaERP.Tests.Unit;
 
 public class PagoRulesTests
 {
+    private static readonly decimal[] MontosPrueba = { 10m, 0m };
+    private static readonly decimal[] MontoValido = { 10m };
+
     private static DocumentoPagable Documento(int id, string numero = "F-1", int terceroId = 1, string estado = "Vigente", decimal saldo = 100m) =>
         new(id, numero, terceroId, estado, saldo);
 
@@ -16,7 +19,7 @@ public class PagoRulesTests
     [Fact]
     public void SolicitudConMontoNoPositivo_EsInvalida()
     {
-        Assert.Equal("El monto aplicado a cada factura debe ser mayor a cero.", PagoRules.ValidarSolicitud(new[] { 10m, 0m }, "Efectivo"));
+        Assert.Equal("El monto aplicado a cada factura debe ser mayor a cero.", PagoRules.ValidarSolicitud(MontosPrueba, "Efectivo"));
     }
 
     [Theory]
@@ -24,13 +27,13 @@ public class PagoRulesTests
     [InlineData("  ")]
     public void SolicitudSinMetodoDePago_EsInvalida(string? metodo)
     {
-        Assert.Equal("El método de pago es obligatorio.", PagoRules.ValidarSolicitud(new[] { 10m }, metodo));
+        Assert.Equal("El método de pago es obligatorio.", PagoRules.ValidarSolicitud(MontoValido, metodo));
     }
 
     [Fact]
     public void SolicitudCorrecta_NoDevuelveError()
     {
-        Assert.Null(PagoRules.ValidarSolicitud(new[] { 10m }, "Efectivo"));
+        Assert.Null(PagoRules.ValidarSolicitud(MontoValido, "Efectivo"));
     }
 
     [Fact]
