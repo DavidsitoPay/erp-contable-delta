@@ -121,6 +121,10 @@ public class PeriodosContablesController : ControllerBase
             // RAISE EXCEPTION del procedimiento: el perfil del usuario no está autorizado.
             return StatusCode(StatusCodes.Status403Forbidden, new { error = ex.MessageText });
         }
+        catch (PostgresException ex) when (ex.SqlState == "55000")
+        {
+            return Conflict(new { error = ex.MessageText });
+        }
 
         var periodo = await _db.PeriodosContables.FindAsync(periodoId);
         return Ok(periodo);

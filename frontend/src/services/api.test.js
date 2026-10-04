@@ -105,4 +105,18 @@ describe("funciones de la API", () => {
     expect(mocks.instance.post).toHaveBeenCalledWith(`/${ruta}/facturas`, { numero: "F-1" });
     expect(mocks.instance.post).toHaveBeenCalledWith(`/${ruta}/pagos`, { metodoPago: "Efectivo" });
   });
+
+  it("periodosApi.cerrar y reabrir envían POST a las rutas correctas", () => {
+    periodosApi.cerrar(1);
+    periodosApi.reabrir(1);
+
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(1, "/periodos/1/cerrar");
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(2, "/periodos/1/reabrir");
+  });
+
+  it("convierte string ids numéricos a números en la URL", () => {
+    cuentasApi.desactivar("7");
+
+    expect(mocks.instance.delete).toHaveBeenCalledWith("/cuentas/7");
+  });
 });

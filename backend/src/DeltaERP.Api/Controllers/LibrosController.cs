@@ -1,3 +1,4 @@
+using DeltaERP.Domain.Entities;
 using DeltaERP.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,8 +18,7 @@ public class LibrosController : ControllerBase
         _db = db;
     }
 
-    // La vista ya excluye asientos no confirmados y aplica el signo según la
-    // naturaleza de cada cuenta; este endpoint no repite esa lógica, solo la expone.
+    // La vista solo suma asientos Confirmado/Anulado y aplica el signo según la naturaleza de la cuenta.
     [HttpGet("balance-saldos")]
     public async Task<IActionResult> BalanceSaldos()
     {
@@ -37,11 +37,9 @@ public class LibrosController : ControllerBase
             return BadRequest(new { error = "El periodo indicado no existe." });
         }
 
-        // Filtro por Confirmado explícito aunque hoy no existan otros estados, para
-        // no depender de esa invariante si el flujo cambia más adelante.
         var asientos = await _db.AsientosContables
             .Include(a => a.Lineas)
-            .Where(a => a.PeriodoId == periodoId && a.Estado == "Confirmado")
+            .Where(a => a.PeriodoId == periodoId && AsientoContable.EstadosContabilizados.Contains(a.Estado))
             .OrderBy(a => a.Fecha).ThenBy(a => a.Numero)
             .ToListAsync();
 
@@ -91,7 +89,7 @@ public class LibrosController : ControllerBase
         var query = _db.LineasAsiento
             .Where(l => l.CuentaId == cuentaId)
             .Join(
-                _db.AsientosContables.Where(a => a.Estado == "Confirmado"),
+                _db.AsientosContables.Where(a => AsientoContable.EstadosContabilizados.Contains(a.Estado)),
                 l => l.AsientoId,
                 a => a.Id,
                 (l, a) => new { Linea = l, Asiento = a });

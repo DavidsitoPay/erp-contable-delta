@@ -8,7 +8,7 @@
 |---|---|---|
 | RN-01 | Todo asiento contable debe cumplir partida doble (suma de débitos = suma de créditos) antes de confirmarse. | Trigger (`trg_validar_partida_doble`) |
 | RN-02 | No se permite registrar, modificar ni eliminar líneas de asiento de un periodo contable cerrado. | Trigger (`trg_bloquear_periodo_cerrado_linea`) |
-| RN-03 | Un asiento solo puede reversarse mediante un asiento de reversión; nunca se elimina físicamente. | Trigger (bloquea DELETE) + Procedimiento (`sp_reversar_asiento`) |
+| RN-03 | Un asiento solo puede reversarse mediante un asiento de reversión; nunca se elimina físicamente. Solo se reversa un asiento `Confirmado` que no sea a su vez una reversa (número `REV-%`), por lo que no puede reversarse dos veces. El original queda `Anulado` (confirmado y ya revertido) y la reversa `REV-<numero>` queda `Confirmado` con las líneas invertidas; ambos permanecen contabilizados y se netean a 0. | Trigger (bloquea DELETE) + Procedimiento (`sp_reversar_asiento`) |
 | RN-04 | Toda factura CxC/CxP debe asociarse a un cliente/proveedor existente en el catálogo. | FK (`contraparte`) |
 | RN-05 | La aplicación de un pago a una factura no puede exceder el saldo pendiente de esa factura. | Trigger (`trg_limite_pago_cxc` / `trg_limite_pago_cxp`) |
 | RN-06 | Toda transacción se registra en la moneda funcional (GTQ); operaciones en otra moneda se convierten con el tipo de cambio vigente. | API (al construir el asiento) |
@@ -27,8 +27,18 @@ Ninguna entidad almacena un saldo como columna libremente editable:
 - `DocumentoCxC` / `DocumentoCxP` — sin columna `saldo_pendiente`; se deriva de
   `vw_saldodocumentocxc` / `vw_saldodocumentocxp`.
 - `SaldoCuentaPeriodo` — única excepción: es un saldo **almacenado a propósito**,
-  pero inmutable (trigger bloquea UPDATE/DELETE) y escrito una sola vez, desde
-  `sp_cerrar_periodo`, como fotografía del cierre. No se recalcula con cada
-  transacción como intentaba hacer un trigger en la versión anterior de este
-  documento — la corrección oficial usa vistas para el saldo en tiempo real y
-  reserva la tabla solo para el cierre.
+  pero inmutable (trigger bloquea UPDATE/DELETE) y escrito solo desde
+  `sp_cerrar_periodo`, como fotografía del cierre. Cada cierre agrega una versión
+  nueva (`cierre_numero` 1, 2, ...); las anteriores se conservan sin cambios y
+  `vw_saldocuentaperiodo_vigente` expone la última por periodo. No se recalcula con
+  cada transacción: las vistas dan el saldo en tiempo real y la tabla se reserva
+  para el cierre.
+
+## Libros, balance y cierre
+
+- Solo los asientos `Borrador` se excluyen de libro diario, libro mayor, balance de
+  saldos (`vw_balance_saldos`) y de la fotografía del cierre; `Confirmado` y `Anulado`
+  se contabilizan.
+- `sp_cerrar_periodo` solo cierra un periodo `Abierto` y `sp_reabrir_periodo` solo
+  reabre uno `Cerrado`; en otro estado fallan con el código `55000`, que la API
+  responde `409 Conflict`. Las fallas de autorización del procedimiento responden `403`.

@@ -61,6 +61,10 @@ Sin cambios.
 ### AsientoContable / LineaAsiento / PlantillaAsiento / LineaPlantillaAsiento
 Sin cambios estructurales respecto a la versión anterior.
 
+Estados de `AsientoContable`: `Borrador` (no contabilizado), `Confirmado` y `Anulado`
+(confirmado y ya revertido por su asiento `REV-<numero>`). `Confirmado` y `Anulado`
+permanecen contabilizados.
+
 ## 4. Cuentas por Cobrar (CxC)
 
 ### DocumentoCxC
@@ -111,14 +115,16 @@ Sin cambios estructurales.
 
 ### SaldoCuentaPeriodo
 Fotografía inalterable del saldo de cada cuenta contable al momento del cierre
-contable. Se escribe una sola vez desde `sp_cerrar_periodo`; un trigger impide
-cualquier modificación o borrado posterior. La combinación de periodo y cuenta es
-única.
+contable. Se escribe solo desde `sp_cerrar_periodo`; un trigger impide cualquier
+modificación o borrado posterior. Cada cierre inserta una versión nueva
+(`cierre_numero` 1, 2, ...) y las versiones anteriores se conservan. La combinación
+de periodo, cierre y cuenta es única (`UNIQUE(periodo_id, cierre_numero, cuenta_id)`).
 
 | Campo | Tipo | Nulo | Llave | Descripción |
 |---|---|---|---|---|
 | id | SERIAL | No | PK | Identificador único |
 | periodo_id | INT | No | FK -> PeriodoContable(id) | Periodo al que corresponde |
+| cierre_numero | INT | No | | Versión del cierre del periodo (1, 2, ...) |
 | cuenta_id | INT | No | FK -> CuentaContable(id) | Cuenta consolidada |
 | total_debito | DECIMAL(14,2) | No | | Suma de débitos del periodo |
 | total_credito | DECIMAL(14,2) | No | | Suma de créditos del periodo |
@@ -134,7 +140,8 @@ saldo del periodo en curso se sigue calculando siempre en tiempo real
 
 | Vista | Reemplaza a | Descripción |
 |---|---|---|
-| `vw_balance_saldos` | `CuentaContable.saldo` (nunca existió como columna) | Saldo en tiempo real por cuenta contable |
+| `vw_balance_saldos` | `CuentaContable.saldo` (nunca existió como columna) | Saldo en tiempo real por cuenta contable, sobre asientos `Confirmado` y `Anulado` (se excluye `Borrador`) |
+| `vw_saldocuentaperiodo_vigente` | — | Último cierre (`cierre_numero` máximo) de `SaldoCuentaPeriodo` por periodo |
 | `vw_saldocuentabancaria` | `CuentaBancaria.saldo` | Saldo en tiempo real por cuenta bancaria |
 | `vw_saldodocumentocxc` | `DocumentoCxC.saldo_pendiente` | Saldo pendiente por documento de CxC |
 | `vw_saldodocumentocxp` | `DocumentoCxP.saldo_pendiente` | Saldo pendiente por documento de CxP |
