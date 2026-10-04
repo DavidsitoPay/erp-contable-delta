@@ -64,9 +64,6 @@ jobs:
         working-directory: frontend
         run: npm run test:ci
 
-      - name: Ajustar rutas en lcov.info
-        run: sed -i 's#^SF:src/#SF:frontend/src/#' frontend/coverage/lcov.info
-
       - name: Pruebas backend
         if: ${{ !cancelled() }}
         uses: dorny/test-reporter@v1
@@ -90,7 +87,7 @@ jobs:
       - name: Gate de coverage (líneas cambiadas vs main)
         run: |
           pip install diff-cover
-          diff-cover backend/tests/DeltaERP.Tests/TestResults/*/coverage.cobertura.xml frontend/coverage/lcov.info --compare-branch=origin/main --fail-under=80 --markdown-report diff-cover.md --exclude '**/Program.cs' --exclude '**/DeltaErpDbContext.cs' --exclude '**/Entities/*' --exclude 'frontend/src/main.jsx' --exclude '*.css' --exclude '*.config.js' --exclude '*.test.*' --exclude '*/src/test/*'
+          diff-cover backend/tests/DeltaERP.Tests/TestResults/*/coverage.cobertura.xml frontend/coverage/cobertura-coverage.xml --compare-branch=origin/main --fail-under=80 --format markdown:diff-cover.md --exclude '**/Program.cs' --exclude '**/DeltaErpDbContext.cs' --exclude '**/Entities/*' --exclude 'frontend/src/main.jsx' --exclude '*.css' --exclude '*.config.js' --exclude '*.test.*' --exclude '*/src/test/*'
 
       - name: Agregar reporte de coverage a GitHub
         if: ${{ !cancelled() }}
