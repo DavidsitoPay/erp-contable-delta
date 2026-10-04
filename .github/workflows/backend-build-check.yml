@@ -1,28 +1,105 @@
-name: Backend — verificación rápida de build (dev)
+name: Pruebas — backend y frontend (dev)
 
-# Solo "dotnet build": valida que compile en push directo a dev, sin el costo
-# de Sonar/Neon/Docker de los otros workflows de backend.
+# Suite completa en push directo a dev: unitarias, integración contra un
+# PostgreSQL real (los triggers aplican RN-01/03/05) y pruebas del frontend.
+# Sin Sonar/Neon/Docker, que viven en los otros workflows.
 on:
   push:
     branches: [dev]
     paths:
       - "backend/**"
+      - "frontend/**"
+      - "database/**"
       - ".github/workflows/backend-build-check.yml"
+      - ".github/requirements-ci.txt"
 
 permissions:
   contents: read
+  checks: write
 
 jobs:
-  build:
+  pruebas:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: delta_erp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_PG_CONN: "Host=localhost;Port=5432;Database=delta_erp_test;Username=postgres;Password=postgres"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Configurar .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
 
-      - name: dotnet build
-        run: dotnet build backend/src/DeltaERP.Api/DeltaERP.Api.csproj --configuration Release
+      - name: Pruebas del backend (unitarias e integración)
+        run: dotnet test backend/tests/DeltaERP.Tests/DeltaERP.Tests.csproj --configuration Release --logger "trx;LogFileName=backend-tests.trx" --collect:"XPlat Code Coverage"
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependencias del frontend
+        working-directory: frontend
+        run: npm ci --ignore-scripts
+
+      - name: Pruebas del frontend
+        working-directory: frontend
+        run: npm run test:ci
+
+      - name: Pruebas backend
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
+        with:
+          name: Pruebas backend
+          path: backend/tests/DeltaERP.Tests/TestResults/*.trx
+          reporter: dotnet-trx
+          fail-on-error: false
+          fail-on-empty: false
+
+      - name: Pruebas frontend
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
+        with:
+          name: Pruebas frontend
+          path: frontend/test-results/junit.xml
+          reporter: java-junit
+          fail-on-error: false
+          fail-on-empty: false
+
+      - name: Gate de coverage (líneas cambiadas vs main)
+        run: |
+          pip install --only-binary :all: --require-hashes -r .github/requirements-ci.txt
+          diff-cover backend/tests/DeltaERP.Tests/TestResults/*/coverage.cobertura.xml frontend/coverage/cobertura-coverage.xml --compare-branch=origin/main --fail-under=80 --format markdown:diff-cover.md --exclude '**/Program.cs' --exclude '**/DeltaErpDbContext.cs' --exclude '**/Entities/*' --exclude 'frontend/src/main.jsx' --exclude '*.css' --exclude '*.config.js' --exclude '*.test.*' --exclude '*/src/test/*'
+
+      - name: Agregar reporte de coverage a GitHub
+        if: ${{ !cancelled() }}
+        run: |
+          [ -f diff-cover.md ] && cat diff-cover.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Gate de duplicación (jscpd)
+        if: ${{ !cancelled() }}
+        run: npx --yes --ignore-scripts jscpd@4.2.4 --min-tokens 80 --exitCode 1 --format "csharp,javascript,jsx,sql" --reporters "console,markdown" --output jscpd-report --ignore "**/bin/**,**/obj/**,**/node_modules/**,**/dist/**,**/coverage/**,**/test-results/**,database/04_procedures.sql,backend/tests/**,**/*.test.*,frontend/src/test/**" backend/src frontend/src database
+
+      - name: Agregar reporte de duplicación a GitHub
+        if: ${{ !cancelled() }}
+        run: |
+          [ -f jscpd-report/jscpd-report.md ] && cat jscpd-report/jscpd-report.md >> "$GITHUB_STEP_SUMMARY" || true

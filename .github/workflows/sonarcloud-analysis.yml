@@ -10,11 +10,28 @@ on:
 
 permissions:
   contents: read
+  checks: write
 
 jobs:
   sonarcloud:
     name: Build y análisis (backend .NET + frontend + SQL)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: delta_erp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_PG_CONN: "Host=localhost;Port=5432;Database=delta_erp_test;Username=postgres;Password=postgres"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,6 +49,13 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Cache de paquetes de SonarCloud
         uses: actions/cache@v4
@@ -54,10 +78,17 @@ jobs:
           mkdir -p ./.sonar/scanner
           dotnet tool install dotnet-sonarscanner --tool-path ./.sonar/scanner
 
-      # begin/build/end deben ir en UN SOLO step, sin "cd" y sin "dotnet restore"
+      - name: Pruebas del frontend con cobertura
+        working-directory: frontend
+        run: |
+          npm ci --ignore-scripts
+          npm run test:ci
+          sed -i 's#^SF:src/#SF:frontend/src/#' coverage/lcov.info
+
+      # begin/test/end deben ir en UN SOLO step, sin "cd" y sin "dotnet restore"
       # aparte: el scanner engancha el build vía una env var que escribe "begin";
-      # separarlos rompe ese enganche.
-      - name: SonarCloud — begin, build y end
+      # separarlos rompe ese enganche. "dotnet test" compila y corre las pruebas.
+      - name: SonarCloud — begin, test y end
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
@@ -66,8 +97,53 @@ jobs:
             /o:"davidsitopay" \
             /d:sonar.token="${SONAR_TOKEN}" \
             /d:sonar.host.url="https://sonarcloud.io" \
-            /d:sonar.exclusions="frontend/node_modules/**,frontend/dist/**,**/bin/**,**/obj/**,graphify-out/**"
+            /d:sonar.exclusions="frontend/node_modules/**,frontend/dist/**,frontend/coverage/**,**/bin/**,**/obj/**,graphify-out/**" \
+            /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml" \
+            /d:sonar.javascript.lcov.reportPaths="frontend/coverage/lcov.info" \
+            /d:sonar.coverage.exclusions="**/Program.cs,**/DeltaErpDbContext.cs,**/Entities/**,frontend/src/main.jsx,frontend/src/**/*.css,frontend/**/*.config.js,frontend/src/test/**,**/*.test.*" \
+            /d:sonar.cpd.exclusions="database/04_procedures.sql,backend/tests/**,frontend/**/*.test.*,frontend/src/test/**"
 
-          dotnet build backend/src/DeltaERP.Api/DeltaERP.Api.csproj --configuration Release
+          dotnet test backend/tests/DeltaERP.Tests/DeltaERP.Tests.csproj --configuration Release --logger "trx;LogFileName=backend-tests.trx" --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
           ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
+
+      - name: Pruebas backend
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
+        with:
+          name: Pruebas backend
+          path: backend/tests/DeltaERP.Tests/TestResults/*.trx
+          reporter: dotnet-trx
+          fail-on-error: false
+          fail-on-empty: false
+
+      - name: Pruebas frontend
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
+        with:
+          name: Pruebas frontend
+          path: frontend/test-results/junit.xml
+          reporter: java-junit
+          fail-on-error: false
+          fail-on-empty: false
+
+      - name: Resumen de cobertura
+        if: ${{ !cancelled() }}
+        run: |
+          echo "## Cobertura de pruebas" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f frontend/coverage/coverage-summary.json ]; then
+            FRONTEND_COV=$(jq '.total.lines.pct' frontend/coverage/coverage-summary.json)
+            echo "- Frontend: ${FRONTEND_COV}% de líneas" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f backend/tests/DeltaERP.Tests/TestResults/*/coverage.opencover.xml ]; then
+            BACKEND_COV=$(grep -oP 'sequenceCoverage="\K[^"]+' backend/tests/DeltaERP.Tests/TestResults/*/coverage.opencover.xml | head -1)
+            [ -n "$BACKEND_COV" ] && echo "- Backend: ${BACKEND_COV}% de líneas" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "*Nota: la cobertura mostrada aquí es total; el gate de Sonar mide solo código nuevo.*" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            SONAR_URL="https://sonarcloud.io/summary/new_code?id=DavidsitoPay_erp-contable-delta&pullRequest=${{ github.event.pull_request.number }}"
+          else
+            SONAR_URL="https://sonarcloud.io/summary/new_code?id=DavidsitoPay_erp-contable-delta&branch=main"
+          fi
+          echo "[Análisis completo en SonarCloud]($SONAR_URL)" >> "$GITHUB_STEP_SUMMARY"

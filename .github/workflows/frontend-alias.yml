@@ -65,3 +65,11 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{\"alias\": \"${ALIAS}\"}")
           echo "$RESP" | jq .
+
+      - name: Resumen del frontend
+        run: |
+          {
+            echo "## Frontend"
+            echo "- Deployment: https://${{ steps.wait.outputs.url }}"
+            echo "- Alias: https://${{ env.ALIAS }}"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -15,6 +15,14 @@ import Contrapartes from "./components/Contrapartes/Contrapartes";
 import CuentasPorCobrar from "./components/CxC/CuentasPorCobrar";
 import CuentasPorPagar from "./components/CxP/CuentasPorPagar";
 
+function TabLink({ to, children }) {
+  return (
+    <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to={to}>
+      {children}
+    </NavLink>
+  );
+}
+
 function App() {
   const [status, setStatus] = useState("Verificando conexión con la API...");
   const [statusVariant, setStatusVariant] = useState("pending");
@@ -75,38 +83,16 @@ function App() {
       </header>
 
       <nav className="tab-nav">
-        {puedeRegistrarAsientos && (
-          <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/asientos">
-            Registrar asiento
-          </NavLink>
-        )}
-        <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/catalogo/cuentas">
-          Cuentas contables
-        </NavLink>
-        <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/catalogo/centros-costo">
-          Centros de costo
-        </NavLink>
-        <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/catalogo/periodos">
-          Periodos
-        </NavLink>
-        <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/libros/balance">
-          Balance de saldos
-        </NavLink>
-        <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/libros/diario">
-          Libro diario
-        </NavLink>
-        <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/libros/mayor">
-          Libro mayor
-        </NavLink>
-        <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/contrapartes">
-          Clientes y proveedores
-        </NavLink>
-        <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/cxc">
-          Cuentas por cobrar
-        </NavLink>
-        <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/cxp">
-          Cuentas por pagar
-        </NavLink>
+        {puedeRegistrarAsientos && <TabLink to="/asientos">Registrar asiento</TabLink>}
+        <TabLink to="/catalogo/cuentas">Cuentas contables</TabLink>
+        <TabLink to="/catalogo/centros-costo">Centros de costo</TabLink>
+        <TabLink to="/catalogo/periodos">Periodos</TabLink>
+        <TabLink to="/libros/balance">Balance de saldos</TabLink>
+        <TabLink to="/libros/diario">Libro diario</TabLink>
+        <TabLink to="/libros/mayor">Libro mayor</TabLink>
+        <TabLink to="/contrapartes">Clientes y proveedores</TabLink>
+        <TabLink to="/cxc">Cuentas por cobrar</TabLink>
+        <TabLink to="/cxp">Cuentas por pagar</TabLink>
       </nav>
 
       <main className="content">

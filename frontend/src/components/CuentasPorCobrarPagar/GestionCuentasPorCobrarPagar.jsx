@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { centrosCostoApi, contrapartesApi, cuentasApi, periodosApi } from "../../services/api";
+import { useLineas } from "../useLineas";
 
 const TIPOS_DOCUMENTO = ["Factura", "NotaCredito", "NotaDebito"];
 
@@ -48,7 +49,7 @@ function GestionCuentasPorCobrarPagar({ config }) {
   const [errorFactura, setErrorFactura] = useState("");
   const [enviandoFactura, setEnviandoFactura] = useState(false);
   const [formFactura, setFormFactura] = useState(formFacturaVacio);
-  const [lineas, setLineas] = useState([lineaVacia()]);
+  const { lineas, actualizarLinea, agregarLinea, quitarLinea, reiniciarLineas } = useLineas(lineaVacia, 1);
 
   const [errorPago, setErrorPago] = useState("");
   const [enviandoPago, setEnviandoPago] = useState(false);
@@ -69,10 +70,10 @@ function GestionCuentasPorCobrarPagar({ config }) {
   }
 
   useEffect(() => {
-    contrapartesApi.listar(tipoContraparte).then(({ data }) => setContrapartes(data));
-    cuentasApi.listar(true).then(({ data }) => setCuentas(data));
-    centrosCostoApi.listar().then(({ data }) => setCentros(data));
-    periodosApi.listar().then(({ data }) => setPeriodos(data));
+    void contrapartesApi.listar(tipoContraparte).then(({ data }) => setContrapartes(data));
+    void cuentasApi.listar(true).then(({ data }) => setCuentas(data));
+    void centrosCostoApi.listar().then(({ data }) => setCentros(data));
+    void periodosApi.listar().then(({ data }) => setPeriodos(data));
     void cargarFacturas();
     void cargarPagos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,18 +84,6 @@ function GestionCuentasPorCobrarPagar({ config }) {
   const cuentasHoja = cuentas.filter((c) => c.activa && !idsConHijos.has(c.id));
   const cuentasControl = cuentasHoja.filter(filtroCuentaControl);
   const periodosAbiertos = periodos.filter((p) => p.estado === "Abierto");
-
-  function actualizarLinea(index, campo, valor) {
-    setLineas((prev) => prev.map((l, i) => (i === index ? { ...l, [campo]: valor } : l)));
-  }
-
-  function agregarLinea() {
-    setLineas((prev) => [...prev, lineaVacia()]);
-  }
-
-  function quitarLinea(index) {
-    setLineas((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
-  }
 
   const totalFactura = lineas.reduce((acc, l) => acc + monto(l.cantidad) * monto(l.precioUnitario) * (1 + monto(l.porcentajeImpuesto) / 100), 0);
 
@@ -130,7 +119,7 @@ function GestionCuentasPorCobrarPagar({ config }) {
       };
       await api.crearFactura(payload);
       setFormFactura({ ...formFacturaVacio(), periodoId: formFactura.periodoId, cuentaControlId: formFactura.cuentaControlId });
-      setLineas([lineaVacia()]);
+      reiniciarLineas();
       await cargarFacturas();
     } catch (err) {
       setErrorFactura(err.response?.data?.error || "No se pudo registrar la factura.");

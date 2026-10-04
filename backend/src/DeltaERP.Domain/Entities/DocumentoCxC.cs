@@ -4,7 +4,7 @@ namespace DeltaERP.Domain.Entities;
 
 // Sin columna "saldo_pendiente": se calcula en vw_saldodocumentocxc. AsientoId
 // queda poblado al registrar la factura (ver CxCController), nunca se asigna a mano.
-public class DocumentoCxC
+public class DocumentoCxC : IDocumentoFactura
 {
     public static readonly string[] TiposDocumentoValidos = { "Factura", "NotaCredito", "NotaDebito" };
 
@@ -20,6 +20,8 @@ public class DocumentoCxC
     public int? AsientoId { get; set; }
 
     public List<LineaDocumentoCxC> Lineas { get; set; } = new();
+
+    IReadOnlyList<ILineaFactura> IDocumentoFactura.Lineas => Lineas;
 
     // Solo se usa en el POST de creación; el asiento generado ya guarda esta
     // cuenta en su propia línea de débito, por eso no persiste como columna.

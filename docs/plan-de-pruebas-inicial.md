@@ -13,6 +13,9 @@
 >
 > Cobertura: 18 Test Cases, uno por cada Historia de Usuario (En-F1-Hn) del backlog
 > completo en `docs/backlog-features-historias.md`. Priority 1–4 (1=más alto).
+>
+> Estos casos son de verificación manual. Las pruebas automatizadas (xUnit y Vitest,
+> ejecutadas en CI) se describen en la sección "Pruebas y calidad" de `docs/architecture.md`.
 
 | Test Case | Descripción | Pasos (Action → Expected Result) | Parent | Priority | Fecha objetivo |
 |---|---|---|---|---|---|

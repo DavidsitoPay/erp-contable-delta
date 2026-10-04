@@ -1,16 +1,13 @@
 import { useEffect, useState } from "react";
 import { asientosApi, centrosCostoApi, cuentasApi, periodosApi } from "../../services/api";
+import { useLineas } from "../useLineas";
 
 function hoyIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
 function lineaVacia() {
-  return { cuentaId: "", centroCostoId: "", debito: "", credito: "" };
-}
-
-function lineasVacias() {
-  return [lineaVacia(), lineaVacia()];
+  return { id: crypto.randomUUID(), cuentaId: "", centroCostoId: "", debito: "", credito: "" };
 }
 
 const vacio = { numero: "", fecha: hoyIso(), periodoId: "" };
@@ -33,7 +30,7 @@ const formatoMoneda = new Intl.NumberFormat("es-GT", {
 
 function RegistrarAsiento() {
   const [form, setForm] = useState(vacio);
-  const [lineas, setLineas] = useState(lineasVacias());
+  const { lineas, actualizarLinea, agregarLinea, quitarLinea, reiniciarLineas } = useLineas(lineaVacia, 2);
   const [cuentas, setCuentas] = useState([]);
   const [centros, setCentros] = useState([]);
   const [periodos, setPeriodos] = useState([]);
@@ -46,9 +43,9 @@ function RegistrarAsiento() {
     // una cuenta es "de mayor" mirando si CUALQUIER cuenta (activa o no) la
     // declara como padre. Si aquí solo pidiéramos activas, una cuenta cuyos
     // únicos hijos están inactivos se clasificaría (mal) como hoja.
-    cuentasApi.listar(true).then(({ data }) => setCuentas(data));
-    centrosCostoApi.listar().then(({ data }) => setCentros(data));
-    periodosApi.listar().then(({ data }) => setPeriodos(data));
+    void cuentasApi.listar(true).then(({ data }) => setCuentas(data));
+    void centrosCostoApi.listar().then(({ data }) => setCentros(data));
+    void periodosApi.listar().then(({ data }) => setPeriodos(data));
   }, []);
 
   // Solo cuentas "hoja" (que ninguna otra cuenta declara como su padre) pueden
@@ -78,18 +75,6 @@ function RegistrarAsiento() {
     cuadrado &&
     totalDebito > 0;
 
-  function actualizarLinea(index, campo, valor) {
-    setLineas((prev) => prev.map((l, i) => (i === index ? { ...l, [campo]: valor } : l)));
-  }
-
-  function agregarLinea() {
-    setLineas((prev) => [...prev, lineaVacia()]);
-  }
-
-  function quitarLinea(index) {
-    setLineas((prev) => (prev.length <= 2 ? prev : prev.filter((_, i) => i !== index)));
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
@@ -115,7 +100,7 @@ function RegistrarAsiento() {
       // fecha y periodo: es normal que el contador registre varios asientos
       // seguidos del mismo día y periodo.
       setForm((prev) => ({ ...prev, numero: "" }));
-      setLineas(lineasVacias());
+      reiniciarLineas();
     } catch (err) {
       setError(err.response?.data?.error || "No se pudo registrar el asiento.");
     } finally {
@@ -176,7 +161,7 @@ function RegistrarAsiento() {
               </thead>
               <tbody>
                 {lineas.map((linea, index) => (
-                  <tr key={index}>
+                  <tr key={linea.id}>
                     <td>
                       <select
                         className="select"

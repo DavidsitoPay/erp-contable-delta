@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { periodosApi } from "../../services/api";
+import { FormularioCatalogo, TablaCatalogo } from "./CatalogoCrud";
 
 const vacio = { nombre: "", fechaInicio: "", fechaFin: "" };
 
@@ -59,39 +60,26 @@ function PeriodosContables() {
     <div>
       <h2>Periodos contables</h2>
 
-      <form onSubmit={handleSubmit} className="catalog-form">
+      <FormularioCatalogo onSubmit={handleSubmit} cargando={cargando} error={error}>
         <input className="input" placeholder="Nombre" aria-label="Nombre" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
         <input type="date" className="input" aria-label="Fecha de inicio" value={form.fechaInicio} onChange={(e) => setForm({ ...form, fechaInicio: e.target.value })} required />
         <input type="date" className="input" aria-label="Fecha de fin" value={form.fechaFin} onChange={(e) => setForm({ ...form, fechaFin: e.target.value })} required />
-        <button type="submit" disabled={cargando} className="btn btn-primary">Agregar</button>
-      </form>
-      {error && <p className="error-chip">{error}</p>}
+      </FormularioCatalogo>
 
-      <div className="table-wrap">
-        <div className="table-scroll">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Nombre</th><th>Fecha inicio</th><th>Fecha fin</th><th>Estado</th><th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {periodos.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.nombre}</td>
-                  <td>{p.fechaInicio}</td>
-                  <td>{p.fechaFin}</td>
-                  <td>{p.estado}</td>
-                  <td>
-                    {p.estado === "Abierto" && <button className="btn btn-danger-outline btn-sm" onClick={() => handleCerrar(p.id)}>Cerrar</button>}
-                    {p.estado === "Cerrado" && <button className="btn btn-outline btn-sm" onClick={() => handleReabrir(p.id)}>Reabrir</button>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <TablaCatalogo encabezados={["Nombre", "Fecha inicio", "Fecha fin", "Estado"]}>
+        {periodos.map((p) => (
+          <tr key={p.id}>
+            <td>{p.nombre}</td>
+            <td>{p.fechaInicio}</td>
+            <td>{p.fechaFin}</td>
+            <td>{p.estado}</td>
+            <td>
+              {p.estado === "Abierto" && <button className="btn btn-danger-outline btn-sm" onClick={() => handleCerrar(p.id)}>Cerrar</button>}
+              {p.estado === "Cerrado" && <button className="btn btn-outline btn-sm" onClick={() => handleReabrir(p.id)}>Reabrir</button>}
+            </td>
+          </tr>
+        ))}
+      </TablaCatalogo>
     </div>
   );
 }

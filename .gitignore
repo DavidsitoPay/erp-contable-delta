@@ -2,12 +2,16 @@
 bin/
 obj/
 *.user
+TestResults/
 
 # Node / React
 node_modules/
 dist/
 .env
 .env.local
+coverage/
+test-results/
+jscpd-report/
 
 # Docker
 *.log

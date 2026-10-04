@@ -15,11 +15,11 @@ function LibroDiario() {
   const [cargando, setCargando] = useState(false);
 
   useEffect(() => {
-    periodosApi.listar().then(({ data }) => setPeriodos(data));
+    void periodosApi.listar().then(({ data }) => setPeriodos(data));
     // incluirInactivos=true: un asiento ya registrado pudo haber usado un
     // centro de costo que luego se desactivó, y el libro diario es un
     // reporte histórico — debe seguir mostrando su nombre, no "—".
-    centrosCostoApi.listar(true).then(({ data }) => setCentros(data));
+    void centrosCostoApi.listar(true).then(({ data }) => setCentros(data));
   }, []);
 
   const nombreCentroCosto = (id) => centros.find((c) => c.id === id)?.nombre ?? null;

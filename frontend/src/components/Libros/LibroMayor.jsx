@@ -16,8 +16,8 @@ function LibroMayor() {
   const [cargando, setCargando] = useState(false);
 
   useEffect(() => {
-    cuentasApi.listar(true).then(({ data }) => setCuentas(data));
-    periodosApi.listar().then(({ data }) => setPeriodos(data));
+    void cuentasApi.listar(true).then(({ data }) => setCuentas(data));
+    void periodosApi.listar().then(({ data }) => setPeriodos(data));
   }, []);
 
   useEffect(() => {
