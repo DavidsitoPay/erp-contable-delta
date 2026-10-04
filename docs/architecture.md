@@ -112,9 +112,11 @@ SonarCloud.
 **Quality gate de SonarCloud.** Cobertura mínima de 80 % sobre código nuevo y
 duplicación máxima de 3 %. Quedan fuera de la cobertura `Program.cs`,
 `DeltaErpDbContext.cs`, `Entities/`, `main.jsx`, hojas de estilo, archivos
-`*.config.js`, `frontend/src/test/` y los propios archivos de prueba. Quedan fuera de
-la detección de duplicación `database/04_procedures.sql`, `backend/tests/` y las
-pruebas del frontend.
+`*.config.js`, `frontend/src/test/` y los propios archivos de prueba. Quedan fuera de la detección de duplicación en SonarCloud `backend/tests/` y las
+pruebas del frontend (`frontend/**/*.test.*`, `frontend/src/test/**`). La carpeta `database/` se
+excluye del análisis de SonarCloud porque su analizador SQL es para Oracle PL/SQL; la
+duplicación en SQL se cubre con el jscpd de `backend-build-check.yml`, que ignora
+`database/04_procedures.sql`.
 
 ## Arquitectura de despliegue
 
@@ -137,8 +139,8 @@ independientes (`.github/workflows/`):
 - `frontend-alias.yml`: tras cada deploy de producción en Vercel, reapunta el
   dominio corto del proyecto al nuevo despliegue.
 - `sonarcloud-analysis.yml`: en cada Pull Request y en cada push a `main` corre las
-  pruebas con cobertura y analiza calidad y seguridad del código (backend, frontend
-  y SQL) en SonarCloud.
+  pruebas con cobertura y analiza calidad y seguridad del código (backend y frontend)
+  en SonarCloud.
 - `backend-build-check.yml`: en cada push a `dev` corre la suite completa de pruebas
   del backend y del frontend, antes de que el cambio llegue a un Pull Request o a `main`.
 
