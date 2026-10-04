@@ -7,7 +7,7 @@ function hoyIso() {
 }
 
 function lineaVacia() {
-  return { cuentaId: "", centroCostoId: "", debito: "", credito: "" };
+  return { id: crypto.randomUUID(), cuentaId: "", centroCostoId: "", debito: "", credito: "" };
 }
 
 const vacio = { numero: "", fecha: hoyIso(), periodoId: "" };
@@ -43,9 +43,9 @@ function RegistrarAsiento() {
     // una cuenta es "de mayor" mirando si CUALQUIER cuenta (activa o no) la
     // declara como padre. Si aquí solo pidiéramos activas, una cuenta cuyos
     // únicos hijos están inactivos se clasificaría (mal) como hoja.
-    cuentasApi.listar(true).then(({ data }) => setCuentas(data));
-    centrosCostoApi.listar().then(({ data }) => setCentros(data));
-    periodosApi.listar().then(({ data }) => setPeriodos(data));
+    void cuentasApi.listar(true).then(({ data }) => setCuentas(data));
+    void centrosCostoApi.listar().then(({ data }) => setCentros(data));
+    void periodosApi.listar().then(({ data }) => setPeriodos(data));
   }, []);
 
   // Solo cuentas "hoja" (que ninguna otra cuenta declara como su padre) pueden
@@ -161,7 +161,7 @@ function RegistrarAsiento() {
               </thead>
               <tbody>
                 {lineas.map((linea, index) => (
-                  <tr key={index}>
+                  <tr key={linea.id}>
                     <td>
                       <select
                         className="select"

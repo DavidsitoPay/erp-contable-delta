@@ -70,10 +70,10 @@ function GestionCuentasPorCobrarPagar({ config }) {
   }
 
   useEffect(() => {
-    contrapartesApi.listar(tipoContraparte).then(({ data }) => setContrapartes(data));
-    cuentasApi.listar(true).then(({ data }) => setCuentas(data));
-    centrosCostoApi.listar().then(({ data }) => setCentros(data));
-    periodosApi.listar().then(({ data }) => setPeriodos(data));
+    void contrapartesApi.listar(tipoContraparte).then(({ data }) => setContrapartes(data));
+    void cuentasApi.listar(true).then(({ data }) => setCuentas(data));
+    void centrosCostoApi.listar().then(({ data }) => setCentros(data));
+    void periodosApi.listar().then(({ data }) => setPeriodos(data));
     void cargarFacturas();
     void cargarPagos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
