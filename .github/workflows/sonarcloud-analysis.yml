@@ -1,0 +1,101 @@
+name: SonarCloud — análisis de código
+
+# Reemplaza el "Automatic Analysis" (app de GitHub, sin build real) por un
+# análisis real vía CI: el Automatic Analysis nunca pudo ver backend/ (C#)
+# porque no ejecuta ningún build — solo escanea texto por extensión, y el
+# analizador de .NET necesita envolver un `dotnet build` real (dotnet-sonarscanner
+# begin/end) para generar el modelo semántico que detecta bugs/vulnerabilidades
+# en C#. Antes de que este workflow corra en main, hay que apagar Automatic
+# Analysis en SonarCloud (Administration > Analysis Method) — los dos modos
+# no pueden convivir: si Automatic Analysis sigue activo, esta ejecución falla.
+#
+# "pull_request" cubre la decoración de PRs (igual que hacía Automatic
+# Analysis); "push a main" cubre el análisis de la rama larga. dev no se
+# analiza aquí a propósito — es la rama de trabajo, igual que backend-deploy.yml
+# solo despliega desde main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read # baseline mínimo; el scanner solo necesita leer el repo (checkout)
+
+jobs:
+  sonarcloud:
+    name: Build y análisis (backend .NET + frontend + SQL)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # SonarCloud usa el historial completo para blame/autoría por línea
+          # y para calcular el "new code period" — un checkout superficial
+          # (el default de Actions) deja esos datos incompletos.
+          fetch-depth: 0
+
+      - name: Configurar JDK (requerido por el scanner de SonarCloud)
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Cache de paquetes de SonarCloud
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Cache del dotnet-sonarscanner
+        id: cache-sonar-scanner
+        uses: actions/cache@v4
+        with:
+          path: ./.sonar/scanner
+          key: ${{ runner.os }}-sonar-scanner
+          restore-keys: ${{ runner.os }}-sonar-scanner
+
+      - name: Instalar dotnet-sonarscanner
+        if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ./.sonar/scanner
+          dotnet tool install dotnet-sonarscanner --tool-path ./.sonar/scanner
+
+      # begin, build y end van en UN SOLO step (no 3), sin "cd" de por medio y
+      # sin "dotnet restore" separado: el scanner de .NET engancha el build vía
+      # una variable de entorno que `begin` deja escrita, y "no se construyó
+      # ningún proyecto" (el error que dio esta corrida) casi siempre es por
+      # romper ese enganche — pasos separados, carpeta de trabajo distinta al
+      # invocar el build, o un restore/build previo que deja todo "ya
+      # compilado" e incremental lo salta. Este es el patrón oficial exacto de
+      # SonarSource para GitHub Actions + .NET. El mismo build, al correr desde
+      # la raíz del repo, también recoge JS/SQL/YAML — no hace falta un
+      # scanner aparte por lenguaje.
+      - name: SonarCloud — begin, build y end
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          ./.sonar/scanner/dotnet-sonarscanner begin \
+            /k:"DavidsitoPay_erp-contable-delta" \
+            /o:"davidsitopay" \
+            /d:sonar.token="${SONAR_TOKEN}" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.exclusions="frontend/node_modules/**,frontend/dist/**,**/bin/**,**/obj/**,graphify-out/**"
+
+          dotnet build backend/src/DeltaERP.Api/DeltaERP.Api.csproj --configuration Release
+
+          ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
+
+      # NOTA: todavía no hay coverage aquí a propósito — el proyecto no tiene
+      # ningún test automatizado (ni *.Tests.csproj en backend, ni *.test.jsx
+      # propio en frontend) y configurar la importación de coverage sin tests
+      # reales solo mostraría 0%. Cuando existan pruebas, agregar
+      # "dotnet test --collect:..." + "sonar.cs.opencover.reportsPaths" antes
+      # del "begin" (backend) y un step de "npm test -- --coverage" +
+      # "sonar.javascript.lcov.reportPaths" (frontend).
