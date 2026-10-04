@@ -12,6 +12,8 @@ public class LibrosControllerTests
 {
     private const int IdInexistente = 2_000_000_000;
     private readonly PostgresFixture _pg;
+    private static readonly decimal[] SaldosAcumuladosMovimientos = { 100m, 70m, 75m };
+    private static readonly decimal[] SaldosAcumuladosFiltro = { 100m, 70m };
 
     public LibrosControllerTests(PostgresFixture pg)
     {
@@ -162,7 +164,7 @@ public class LibrosControllerTests
         Assert.Equal(a4, movimientosArray[2].GetProperty("asientoId").GetInt32());
 
         var saldosDeudora = movimientos.EnumerateArray().Select(m => m.GetProperty("saldoAcumulado").GetDecimal()).ToArray();
-        Assert.Equal(new[] { 100m, 70m, 75m }, saldosDeudora);
+        Assert.Equal(SaldosAcumuladosMovimientos, saldosDeudora);
 
         Assert.Equal(100m, movimientosArray[0].GetProperty("debito").GetDecimal());
         Assert.Equal(0m, movimientosArray[0].GetProperty("credito").GetDecimal());
@@ -173,7 +175,7 @@ public class LibrosControllerTests
         var movimientosAcreedora = bodyAcreedora.GetProperty("movimientos");
         Assert.Equal(3, movimientosAcreedora.GetArrayLength());
         var saldosAcreedora = movimientosAcreedora.EnumerateArray().Select(m => m.GetProperty("saldoAcumulado").GetDecimal()).ToArray();
-        Assert.Equal(new[] { 100m, 70m, 75m }, saldosAcreedora);
+        Assert.Equal(SaldosAcumuladosMovimientos, saldosAcreedora);
         var primerMovAcreedora = movimientosAcreedora.EnumerateArray().First();
         Assert.Equal(0m, primerMovAcreedora.GetProperty("debito").GetDecimal());
         Assert.Equal(100m, primerMovAcreedora.GetProperty("credito").GetDecimal());
@@ -187,7 +189,7 @@ public class LibrosControllerTests
         Assert.Equal(a1, movimientosFiltroArray[0].GetProperty("asientoId").GetInt32());
         Assert.Equal(a2, movimientosFiltroArray[1].GetProperty("asientoId").GetInt32());
         var saldosFiltro = movimientosFiltro.EnumerateArray().Select(m => m.GetProperty("saldoAcumulado").GetDecimal()).ToArray();
-        Assert.Equal(new[] { 100m, 70m }, saldosFiltro);
+        Assert.Equal(SaldosAcumuladosFiltro, saldosFiltro);
     }
 
     [Fact]
