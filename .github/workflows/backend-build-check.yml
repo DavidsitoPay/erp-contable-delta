@@ -1,0 +1,35 @@
+name: Backend — verificación rápida de build (dev)
+
+# Cierra un hueco real: ni sonarcloud-analysis.yml (solo corre en push a main
+# o en un PR) ni backend-deploy.yml (solo en push a main, después de migrar
+# contra la Neon de producción) validan que el backend compile en un push
+# directo a dev. Sin esto, un build roto en dev no se detecta hasta abrir un
+# PR o hasta llegar a main — ya tocando producción. Este workflow es solo
+# "dotnet build": nada de Sonar, nada de Neon, nada de Docker — rápido y sin
+# costo de análisis, igual que decidimos no correr el scan completo de Sonar
+# en dev (ver sonarcloud-analysis.yml), pero sí queremos saber en segundos si
+# compila.
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-build-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: dotnet build
+        run: dotnet build backend/src/DeltaERP.Api/DeltaERP.Api.csproj --configuration Release
