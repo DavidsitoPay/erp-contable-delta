@@ -18,14 +18,8 @@ function monto(valor) {
   return Number.isFinite(n) ? n : 0;
 }
 
-/**
- * M4/M5 comparten exactamente el mismo flujo (factura con asiento automático +
- * pago con límite RN-05) con solo la terminología y el filtro de cuenta de
- * control invertidos entre Cliente/CxC y Proveedor/CxP — ver CxCController.cs
- * y CxPController.cs en el backend para la misma simetría. config concentra
- * esa diferencia para que CuentasPorCobrar.jsx y CuentasPorPagar.jsx queden
- * como envoltorios delgados en vez de duplicar este componente completo.
- */
+// config aísla las diferencias de terminología/cuenta de control entre CxC y
+// CxP, de ahí las claves dinámicas como formFactura[campoContraparteId].
 function GestionCuentasPorCobrarPagar({ config }) {
   const {
     tipoContraparte,

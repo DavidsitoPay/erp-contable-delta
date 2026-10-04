@@ -1,8 +1,5 @@
 namespace DeltaERP.Domain.Entities;
 
-/// <summary>
-/// Registro contable de partida doble (módulo M2). Ver docs/data-dictionary.md.
-/// </summary>
 public class AsientoContable
 {
     public int Id { get; set; }

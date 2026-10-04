@@ -2,11 +2,6 @@ using DeltaERP.Domain.Entities;
 
 namespace DeltaERP.Domain.Rules;
 
-/// <summary>
-/// RN-01: todo asiento contable debe cumplir partida doble
-/// (suma de débitos = suma de créditos) antes de poder registrarse.
-/// Ver docs/business-rules.md.
-/// </summary>
 public static class PartidaDobleValidator
 {
     public static bool EsValido(AsientoContable asiento, out string? mensajeError)
@@ -35,6 +30,7 @@ public static class PartidaDobleValidator
         var totalDebito = asiento.Lineas.Sum(l => l.Debito);
         var totalCredito = asiento.Lineas.Sum(l => l.Credito);
 
+        // RN-01
         if (totalDebito != totalCredito)
         {
             mensajeError =

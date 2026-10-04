@@ -1,11 +1,8 @@
 -- =====================================================================
 -- 03_triggers.sql
--- Reglas de integridad que NO pueden delegarse en la aplicación:
--- partida doble, bloqueo de periodo cerrado, no eliminación de asientos,
--- límites de aplicación de pagos, e inmutabilidad de bitácora y saldos.
--- La trazabilidad de auditoría (quién ejecutó la acción) SIGUE sin poder
--- resolverse aquí — eso vive en sp_registrar_auditoria (04_procedures.sql),
--- invocado por la API. Ver docs/architecture.md.
+-- Integridad que no puede delegarse en la aplicación: partida doble,
+-- bloqueo de periodo cerrado, no eliminación de asientos, límites de
+-- pago, e inmutabilidad de bitácora y saldos.
 -- =====================================================================
 
 -- --- RN-01: partida doble al confirmar un asiento --------------------------
@@ -16,17 +13,10 @@ DECLARE
     v_total_credito DECIMAL(14,2);
     v_debe_validar  BOOLEAN;
 BEGIN
-    -- En INSERT no existe OLD (es NULL para triggers de INSERT en Postgres), así que
-    -- la comparación de transición OLD.estado solo aplica en UPDATE. Un INSERT que ya
-    -- nace 'Confirmado' (el único flujo real hoy: AsientosController.Registrar hace un
-    -- solo INSERT, sin borrador->confirmación por UPDATE) debe validarse igual.
-    --
-    -- Este trigger corre AFTER INSERT ... DEFERRABLE INITIALLY DEFERRED (no BEFORE):
-    -- EF Core inserta primero la fila de asientocontable (para obtener el id generado)
-    -- y luego, en la MISMA transacción, las filas de lineaasiento que referencian ese
-    -- id. Un BEFORE INSERT vería lineaasiento vacío para este asiento_id (0 filas ->
-    -- 0 = 0 -> "balanceado" siempre, sin importar el contenido real) y nunca detectaría
-    -- un desbalance. Al diferir la validación al COMMIT, ya existen las líneas.
+    -- AFTER INSERT ... DEFERRABLE INITIALLY DEFERRED (no BEFORE): EF Core inserta
+    -- asientocontable y lineaasiento en la misma transacción; un BEFORE INSERT vería
+    -- lineaasiento vacío (0=0, siempre "balanceado"). Un INSERT que ya nace
+    -- 'Confirmado' también debe validarse (OLD no existe en INSERT).
     IF TG_OP = 'INSERT' THEN
         v_debe_validar := NEW.estado = 'Confirmado';
     ELSE

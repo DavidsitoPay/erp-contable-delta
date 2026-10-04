@@ -15,7 +15,7 @@ function PeriodosContables() {
   }
 
   useEffect(() => {
-    cargar();
+    void cargar();
   }, []);
 
   async function handleSubmit(e) {

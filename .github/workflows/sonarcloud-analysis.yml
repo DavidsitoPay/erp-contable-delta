@@ -1,18 +1,7 @@
 name: SonarCloud — análisis de código
 
-# Reemplaza el "Automatic Analysis" (app de GitHub, sin build real) por un
-# análisis real vía CI: el Automatic Analysis nunca pudo ver backend/ (C#)
-# porque no ejecuta ningún build — solo escanea texto por extensión, y el
-# analizador de .NET necesita envolver un `dotnet build` real (dotnet-sonarscanner
-# begin/end) para generar el modelo semántico que detecta bugs/vulnerabilidades
-# en C#. Antes de que este workflow corra en main, hay que apagar Automatic
-# Analysis en SonarCloud (Administration > Analysis Method) — los dos modos
-# no pueden convivir: si Automatic Analysis sigue activo, esta ejecución falla.
-#
-# "pull_request" cubre la decoración de PRs (igual que hacía Automatic
-# Analysis); "push a main" cubre el análisis de la rama larga. dev no se
-# analiza aquí a propósito — es la rama de trabajo, igual que backend-deploy.yml
-# solo despliega desde main.
+# Requiere desactivar "Automatic Analysis" en SonarCloud (Administration >
+# Analysis Method); los dos modos no pueden convivir.
 on:
   push:
     branches: [main]
@@ -20,7 +9,7 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: read # baseline mínimo; el scanner solo necesita leer el repo (checkout)
+  contents: read
 
 jobs:
   sonarcloud:
@@ -30,9 +19,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # SonarCloud usa el historial completo para blame/autoría por línea
-          # y para calcular el "new code period" — un checkout superficial
-          # (el default de Actions) deja esos datos incompletos.
+          # Historial completo: SonarCloud lo necesita para blame y el "new code period".
           fetch-depth: 0
 
       - name: Configurar JDK (requerido por el scanner de SonarCloud)
@@ -67,16 +54,9 @@ jobs:
           mkdir -p ./.sonar/scanner
           dotnet tool install dotnet-sonarscanner --tool-path ./.sonar/scanner
 
-      # begin, build y end van en UN SOLO step (no 3), sin "cd" de por medio y
-      # sin "dotnet restore" separado: el scanner de .NET engancha el build vía
-      # una variable de entorno que `begin` deja escrita, y "no se construyó
-      # ningún proyecto" (el error que dio esta corrida) casi siempre es por
-      # romper ese enganche — pasos separados, carpeta de trabajo distinta al
-      # invocar el build, o un restore/build previo que deja todo "ya
-      # compilado" e incremental lo salta. Este es el patrón oficial exacto de
-      # SonarSource para GitHub Actions + .NET. El mismo build, al correr desde
-      # la raíz del repo, también recoge JS/SQL/YAML — no hace falta un
-      # scanner aparte por lenguaje.
+      # begin/build/end deben ir en UN SOLO step, sin "cd" y sin "dotnet restore"
+      # aparte: el scanner engancha el build vía una env var que escribe "begin";
+      # separarlos rompe ese enganche.
       - name: SonarCloud — begin, build y end
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -91,11 +71,3 @@ jobs:
           dotnet build backend/src/DeltaERP.Api/DeltaERP.Api.csproj --configuration Release
 
           ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
-
-      # NOTA: todavía no hay coverage aquí a propósito — el proyecto no tiene
-      # ningún test automatizado (ni *.Tests.csproj en backend, ni *.test.jsx
-      # propio en frontend) y configurar la importación de coverage sin tests
-      # reales solo mostraría 0%. Cuando existan pruebas, agregar
-      # "dotnet test --collect:..." + "sonar.cs.opencover.reportsPaths" antes
-      # del "begin" (backend) y un step de "npm test -- --coverage" +
-      # "sonar.javascript.lcov.reportPaths" (frontend).

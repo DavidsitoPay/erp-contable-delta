@@ -1,9 +1,5 @@
 -- =====================================================================
 -- 02_functions.sql
--- Las funciones de soporte de los triggers (fn_validar_partida_doble,
--- fn_bloquear_periodo_cerrado, fn_limite_pago_cxc/cxp, fn_bitacora_inmutable,
--- fn_saldoperiodo_inmutable, fn_prevenir_eliminacion_*) se definen junto a
--- sus triggers en 03_triggers.sql, para mantener cada regla en un solo lugar.
--- Este archivo queda para funciones de propósito general que no disparan
--- triggers (ej. validación de consistencia de M9 Importación).
+-- Funciones de soporte de los triggers viven en 03_triggers.sql, junto a su
+-- trigger. Este archivo es para funciones de propósito general sin trigger.
 -- =====================================================================

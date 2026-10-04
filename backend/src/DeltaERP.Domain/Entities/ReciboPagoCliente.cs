@@ -1,11 +1,6 @@
 namespace DeltaERP.Domain.Entities;
 
-/// <summary>
-/// Recibo de pago de un cliente, aplicado a una o varias facturas (RN-05). No
-/// genera AsientoContable: la tabla no tiene columna asiento_id en el modelo
-/// de datos entregado (a diferencia de DocumentoCxC) — el impacto en bancos
-/// se modela en M6 Tesorería (MovimientoTesoreria), fuera de este alcance.
-/// </summary>
+// No genera AsientoContable: no tiene columna asiento_id (a diferencia de DocumentoCxC).
 public class ReciboPagoCliente
 {
     public int Id { get; set; }

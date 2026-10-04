@@ -1,11 +1,7 @@
 namespace DeltaERP.Api.Auth;
 
-/// <summary>
-/// Enlazado a la sección "Jwt" de appsettings.json. La clave de desarrollo está
-/// marcada como local-only (mismo criterio que la contraseña de la BD en
-/// devops/docker-compose.yml); en un entorno real debe venir de un secreto
-/// gestionado (Azure Key Vault, variable de entorno de la pipeline), no del repo.
-/// </summary>
+// Key es solo para desarrollo local; en producción debe venir de un secreto
+// gestionado, no del repo.
 public class JwtOptions
 {
     public const string SectionName = "Jwt";

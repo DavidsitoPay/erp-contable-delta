@@ -8,13 +8,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DeltaERP.Api.Controllers;
 
-/// <summary>
-/// M5 Cuentas por pagar: facturas de proveedores y aplicación de pagos
-/// (RN-05), simétrico a CxCController. La única asimetría real es el asiento
-/// generado: aquí se CREDITA la cuenta de control (Pasivo/Acreedora, ej.
-/// "Cuentas por pagar") y se DEBITA la cuenta de cada línea (gasto/activo
-/// adquirido) — lo inverso de una factura de venta.
-/// </summary>
+// A diferencia de CxC, aquí se CREDITA la cuenta de control (Pasivo/Acreedora) y
+// se DEBITA la cuenta de cada línea: es la operación inversa de una factura de venta.
 [ApiController]
 [Route("api/cxp")]
 [Authorize]

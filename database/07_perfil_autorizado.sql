@@ -1,23 +1,8 @@
 -- =====================================================================
 -- 07_perfil_autorizado.sql
--- Corrige duplicación de literales detectada por SonarCloud (plsql:S1192,
--- impacto HIGH en Mantenibilidad):
---   - 'Confirmado' se repetía 3 veces en fn_validar_partida_doble
---     (03_triggers.sql).
---   - 'Administrador del sistema' se repetía 3 veces — una por cada
---     procedimiento que verifica perfil autorizado (sp_cerrar_periodo,
---     sp_reabrir_periodo, sp_finalizar_conciliacion en 04_procedures.sql).
--- Convención del proyecto (ver cabecera de run_migrations.sh): un script ya
--- aplicado nunca se edita. Este archivo nuevo REDEFINE esas rutinas vía
--- CREATE OR REPLACE — seguro de re-ejecutar y deja el mismo estado final
--- tanto en un entorno que ya corrió 03/04 como en uno que arranca de cero
--- y aplica 01..07 en orden.
 -- =====================================================================
 
--- Postgres no tiene constantes a nivel de módulo (a diferencia de un
--- package de Oracle PL/SQL); el equivalente idiomático es una función SQL
--- de un solo valor, marcada IMMUTABLE. Esto deja el literal del nombre de
--- perfil escrito UNA sola vez en todo el proyecto.
+-- Postgres no tiene constantes de módulo; una función SQL IMMUTABLE es el idiom.
 CREATE OR REPLACE FUNCTION fn_perfil_administrador_sistema() RETURNS VARCHAR AS $$
     SELECT 'Administrador del sistema'::VARCHAR;
 $$ LANGUAGE sql IMMUTABLE;
@@ -26,9 +11,6 @@ CREATE OR REPLACE FUNCTION fn_perfil_contador() RETURNS VARCHAR AS $$
     SELECT 'Contador'::VARCHAR;
 $$ LANGUAGE sql IMMUTABLE;
 
--- Centraliza la verificación de perfil autorizado que antes repetía (misma
--- consulta + misma lista de literales) en sp_cerrar_periodo,
--- sp_reabrir_periodo y sp_finalizar_conciliacion.
 CREATE OR REPLACE FUNCTION fn_usuario_tiene_perfil_autorizado(
     p_usuario_id INT,
     VARIADIC p_perfiles_permitidos VARCHAR[]
@@ -44,8 +26,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- --- RN-01: misma lógica que la versión original en 03_triggers.sql, solo
--- con 'Confirmado' leído de una constante local en vez de repetido 2 veces.
+-- --- RN-01 ---
 CREATE OR REPLACE FUNCTION fn_validar_partida_doble() RETURNS TRIGGER AS $$
 DECLARE
     c_estado_confirmado CONSTANT VARCHAR(20) := 'Confirmado';
@@ -74,9 +55,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- --- Mismas 3 rutinas que 04_procedures.sql, ahora usando el helper de
--- arriba en vez de repetir "SELECT perfil... IF v_perfil_nombre IS DISTINCT
--- FROM '...'" con los nombres de perfil escritos a mano en cada una.
 CREATE OR REPLACE PROCEDURE sp_cerrar_periodo(p_periodo_id INT, p_usuario_id INT)
 LANGUAGE plpgsql
 AS $$
@@ -116,9 +94,8 @@ BEGIN
         RAISE EXCEPTION 'El usuario % no tiene perfil autorizado para reabrir un periodo.', p_usuario_id;
     END IF;
 
-    -- Nota: los registros ya escritos en saldocuentaperiodo para este periodo
-    -- NO se eliminan (son inmutables); un nuevo cierre debe usar otra estrategia
-    -- de conciliación si el periodo se reabre. Definir con el equipo antes de usar.
+    -- saldocuentaperiodo ya escrito para este periodo no se borra (es inmutable);
+    -- un nuevo cierre tras reabrir necesita su propia estrategia de conciliación.
     UPDATE periodocontable SET estado = 'Abierto' WHERE id = p_periodo_id;
 
     CALL sp_registrar_auditoria(p_usuario_id, 'reabrir_periodo', 'periodocontable',

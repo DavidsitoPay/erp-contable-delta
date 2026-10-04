@@ -8,11 +8,8 @@ using Npgsql;
 
 namespace DeltaERP.Api.Controllers;
 
-/// <summary>
-/// M1 Catálogo: cuentas contables. Sin columna de saldo (ver
-/// database/05_views.sql); "eliminar" es desactivar, porque
-/// trg_prevenir_eliminacion_cuentacontable bloquea el DELETE físico.
-/// </summary>
+// "Eliminar" es desactivar: trg_prevenir_eliminacion_cuentacontable bloquea
+// el DELETE físico.
 [ApiController]
 [Route("api/cuentas")]
 [Authorize]
@@ -62,9 +59,7 @@ public class CuentasContablesController : ControllerBase
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: "23505" })
         {
-            // Segunda red de seguridad: la comprobación AnyAsync de arriba tiene una
-            // ventana de carrera bajo peticiones concurrentes; el UNIQUE en la base
-            // de datos (cuentacontable.codigo) es la garantía real.
+            // Fallback ante carrera entre el AnyAsync de arriba y el UNIQUE real en la BD.
             return Conflict(new { error = $"Ya existe una cuenta con el código {cuenta.Codigo}." });
         }
         return CreatedAtAction(nameof(Obtener), new { id = cuenta.Id }, cuenta);
@@ -87,8 +82,7 @@ public class CuentasContablesController : ControllerBase
             return error;
         }
 
-        // El código no se permite editar: es la clave de referencia contable
-        // ya usada potencialmente en asientos; solo nombre/tipo/naturaleza/padre.
+        // Código no se edita: es la clave de referencia ya usada en asientos.
         cuenta.Nombre = cambios.Nombre;
         cuenta.Tipo = cambios.Tipo;
         cuenta.Naturaleza = cambios.Naturaleza;
@@ -122,9 +116,8 @@ public class CuentasContablesController : ControllerBase
         {
             return BadRequest(new { error = $"Naturaleza inválida. Debe ser una de: {string.Join(", ", CuentaContable.NaturalezasValidas)}." });
         }
-        // Convención contable: la naturaleza debe corresponder al tipo (Activo/Gasto
-        // -> Deudora, Pasivo/Capital/Ingreso -> Acreedora). Una combinación inconsistente
-        // invertiría el signo del saldo en vw_balance_saldos (database/05_views.sql).
+        // La naturaleza debe corresponder al tipo (Activo/Gasto -> Deudora,
+        // Pasivo/Capital/Ingreso -> Acreedora); si no, el signo se invierte en vw_balance_saldos.
         if (CuentaContable.NaturalezaEsperadaPorTipo.TryGetValue(cuenta.Tipo, out var naturalezaEsperada)
             && cuenta.Naturaleza != naturalezaEsperada)
         {
@@ -161,12 +154,6 @@ public class CuentasContablesController : ControllerBase
         return null;
     }
 
-    /// <summary>
-    /// Recorre la cadena de padres a partir de <paramref name="padreIdPropuesto"/>
-    /// (padre -> abuelo -> ...) para detectar si <paramref name="idCuentaEditada"/>
-    /// aparece en ella, lo que la convertiría en su propio ancestro. Solo aplica en
-    /// Actualizar: una cuenta recién creada no puede formar parte de un ciclo existente.
-    /// </summary>
     private async Task<IActionResult?> ValidarSinCicloAsync(int idCuentaEditada, int padreIdPropuesto)
     {
         const int maxProfundidad = 50; // guarda contra un ciclo preexistente corrupto

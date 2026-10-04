@@ -1,8 +1,3 @@
-/*
-  Delta ERP Contable — reusable component classes
-  Built on top of the tokens in theme.css.
-*/
-
 /* ---------- Layout shell ---------- */
 
 .app-shell {
@@ -340,7 +335,7 @@ input[type="radio"]:focus-visible {
   margin: 0 0 var(--space-md);
 }
 
-/* ---------- Asientos: líneas dinámicas (M2) ---------- */
+/* ---------- Asientos: líneas dinámicas ---------- */
 
 .lineas-toolbar {
   display: flex;
@@ -465,7 +460,6 @@ input[type="radio"]:focus-visible {
   outline-offset: 2px;
 }
 
-/* Utility classes for numeric and code cells */
 .numeric {
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -530,7 +524,6 @@ input[type="radio"]:focus-visible {
   text-align: left;
 }
 
-/* WCAG 2.3.3: Respect prefers-reduced-motion for all transitions */
 @media (prefers-reduced-motion: reduce) {
   .tab-link,
   .btn,

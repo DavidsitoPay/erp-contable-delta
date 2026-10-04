@@ -23,7 +23,7 @@ function CuentasContables() {
   }
 
   useEffect(() => {
-    cargar(incluirInactivas);
+    void cargar(incluirInactivas);
   }, [incluirInactivas]);
 
   function calcularProfundidad(cuentaId, maxIteraciones = 10) {

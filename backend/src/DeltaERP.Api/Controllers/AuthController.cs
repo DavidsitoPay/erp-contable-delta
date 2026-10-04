@@ -26,11 +26,6 @@ public class AuthController : ControllerBase
         _tokenService = tokenService;
     }
 
-    /// <summary>
-    /// M8 Seguridad. Valida credenciales y emite un JWT; el resto de la API
-    /// (ver AsientosController) lo usa para resolver el usuario autenticado
-    /// en vez de confiar en un usuarioId enviado por el cliente.
-    /// </summary>
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {

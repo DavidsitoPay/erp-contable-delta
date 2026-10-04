@@ -5,12 +5,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DeltaERP.Api.Controllers;
 
-/// <summary>
-/// M3 Libros y auxiliares: balance de saldos, libro diario y libro mayor.
-/// Las tres son consultas de solo lectura derivadas en tiempo real de
-/// AsientoContable/LineaAsiento (ver database/05_views.sql y
-/// docs/architecture.md) — no hay POST/PUT/DELETE en este controlador.
-/// </summary>
 [ApiController]
 [Route("api/libros")]
 [Authorize]
@@ -23,13 +17,8 @@ public class LibrosController : ControllerBase
         _db = db;
     }
 
-    /// <summary>
-    /// E3-F1-H1. Devuelve vw_balance_saldos completa: una fila por cada cuenta
-    /// del catálogo (activa o no), saldo en cero si nunca tuvo movimiento. La
-    /// vista ya excluye asientos no confirmados y ya aplica el signo según la
-    /// naturaleza de cada cuenta (ver database/05_views.sql) — este endpoint
-    /// no repite esa lógica, solo la expone.
-    /// </summary>
+    // La vista ya excluye asientos no confirmados y aplica el signo según la
+    // naturaleza de cada cuenta; este endpoint no repite esa lógica, solo la expone.
     [HttpGet("balance-saldos")]
     public async Task<IActionResult> BalanceSaldos()
     {
@@ -39,14 +28,6 @@ public class LibrosController : ControllerBase
         return Ok(balance);
     }
 
-    /// <summary>
-    /// E3-F1-H2 (primera mitad). Asientos confirmados de un periodo, con sus
-    /// líneas, ordenados por fecha y número — igual que pediría un contador al
-    /// imprimir el diario para el cierre mensual. Los asientos en Borrador o
-    /// Anulados no pueden existir hoy (AsientosController solo acepta
-    /// "Confirmado" al registrar), pero el filtro se deja explícito para no
-    /// depender de esa invariante si el flujo cambia más adelante.
-    /// </summary>
     [HttpGet("diario")]
     public async Task<IActionResult> LibroDiario([FromQuery] int periodoId)
     {
@@ -56,14 +37,15 @@ public class LibrosController : ControllerBase
             return BadRequest(new { error = "El periodo indicado no existe." });
         }
 
+        // Filtro por Confirmado explícito aunque hoy no existan otros estados, para
+        // no depender de esa invariante si el flujo cambia más adelante.
         var asientos = await _db.AsientosContables
             .Include(a => a.Lineas)
             .Where(a => a.PeriodoId == periodoId && a.Estado == "Confirmado")
             .OrderBy(a => a.Fecha).ThenBy(a => a.Numero)
             .ToListAsync();
 
-        // Mismo patrón que AsientosController.Registrar: un solo lookup de las
-        // cuentas realmente usadas, no una consulta por línea.
+        // Lookup único de cuentas usadas, no una consulta por línea.
         var idsCuenta = asientos.SelectMany(a => a.Lineas).Select(l => l.CuentaId).Distinct().ToList();
         var cuentas = await _db.CuentasContables
             .Where(c => idsCuenta.Contains(c.Id))
@@ -93,14 +75,6 @@ public class LibrosController : ControllerBase
         return Ok(resultado);
     }
 
-    /// <summary>
-    /// E3-F1-H2 (segunda mitad). Movimientos de una cuenta específica, en
-    /// asientos confirmados, con saldo acumulado línea a línea — el signo del
-    /// acumulado respeta la naturaleza de la cuenta, igual que
-    /// vw_balance_saldos (naturaleza Deudora: débito - crédito; Acreedora al
-    /// revés). periodoId es opcional: sin él se ve el histórico completo de la
-    /// cuenta, igual que vw_balance_saldos.
-    /// </summary>
     [HttpGet("mayor")]
     public async Task<IActionResult> LibroMayor([FromQuery] int cuentaId, [FromQuery] int? periodoId)
     {
@@ -139,6 +113,7 @@ public class LibrosController : ControllerBase
             })
             .ToListAsync();
 
+        // Signo del acumulado sigue la misma convención que vw_balance_saldos.
         var esDeudora = cuenta.Naturaleza == "Deudora";
         decimal acumulado = 0;
         var resultado = movimientos.Select(m =>

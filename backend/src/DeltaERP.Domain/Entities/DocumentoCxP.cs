@@ -2,12 +2,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DeltaERP.Domain.Entities;
 
-/// <summary>
-/// Factura/nota de un proveedor (módulo M5), simétrica a DocumentoCxC. Sin
-/// columna "saldo_pendiente": se calcula en vw_saldodocumentocxp
-/// (database/05_views.sql). Registrarla genera automáticamente el
-/// AsientoContable correspondiente (ver CxPController).
-/// </summary>
+// Sin columna "saldo_pendiente": se calcula en vw_saldodocumentocxp. El asiento
+// se genera al registrarla (ver CxPController).
 public class DocumentoCxP
 {
     public static readonly string[] TiposDocumentoValidos = { "Factura", "NotaCredito", "NotaDebito" };
@@ -25,11 +21,7 @@ public class DocumentoCxP
 
     public List<LineaDocumentoCxP> Lineas { get; set; } = new();
 
-    /// <summary>
-    /// Cuenta de control (Pasivo/Acreedora, ej. "Cuentas por pagar") que
-    /// recibe el crédito del asiento generado al registrar la factura. Ver el
-    /// comentario equivalente en DocumentoCxC.CuentaControlId.
-    /// </summary>
+    // Solo se usa en el POST de creación; ver CuentaControlId en DocumentoCxC.
     [NotMapped]
     public int CuentaControlId { get; set; }
 

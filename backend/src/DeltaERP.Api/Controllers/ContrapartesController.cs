@@ -7,12 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DeltaERP.Api.Controllers;
 
-/// <summary>
-/// Catálogo compartido de clientes y proveedores (M4/M5) — ver
-/// docs/data-dictionary.md sección 2. Sin "desactivar": Contraparte no tiene
-/// columna "activa" en el modelo de datos entregado, así que una vez creada
-/// solo se editan sus datos de contacto (Nombre/Nit/Direccion), nunca el Tipo.
-/// </summary>
+// Contraparte no tiene columna "activa": no hay endpoint de desactivar, solo
+// se editan Nombre/Nit/Direccion, nunca el Tipo.
 [ApiController]
 [Route("api/contrapartes")]
 [Authorize]
@@ -76,9 +72,7 @@ public class ContrapartesController : ControllerBase
             return BadRequest(new { error = "El nombre es obligatorio." });
         }
 
-        // El tipo no se permite editar: ya pudo haberse usado en documentocxc/cxp
-        // (Cliente) o documentocxp (Proveedor) — cambiarlo dejaría esos documentos
-        // apuntando a una contraparte de un tipo distinto al que dice su propio módulo.
+        // Tipo no se actualiza: cambiarlo rompería referencias ya creadas en CxC/CxP.
         contraparte.Nombre = cambios.Nombre;
         contraparte.Nit = cambios.Nit;
         contraparte.Direccion = cambios.Direccion;

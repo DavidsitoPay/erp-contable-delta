@@ -8,15 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DeltaERP.Api.Controllers;
 
-/// <summary>
-/// M4 Cuentas por cobrar: facturas a clientes y aplicación de pagos (RN-05).
-/// Registrar una factura genera automáticamente su AsientoContable (débito a
-/// CuentaControlId, crédito a la cuenta de cada línea) dentro de la misma
-/// transacción — ver Lineas.Crear. Los pagos (ReciboPagoCliente) NO generan
-/// asiento: el modelo de datos entregado no le dio columna asiento_id a esa
-/// tabla (a diferencia de DocumentoCxC); el impacto en bancos queda para
-/// M6 Tesorería (MovimientoTesoreria).
-/// </summary>
+// CrearFactura genera su AsientoContable (débito CuentaControlId, crédito por
+// línea) en la misma transacción. CrearPago NO genera asiento: recibopagocliente
+// no tiene columna asiento_id; el impacto en bancos queda para Tesorería.
 [ApiController]
 [Route("api/cxc")]
 [Authorize]
@@ -101,12 +95,6 @@ public class CxCController : ControllerBase
         });
     }
 
-    /// <summary>
-    /// RN-04 (cliente existente), RN-01 (el asiento generado siempre cuadra
-    /// por construcción: débito = crédito = suma de líneas). El monto de cada
-    /// línea y el total se recalculan en el servidor, igual que
-    /// AsientosController.Registrar — nunca se confía en lo enviado por el cliente.
-    /// </summary>
     [HttpPost("facturas")]
     [Authorize(Roles = Roles.GestionCxC)]
     public async Task<IActionResult> CrearFactura([FromBody] DocumentoCxC documento)
@@ -124,6 +112,7 @@ public class CxCController : ControllerBase
             return BadRequest(new { error = "Cada línea debe tener cantidad mayor a cero, precio unitario y porcentaje de impuesto no negativos." });
         }
 
+        // RN-04
         var cliente = await _db.Contrapartes.FindAsync(documento.ClienteId);
         if (cliente is null || cliente.Tipo != "Cliente")
         {
@@ -140,9 +129,8 @@ public class CxCController : ControllerBase
             return BadRequest(new { error = $"El periodo '{periodo.Nombre}' está en estado '{periodo.Estado}'; no se pueden registrar facturas en un periodo que no esté Abierto." });
         }
 
-        // Mismo criterio de validación de cuentas que AsientosController.Registrar,
-        // aplicado al conjunto combinado: la cuenta de control (débito) y la cuenta
-        // de cada línea (crédito) — todas van a parar a LineaAsiento del asiento generado.
+        // Valida cuenta de control y cuentas de línea juntas: ambas terminan en
+        // LineaAsiento del asiento generado.
         var idsCuentaUsados = documento.Lineas.Select(l => l.CuentaContableId).Append(documento.CuentaControlId).Distinct().ToList();
         var errorCuentas = await ValidarCuentasAsync(idsCuentaUsados);
         if (errorCuentas is not null)
@@ -163,10 +151,8 @@ public class CxCController : ControllerBase
             return errorCentros;
         }
 
-        // Redondeo por línea ANTES de sumar: así el total del asiento (CuentaControlId)
-        // coincide centavo a centavo con la suma de los créditos, sin importar cómo
-        // redondee cada línea individualmente (evita falsos "no cuadra" en el trigger
-        // trg_validar_partida_doble, igual razón que "redondear" en RegistrarAsiento.jsx).
+        // Redondeo por línea antes de sumar: el total coincide centavo a centavo con
+        // la suma de créditos, evitando falsos "no cuadra" en trg_validar_partida_doble.
         var montosLinea = documento.Lineas
             .Select(l => Math.Round(l.Cantidad * l.PrecioUnitario * (1 + l.PorcentajeImpuesto / 100m), 2, MidpointRounding.AwayFromZero))
             .ToList();
@@ -174,6 +160,7 @@ public class CxCController : ControllerBase
 
         var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
+        // RN-01: cuadra por construcción (débito = crédito = montoTotal).
         var asiento = new AsientoContable
         {
             Numero = $"CXC-{documento.Numero}",
@@ -253,14 +240,6 @@ public class CxCController : ControllerBase
         return Ok(resultado);
     }
 
-    /// <summary>
-    /// RN-05: el monto aplicado a cada factura no puede exceder su saldo
-    /// pendiente. Se valida aquí para dar un 400 claro, pero
-    /// trg_limite_pago_cxc (database/03_triggers.sql) revalida a nivel de base
-    /// de datos como respaldo — mismo criterio defense-in-depth que RN-01/RN-02
-    /// en AsientosController. El monto total del recibo se recalcula en el
-    /// servidor como la suma de las aplicaciones enviadas.
-    /// </summary>
     [HttpPost("pagos")]
     [Authorize(Roles = Roles.GestionCxC)]
     public async Task<IActionResult> CrearPago([FromBody] ReciboPagoCliente recibo)
@@ -304,9 +283,8 @@ public class CxCController : ControllerBase
             return BadRequest(new { error = $"Las siguientes facturas no están vigentes: {string.Join(", ", documentosAnulados)}." });
         }
 
-        // Varias aplicaciones del mismo request a la misma factura se suman antes
-        // de comparar contra el saldo pendiente (el trigger ve cada INSERT por
-        // separado, pero dentro de una misma transacción SÍ ve los anteriores).
+        // RN-05: varias aplicaciones a la misma factura se suman antes de comparar
+        // contra el saldo (trg_limite_pago_cxc revalida en la BD como respaldo).
         var aplicadoPorDocumento = recibo.Aplicaciones.GroupBy(a => a.DocumentoId).ToDictionary(g => g.Key, g => g.Sum(a => a.MontoAplicado));
         var excedidos = aplicadoPorDocumento
             .Where(kv => kv.Value > saldos[kv.Key].SaldoPendiente)

@@ -15,7 +15,7 @@ function CentrosCosto() {
   }
 
   useEffect(() => {
-    cargar();
+    void cargar();
   }, []);
 
   async function handleSubmit(e) {

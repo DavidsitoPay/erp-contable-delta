@@ -15,21 +15,16 @@ public class DeltaErpDbContext : DbContext
     public DbSet<CentroCosto> CentrosCosto => Set<CentroCosto>();
     public DbSet<PeriodoContable> PeriodosContables => Set<PeriodoContable>();
 
-    // M3 Libros: balance de saldos. Vista de solo lectura (sin clave primaria),
-    // nunca se hace INSERT/UPDATE/DELETE sobre este DbSet.
     public DbSet<BalanceSaldoCuenta> BalanceSaldos => Set<BalanceSaldoCuenta>();
 
-    // M4/M5: catálogo compartido de clientes y proveedores.
     public DbSet<Contraparte> Contrapartes => Set<Contraparte>();
 
-    // M4 Cuentas por cobrar.
     public DbSet<DocumentoCxC> DocumentosCxC => Set<DocumentoCxC>();
     public DbSet<LineaDocumentoCxC> LineasDocumentoCxC => Set<LineaDocumentoCxC>();
     public DbSet<ReciboPagoCliente> RecibosPagoCliente => Set<ReciboPagoCliente>();
     public DbSet<AplicacionPagoCliente> AplicacionesPagoCliente => Set<AplicacionPagoCliente>();
     public DbSet<SaldoDocumentoCxC> SaldosDocumentoCxC => Set<SaldoDocumentoCxC>();
 
-    // M5 Cuentas por pagar.
     public DbSet<DocumentoCxP> DocumentosCxP => Set<DocumentoCxP>();
     public DbSet<LineaDocumentoCxP> LineasDocumentoCxP => Set<LineaDocumentoCxP>();
     public DbSet<PagoProveedorCabecera> PagosProveedor => Set<PagoProveedorCabecera>();
@@ -38,7 +33,7 @@ public class DeltaErpDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Nombres de tabla en snake_case, igual al diccionario de datos entregado.
+        // snake_case: debe coincidir con los nombres de tabla reales en la base de datos.
         modelBuilder.Entity<Usuario>().ToTable("usuario");
         modelBuilder.Entity<Perfil>().ToTable("perfil");
         modelBuilder.Entity<AsientoContable>().ToTable("asientocontable");
@@ -56,23 +51,20 @@ public class DeltaErpDbContext : DbContext
         modelBuilder.Entity<PagoProveedorCabecera>().ToTable("pagoproveedorcabecera");
         modelBuilder.Entity<AplicacionPagoProveedor>().ToTable("aplicacionpagoproveedor");
 
-        // Sin clave primaria (es una vista, no una tabla) — HasNoKey() es
-        // obligatorio para que EF no intente inferir un Id. ToView en vez de
-        // ToTable: EF la trata como solo lectura y nunca genera migraciones
-        // de escritura sobre ella.
+        // Vistas sin clave primaria: HasNoKey() evita que EF infiera un Id, y ToView
+        // (no ToTable) las deja de solo lectura, sin migraciones de escritura.
         modelBuilder.Entity<BalanceSaldoCuenta>().HasNoKey().ToView("vw_balance_saldos");
         modelBuilder.Entity<SaldoDocumentoCxC>().HasNoKey().ToView("vw_saldodocumentocxc");
         modelBuilder.Entity<SaldoDocumentoCxP>().HasNoKey().ToView("vw_saldodocumentocxp");
 
-        // LineaAsiento no tiene navegación de vuelta hacia AsientoContable, así que
-        // la convención de EF no reconoce AsientoId como la FK de Lineas y crea una
-        // columna sombra (AsientoContableId) que no existe en la base de datos.
+        // Sin navegación inversa, la convención de EF no reconoce AsientoId como FK
+        // y crea una columna sombra (AsientoContableId) inexistente en la base de datos.
         modelBuilder.Entity<AsientoContable>()
             .HasMany(a => a.Lineas)
             .WithOne()
             .HasForeignKey(l => l.AsientoId);
 
-        // Mismo patrón para las colecciones de líneas/aplicaciones de CxC y CxP.
+        // Mismo motivo: evitar columnas sombra en las colecciones de CxC y CxP.
         modelBuilder.Entity<DocumentoCxC>()
             .HasMany(d => d.Lineas)
             .WithOne()

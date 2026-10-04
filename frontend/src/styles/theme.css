@@ -1,8 +1,3 @@
-/*
-  Delta ERP Contable — light-mode design tokens
-  Sober, formal, data-dense interface. Restrained, functional, zero decoration.
-*/
-
 :root {
   /* Superficies */
   --color-bg: #FFFFFF;
@@ -196,12 +191,10 @@ button {
   color: var(--color-text-heading);
 }
 
-/* NOTA sobre --color-row-alt y --color-row-hover en oscuro:
-   En claro, la separación entre filas (alt/hover) es apenas perceptible (1.036:1 y 1.088:1).
-   En oscuro, aunque el reportante los ve "casi pegados", la diferencia ya es 1.11:1 y 1.34:1 — mayor.
-   Además, --color-row-hover (#2E3950) está al techo de posibilidad: con ese fondo, el texto
-   atenuado queda en 4.51:1 y el primario en 4.55:1 — casi en el límite de AA.
-   Aclarar el fondo violaría esos contrastes de texto. No se cambian. */
+/* --color-row-alt/--color-row-hover en oscuro no se aclaran más: con
+   --color-row-hover (#2E3950) el texto atenuado ya queda en 4.51:1 y el
+   primario en 4.55:1, casi en el límite de AA. Aclarar el fondo rompería
+   esos contrastes de texto. */
 
 /* Impresión: fuerza paleta clara independientemente del tema activo */
 @media print {

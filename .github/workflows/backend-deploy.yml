@@ -1,9 +1,5 @@
 name: Backend — build y despliegue a Azure Container Apps
 
-# Solo corre en main: dev es la rama de trabajo y no debe tocar Azure/Neon
-# (el recurso real, compartido). El deploy real ocurre únicamente al mergear
-# a main, y solo cuando cambia algo que afecte al backend, la base de datos
-# o la imagen.
 on:
   push:
     branches: [main]
@@ -15,23 +11,18 @@ on:
   workflow_dispatch: {} # permite correrlo a mano desde la pestaña Actions (cualquier rama)
 
 permissions:
-  contents: read # baseline mínimo; cada job amplía solo lo que de verdad necesita
+  contents: read
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}-backend
 
 jobs:
-  # Corre database/run_migrations.sh contra la branch "production" de Neon:
-  # es la única base de datos ligada a main y al backend desplegado. La
-  # branch "development" de Neon queda para trabajo local de cada dev (no
-  # la toca este pipeline). Si un script SQL falla, este job falla y
-  # build-and-deploy ni siquiera arranca: no se despliega código nuevo sobre
-  # un esquema que no pudo actualizarse.
+  # Corre contra la branch "production" de Neon; si falla, build-and-deploy no arranca.
   migrate:
     runs-on: ubuntu-latest
     permissions:
-      contents: read # solo necesita leer el repo (checkout) para correr los scripts SQL
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,8 +38,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write # necesario para publicar en GitHub Container Registry (ghcr.io)
-      id-token: write # necesario para el login OIDC contra Azure (sin secreto de larga duración)
+      packages: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -59,8 +50,7 @@ jobs:
           echo "name=$(echo '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
       - name: Configurar Docker Buildx
-        # Necesario para el driver docker-container: el driver "docker" por
-        # defecto no soporta el cache export de GHA (type=gha) usado abajo.
+        # Necesario: el driver "docker" por defecto no soporta cache export a GHA (type=gha).
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Login en GitHub Container Registry
@@ -82,10 +72,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Login sin secreto de larga duración: usa la identidad federada
-      # (id-github-deploy) creada en Azure, con confianza acotada a este repo.
-      # Solo corre en main (ver el trigger arriba); la credencial federada para
-      # dev sigue existiendo en Azure pero no se usa desde este workflow.
       - name: Login en Azure (OIDC)
         uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
         with:
