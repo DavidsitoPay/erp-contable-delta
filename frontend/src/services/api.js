@@ -25,25 +25,25 @@ export function login(email, password) {
 export const cuentasApi = {
   listar: (incluirInactivas = false) => api.get("/cuentas", { params: { incluirInactivas } }),
   crear: (cuenta) => api.post("/cuentas", cuenta),
-  actualizar: (id, cambios) => api.put(`/cuentas/${id}`, cambios),
-  desactivar: (id) => api.delete(`/cuentas/${id}`),
+  actualizar: (id, cambios) => api.put(`/cuentas/${encodeURIComponent(id)}`, cambios),
+  desactivar: (id) => api.delete(`/cuentas/${encodeURIComponent(id)}`),
 };
 
 // M1 Catálogo: centros de costo.
 export const centrosCostoApi = {
   listar: (incluirInactivos = false) => api.get("/centros-costo", { params: { incluirInactivos } }),
   crear: (centro) => api.post("/centros-costo", centro),
-  actualizar: (id, cambios) => api.put(`/centros-costo/${id}`, cambios),
-  desactivar: (id) => api.delete(`/centros-costo/${id}`),
+  actualizar: (id, cambios) => api.put(`/centros-costo/${encodeURIComponent(id)}`, cambios),
+  desactivar: (id) => api.delete(`/centros-costo/${encodeURIComponent(id)}`),
 };
 
 // M1 Catálogo: periodos contables.
 export const periodosApi = {
   listar: () => api.get("/periodos"),
   crear: (periodo) => api.post("/periodos", periodo),
-  actualizar: (id, cambios) => api.put(`/periodos/${id}`, cambios),
-  cerrar: (id) => api.post(`/periodos/${id}/cerrar`),
-  reabrir: (id) => api.post(`/periodos/${id}/reabrir`),
+  actualizar: (id, cambios) => api.put(`/periodos/${encodeURIComponent(id)}`, cambios),
+  cerrar: (id) => api.post(`/periodos/${encodeURIComponent(id)}/cerrar`),
+  reabrir: (id) => api.post(`/periodos/${encodeURIComponent(id)}/reabrir`),
 };
 
 // M2: asientos contables. Solo existe POST en el backend (sin GET/listar todavía).
@@ -64,13 +64,13 @@ export const librosApi = {
 export const contrapartesApi = {
   listar: (tipo) => api.get("/contrapartes", { params: tipo ? { tipo } : {} }),
   crear: (contraparte) => api.post("/contrapartes", contraparte),
-  actualizar: (id, cambios) => api.put(`/contrapartes/${id}`, cambios),
+  actualizar: (id, cambios) => api.put(`/contrapartes/${encodeURIComponent(id)}`, cambios),
 };
 
 // M4 Cuentas por cobrar: facturas a clientes y aplicación de pagos.
 export const cxcApi = {
   listarFacturas: () => api.get("/cxc/facturas"),
-  obtenerFactura: (id) => api.get(`/cxc/facturas/${id}`),
+  obtenerFactura: (id) => api.get(`/cxc/facturas/${encodeURIComponent(id)}`),
   crearFactura: (factura) => api.post("/cxc/facturas", factura),
   listarPagos: () => api.get("/cxc/pagos"),
   crearPago: (pago) => api.post("/cxc/pagos", pago),
@@ -79,7 +79,7 @@ export const cxcApi = {
 // M5 Cuentas por pagar: facturas de proveedores y aplicación de pagos.
 export const cxpApi = {
   listarFacturas: () => api.get("/cxp/facturas"),
-  obtenerFactura: (id) => api.get(`/cxp/facturas/${id}`),
+  obtenerFactura: (id) => api.get(`/cxp/facturas/${encodeURIComponent(id)}`),
   crearFactura: (factura) => api.post("/cxp/facturas", factura),
   listarPagos: () => api.get("/cxp/pagos"),
   crearPago: (pago) => api.post("/cxp/pagos", pago),
