@@ -18,7 +18,7 @@ function Contrapartes() {
   }
 
   useEffect(() => {
-    cargar(tipo);
+    void cargar(tipo);
     setForm(vacio(tipo));
     setError("");
   }, [tipo]);

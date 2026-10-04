@@ -8,7 +8,7 @@ function hoyIso() {
 }
 
 function lineaVacia() {
-  return { descripcion: "", cantidad: "1", precioUnitario: "", porcentajeImpuesto: "0", centroCostoId: "", cuentaContableId: "" };
+  return { id: crypto.randomUUID(), descripcion: "", cantidad: "1", precioUnitario: "", porcentajeImpuesto: "0", centroCostoId: "", cuentaContableId: "" };
 }
 
 const formoFacturaVacio = {
@@ -24,7 +24,7 @@ const formoFacturaVacio = {
 const formatoMoneda = new Intl.NumberFormat("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function monto(valor) {
-  const n = parseFloat(valor);
+  const n = Number.parseFloat(valor);
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -66,8 +66,8 @@ function CuentasPorCobrar() {
     cuentasApi.listar(true).then(({ data }) => setCuentas(data));
     centrosCostoApi.listar().then(({ data }) => setCentros(data));
     periodosApi.listar().then(({ data }) => setPeriodos(data));
-    cargarFacturas();
-    cargarPagos();
+    void cargarFacturas();
+    void cargarPagos();
   }, []);
 
   // Misma regla que RegistrarAsiento: solo cuentas "hoja" reciben movimientos.
@@ -221,7 +221,7 @@ function CuentasPorCobrar() {
                   </thead>
                   <tbody>
                     {lineas.map((l, index) => (
-                      <tr key={index}>
+                      <tr key={l.id}>
                         <td><input className="input" aria-label="Descripción de línea" value={l.descripcion} onChange={(e) => actualizarLinea(index, "descripcion", e.target.value)} /></td>
                         <td className="numeric"><input type="number" className="input input-money" aria-label="Cantidad" min="0" step="0.01" value={l.cantidad} onChange={(e) => actualizarLinea(index, "cantidad", e.target.value)} /></td>
                         <td className="numeric"><input type="number" className="input input-money" aria-label="Precio unitario" min="0" step="0.01" value={l.precioUnitario} onChange={(e) => actualizarLinea(index, "precioUnitario", e.target.value)} /></td>
