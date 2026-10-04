@@ -60,4 +60,29 @@ export const librosApi = {
     api.get("/libros/mayor", { params: { cuentaId, periodoId: periodoId || undefined } }),
 };
 
+// M4/M5: catálogo compartido de clientes y proveedores.
+export const contrapartesApi = {
+  listar: (tipo) => api.get("/contrapartes", { params: tipo ? { tipo } : {} }),
+  crear: (contraparte) => api.post("/contrapartes", contraparte),
+  actualizar: (id, cambios) => api.put(`/contrapartes/${id}`, cambios),
+};
+
+// M4 Cuentas por cobrar: facturas a clientes y aplicación de pagos.
+export const cxcApi = {
+  listarFacturas: () => api.get("/cxc/facturas"),
+  obtenerFactura: (id) => api.get(`/cxc/facturas/${id}`),
+  crearFactura: (factura) => api.post("/cxc/facturas", factura),
+  listarPagos: () => api.get("/cxc/pagos"),
+  crearPago: (pago) => api.post("/cxc/pagos", pago),
+};
+
+// M5 Cuentas por pagar: facturas de proveedores y aplicación de pagos.
+export const cxpApi = {
+  listarFacturas: () => api.get("/cxp/facturas"),
+  obtenerFactura: (id) => api.get(`/cxp/facturas/${id}`),
+  crearFactura: (factura) => api.post("/cxp/facturas", factura),
+  listarPagos: () => api.get("/cxp/pagos"),
+  crearPago: (pago) => api.post("/cxp/pagos", pago),
+};
+
 export default api;
