@@ -40,12 +40,12 @@ describe("ToggleTema", () => {
     expect(document.documentElement.dataset.theme).toBe("oscuro");
     expect(localStorage.getItem("delta_tema")).toBe("oscuro");
     expect(button).toHaveAttribute("aria-pressed", "true");
-    expect(button).toHaveAttribute("name", "Cambiar a modo claro");
+    expect(button).toHaveAttribute("aria-label", "Cambiar a modo claro");
     fireEvent.click(button);
     expect(document.documentElement.dataset.theme).toBe("claro");
     expect(localStorage.getItem("delta_tema")).toBe("claro");
     expect(button).toHaveAttribute("aria-pressed", "false");
-    expect(button).toHaveAttribute("name", "Cambiar a modo oscuro");
+    expect(button).toHaveAttribute("aria-label", "Cambiar a modo oscuro");
   });
 
   it("se actualiza cuando otro codigo cambia el tema", () => {
