@@ -16,7 +16,7 @@ function lineasVacias() {
 const vacio = { numero: "", fecha: hoyIso(), periodoId: "" };
 
 function monto(valor) {
-  const n = parseFloat(valor);
+  const n = Number.parseFloat(valor);
   return Number.isFinite(n) ? n : 0;
 }
 

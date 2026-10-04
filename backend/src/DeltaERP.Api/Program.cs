@@ -72,4 +72,4 @@ app.MapControllers();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "Delta ERP Contable API" }));
 
-app.Run();
+await app.RunAsync();
