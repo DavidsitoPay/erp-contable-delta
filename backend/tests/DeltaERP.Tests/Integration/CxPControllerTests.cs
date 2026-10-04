@@ -80,6 +80,22 @@ public class CxPControllerTests
     }
 
     [Fact]
+    public async Task CrearFactura_ConProveedorInexistente_RespondeBadRequestSinCrearNada()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var numero = $"P-{TestData.Sufijo()}";
+        var client = _pg.CreateApiClient(e.UsuarioId);
+
+        var response = await client.PostAsJsonAsync("/api/cxp/facturas", PayloadFactura(e, numero, IdInexistente, e.CuentaGasto));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("error").GetString();
+        Assert.Contains("no existe", error);
+        Assert.Equal(0, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM documentocxp WHERE numero = $1", numero));
+        Assert.Equal(0, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM asientocontable WHERE numero = $1", $"CXP-{numero}"));
+    }
+
+    [Fact]
     public async Task CrearFactura_ConCuentaDeLineaInexistente_RespondeBadRequestSinCrearNada()
     {
         var e = await _pg.Data.SembrarEscenarioAsync();

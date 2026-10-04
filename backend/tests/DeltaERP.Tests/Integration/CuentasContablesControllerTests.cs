@@ -90,6 +90,7 @@ public class CuentasContablesControllerTests
             new { Cuerpo = Payload(CodigoNuevo(), "Otro"), Fragmento = "Tipo inválido" },
             new { Cuerpo = Payload(CodigoNuevo(), naturaleza: "Otra"), Fragmento = "Naturaleza inválida" },
             new { Cuerpo = Payload(CodigoNuevo(), "Activo", "Acreedora"), Fragmento = "debe ser Deudora" },
+            new { Cuerpo = Payload(CodigoNuevo(), "Pasivo", "Deudora"), Fragmento = "debe ser Acreedora" },
             new { Cuerpo = Payload(CodigoNuevo(), cuentaPadreId: IdInexistente), Fragmento = "no existe" },
             new { Cuerpo = Payload(CodigoNuevo(), "Activo", "Deudora", otroTipo), Fragmento = "mismo tipo" },
         };
