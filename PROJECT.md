@@ -40,8 +40,8 @@ Fase 1: uso interno. Fase 2 (futura): comercialización SaaS B2B a PyMEs guatema
 | M1 | Catálogo y parametrización contable | Alta | Implementado (cuentas contables, centros de costo, periodos — CRUD + backend) |
 | M2 | Registro de transacciones | Alta | Implementado (registro de asientos con RN-01/RN-02/RN-08; falta listado `GET /api/asientos`) |
 | M3 | Libros y auxiliares | Alta | Implementado (balance de saldos, libro diario y libro mayor, los tres calculados en tiempo real — `LibrosController`) |
-| M4 | Cuentas por cobrar | Alta | Diseñado |
-| M5 | Cuentas por pagar | Alta | Diseñado |
+| M4 | Cuentas por cobrar | Alta | Implementado (facturas a clientes con asiento automático, recibos y aplicación de pagos con límite RN-05 — `CxCController`) |
+| M5 | Cuentas por pagar | Alta | Implementado (facturas de proveedores con asiento automático, pagos y aplicación con límite RN-05 — `CxPController`) |
 | M6 | Tesorería y bancos | Media | Diseñado |
 | M7 | Reportes y estados financieros | Alta | Diseñado |
 | M8 | Seguridad y auditoría | Alta | Implementado (login, JWT, roles, usuarios seed) |
@@ -83,7 +83,7 @@ Orden recomendado, siguiendo la dependencia real entre módulos (ver diagrama de
 2. ✅ **M1 Catálogo** (CuentaContable, CentroCosto, PeriodoContable). Implementado: CRUD completo de los tres controladores, con validación de jerarquía y naturaleza contable.
 3. ✅ **M2 Transacciones** (AsientoContable, LineaAsiento + validación de partida doble RN-01). Implementado: `AsientosController.Registrar` con RN-01/RN-02/RN-08 y monto calculado server-side. **Pendiente:** endpoint de listado/consulta (`GET /api/asientos`).
 4. ✅ **M3 Libros** (reportes de LineaAsiento). Implementado: `LibrosController` — balance de saldos (`vw_balance_saldos`), libro diario por periodo y libro mayor por cuenta con saldo acumulado, los tres calculados en tiempo real, sin tablas ni columnas precalculadas.
-5. **M4 / M5 CxC y CxP** (DocumentoCxC/CxP + aplicaciones de pago) — no iniciado
+5. ✅ **M4 / M5 CxC y CxP** (DocumentoCxC/CxP + aplicaciones de pago). Implementado: `ContrapartesController` (catálogo compartido clientes/proveedores), `CxCController` y `CxPController` — registrar una factura genera automáticamente su `AsientoContable` (débito/crédito a la cuenta de control indicada, contra la cuenta de cada línea), y los pagos (`ReciboPagoCliente`/`PagoProveedorCabecera`) validan RN-05 (no exceder el saldo pendiente, `vw_saldodocumentocxc`/`cxp`) en la API y en el trigger. Los pagos no generan asiento propio: el modelo de datos no les dio columna `asiento_id`; el impacto en bancos queda para M6.
 6. **M6 Tesorería** (CuentaBancaria, MovimientoTesoreria, conciliación) — no iniciado
 7. **M7 Reportes** — no iniciado
 8. **M9 Importación** — no iniciado
@@ -94,7 +94,8 @@ transacciones → CxC/CxP → reportes. Cada pantalla consume un endpoint ya pro
 
 ✅ Implementado: login, catálogo de cuentas contables (búsqueda, filtro por tipo, orden por
 columna, jerarquía con sangría), centros de costo, periodos contables, registro de asientos,
-balance de saldos, libro diario y libro mayor.
+balance de saldos, libro diario, libro mayor, catálogo de clientes/proveedores, facturación y
+pagos de cuentas por cobrar, y facturación y pagos de cuentas por pagar.
 Rediseño visual completo (tema sobrio, paleta de marca) con modo oscuro conmutable persistido
 por navegador. **Pendiente conocido:** las pantallas de catálogo no ocultan aún sus botones de
 edición a perfiles sin permiso (el backend sí devuelve 403; es solo inconsistencia de UX).

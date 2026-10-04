@@ -11,6 +11,9 @@ import RegistrarAsiento from "./components/Asientos/RegistrarAsiento";
 import BalanceSaldos from "./components/Libros/BalanceSaldos";
 import LibroDiario from "./components/Libros/LibroDiario";
 import LibroMayor from "./components/Libros/LibroMayor";
+import Contrapartes from "./components/Contrapartes/Contrapartes";
+import CuentasPorCobrar from "./components/CxC/CuentasPorCobrar";
+import CuentasPorPagar from "./components/CxP/CuentasPorPagar";
 
 function App() {
   const [status, setStatus] = useState("Verificando conexión con la API...");
@@ -95,6 +98,15 @@ function App() {
         <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/libros/mayor">
           Libro mayor
         </NavLink>
+        <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/contrapartes">
+          Clientes y proveedores
+        </NavLink>
+        <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/cxc">
+          Cuentas por cobrar
+        </NavLink>
+        <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to="/cxp">
+          Cuentas por pagar
+        </NavLink>
       </nav>
 
       <main className="content">
@@ -116,6 +128,9 @@ function App() {
           <Route path="/libros/balance" element={<BalanceSaldos />} />
           <Route path="/libros/diario" element={<LibroDiario />} />
           <Route path="/libros/mayor" element={<LibroMayor />} />
+          <Route path="/contrapartes" element={<Contrapartes />} />
+          <Route path="/cxc" element={<CuentasPorCobrar />} />
+          <Route path="/cxp" element={<CuentasPorPagar />} />
         </Routes>
       </main>
     </div>
