@@ -93,3 +93,12 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           [ -f diff-cover.md ] && cat diff-cover.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Gate de duplicación (jscpd)
+        if: ${{ !cancelled() }}
+        run: npx --yes jscpd@4 --min-tokens 80 --exitCode 1 --format "csharp,javascript,jsx,sql" --reporters "console,markdown" --output jscpd-report --ignore "**/bin/**,**/obj/**,**/node_modules/**,**/dist/**,**/coverage/**,**/test-results/**,database/04_procedures.sql,backend/tests/**,**/*.test.*,frontend/src/test/**" backend/src frontend/src database
+
+      - name: Agregar reporte de duplicación a GitHub
+        if: ${{ !cancelled() }}
+        run: |
+          [ -f jscpd-report/jscpd-report.md ] && cat jscpd-report/jscpd-report.md >> "$GITHUB_STEP_SUMMARY" || true
