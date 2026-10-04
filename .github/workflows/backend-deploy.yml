@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "backend/**"
+      - "!backend/tests/**"
       - "database/**"
       - "devops/Dockerfile.backend"
       - ".github/workflows/backend-deploy.yml"

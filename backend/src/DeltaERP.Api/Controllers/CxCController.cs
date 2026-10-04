@@ -1,6 +1,9 @@
 using System.Security.Claims;
 using DeltaERP.Api.Auth;
+using DeltaERP.Api.Models;
+using DeltaERP.Api.Services;
 using DeltaERP.Domain.Entities;
+using DeltaERP.Domain.Rules;
 using DeltaERP.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,14 +19,20 @@ namespace DeltaERP.Api.Controllers;
 [Authorize]
 public class CxCController : ControllerBase
 {
-    private readonly DeltaErpDbContext _db;
+    private static readonly PerfilFactura Perfil = new("CxC", "Cliente", DocumentoCxC.TiposDocumentoValidos, "Activo", "Deudora", "Cuentas por cobrar", LadoControl.Debito);
 
-    public CxCController(DeltaErpDbContext db)
+    private readonly DeltaErpDbContext _db;
+    private readonly ValidacionContable _validacion;
+    private readonly AuditoriaService _auditoria;
+    private readonly FacturaService _facturas;
+
+    public CxCController(DeltaErpDbContext db, ValidacionContable validacion, AuditoriaService auditoria, FacturaService facturas)
     {
         _db = db;
+        _validacion = validacion;
+        _auditoria = auditoria;
+        _facturas = facturas;
     }
-
-    // ---- Facturas ----------------------------------------------------------
 
     [HttpGet("facturas")]
     public async Task<IActionResult> ListarFacturas()
@@ -39,13 +48,13 @@ public class CxCController : ControllerBase
                 d.Numero,
                 d.TipoDocumento,
                 d.ClienteId,
-                ClienteNombre = c.Nombre,
                 d.Fecha,
                 d.FechaVencimiento,
                 d.MontoTotal,
                 d.Estado,
                 d.AsientoId,
                 s.SaldoPendiente,
+                ClienteNombre = c.Nombre,
             }).ToListAsync();
 
         return Ok(facturas);
@@ -61,153 +70,27 @@ public class CxCController : ControllerBase
         }
 
         var saldo = await _db.SaldosDocumentoCxC.FirstOrDefaultAsync(s => s.DocumentoId == id);
-        var idsCuenta = documento.Lineas.Select(l => l.CuentaContableId).Distinct().ToList();
-        var cuentas = await _db.CuentasContables.Where(c => idsCuenta.Contains(c.Id)).ToDictionaryAsync(c => c.Id);
+        var cuentas = await _validacion.ObtenerCuentasAsync(documento.Lineas);
 
-        return Ok(new
-        {
-            documento.Id,
-            documento.Numero,
-            documento.TipoDocumento,
-            documento.ClienteId,
-            documento.Fecha,
-            documento.FechaVencimiento,
-            documento.MontoTotal,
-            documento.TipoCambioAplicado,
-            documento.Estado,
-            documento.AsientoId,
-            SaldoPendiente = saldo?.SaldoPendiente ?? 0,
-            Lineas = documento.Lineas.Select(l =>
-            {
-                cuentas.TryGetValue(l.CuentaContableId, out var cuenta);
-                return new
-                {
-                    l.Descripcion,
-                    l.Cantidad,
-                    l.PrecioUnitario,
-                    l.PorcentajeImpuesto,
-                    l.CentroCostoId,
-                    l.CuentaContableId,
-                    CuentaCodigo = cuenta?.Codigo,
-                    CuentaNombre = cuenta?.Nombre,
-                };
-            }),
-        });
+        return Ok(FacturaDetalle.Desde(documento, saldo?.SaldoPendiente ?? 0, cuentas, "clienteId", documento.ClienteId));
     }
 
     [HttpPost("facturas")]
     [Authorize(Roles = Roles.GestionCxC)]
     public async Task<IActionResult> CrearFactura([FromBody] DocumentoCxC documento)
     {
-        if (!DocumentoCxC.TiposDocumentoValidos.Contains(documento.TipoDocumento))
-        {
-            return BadRequest(new { error = $"Tipo de documento inválido. Debe ser uno de: {string.Join(", ", DocumentoCxC.TiposDocumentoValidos)}." });
-        }
-        if (documento.Lineas.Count == 0)
-        {
-            return BadRequest(new { error = "La factura debe tener al menos una línea." });
-        }
-        if (documento.Lineas.Any(l => l.Cantidad <= 0 || l.PrecioUnitario < 0 || l.PorcentajeImpuesto < 0))
-        {
-            return BadRequest(new { error = "Cada línea debe tener cantidad mayor a cero, precio unitario y porcentaje de impuesto no negativos." });
-        }
-
         // RN-04
-        var cliente = await _db.Contrapartes.FindAsync(documento.ClienteId);
-        if (cliente is null || cliente.Tipo != "Cliente")
+        var (cliente, error) = await _validacion.ValidarFacturaAsync(documento, documento.ClienteId, Perfil);
+        if (error is not null)
         {
-            return BadRequest(new { error = "El cliente indicado no existe en el catálogo de contrapartes." });
+            return BadRequest(new { error });
         }
-
-        var periodo = await _db.PeriodosContables.FindAsync(documento.PeriodoId);
-        if (periodo is null)
-        {
-            return BadRequest(new { error = "El periodo indicado no existe." });
-        }
-        if (periodo.Estado != PeriodoContable.EstadoAbierto)
-        {
-            return BadRequest(new { error = $"El periodo '{periodo.Nombre}' está en estado '{periodo.Estado}'; no se pueden registrar facturas en un periodo que no esté Abierto." });
-        }
-
-        // Valida cuenta de control y cuentas de línea juntas: ambas terminan en
-        // LineaAsiento del asiento generado.
-        var idsCuentaUsados = documento.Lineas.Select(l => l.CuentaContableId).Append(documento.CuentaControlId).Distinct().ToList();
-        var errorCuentas = await ValidarCuentasAsync(idsCuentaUsados);
-        if (errorCuentas is not null)
-        {
-            return errorCuentas;
-        }
-
-        var cuentaControl = await _db.CuentasContables.FindAsync(documento.CuentaControlId);
-        if (cuentaControl!.Tipo != "Activo" || cuentaControl.Naturaleza != "Deudora")
-        {
-            return BadRequest(new { error = "La cuenta de control de CxC debe ser de tipo Activo y naturaleza Deudora (ej. \"Cuentas por cobrar\")." });
-        }
-
-        var idsCentroCostoUsados = documento.Lineas.Where(l => l.CentroCostoId is not null).Select(l => l.CentroCostoId!.Value).Distinct().ToList();
-        var errorCentros = await ValidarCentrosCostoAsync(idsCentroCostoUsados);
-        if (errorCentros is not null)
-        {
-            return errorCentros;
-        }
-
-        // Redondeo por línea antes de sumar: el total coincide centavo a centavo con
-        // la suma de créditos, evitando falsos "no cuadra" en trg_validar_partida_doble.
-        var montosLinea = documento.Lineas
-            .Select(l => Math.Round(l.Cantidad * l.PrecioUnitario * (1 + l.PorcentajeImpuesto / 100m), 2, MidpointRounding.AwayFromZero))
-            .ToList();
-        var montoTotal = montosLinea.Sum();
 
         var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-        // RN-01: cuadra por construcción (débito = crédito = montoTotal).
-        var asiento = new AsientoContable
-        {
-            Numero = $"CXC-{documento.Numero}",
-            Fecha = documento.Fecha,
-            PeriodoId = documento.PeriodoId,
-            Estado = "Confirmado",
-            UsuarioId = usuarioId,
-            TipoCambioAplicado = documento.TipoCambioAplicado,
-            Monto = montoTotal,
-            Lineas = new List<LineaAsiento> { new() { CuentaId = documento.CuentaControlId, Debito = montoTotal, Credito = 0 } },
-        };
-        for (var i = 0; i < documento.Lineas.Count; i++)
-        {
-            asiento.Lineas.Add(new LineaAsiento
-            {
-                CuentaId = documento.Lineas[i].CuentaContableId,
-                CentroCostoId = documento.Lineas[i].CentroCostoId,
-                Debito = 0,
-                Credito = montosLinea[i],
-            });
-        }
-
-        await using var transaction = await _db.Database.BeginTransactionAsync();
-
-        _db.AsientosContables.Add(asiento);
-        await _db.SaveChangesAsync();
-
-        documento.Id = 0;
-        documento.Estado = "Vigente";
-        documento.MontoTotal = montoTotal;
-        documento.AsientoId = asiento.Id;
-        foreach (var linea in documento.Lineas)
-        {
-            linea.Id = 0;
-        }
-        _db.DocumentosCxC.Add(documento);
-        await _db.SaveChangesAsync();
-
-        await _db.Database.ExecuteSqlInterpolatedAsync(
-            $"CALL sp_registrar_auditoria({usuarioId}, {"registrar_factura_cxc"}, {"documentocxc"}, {$"Factura {documento.Numero} (id {documento.Id}) registrada para cliente {cliente.Nombre}, monto {montoTotal}"})");
-
-        await transaction.CommitAsync();
+        await _facturas.RegistrarAsync(documento, cliente!, Perfil, usuarioId);
 
         return CreatedAtAction(nameof(ObtenerFactura), new { id = documento.Id }, documento);
     }
-
-    // ---- Pagos ---------------------------------------------------------------
 
     [HttpGet("pagos")]
     public async Task<IActionResult> ListarPagos()
@@ -244,137 +127,51 @@ public class CxCController : ControllerBase
     [Authorize(Roles = Roles.GestionCxC)]
     public async Task<IActionResult> CrearPago([FromBody] ReciboPagoCliente recibo)
     {
-        if (recibo.Aplicaciones.Count == 0)
+        var aplicaciones = recibo.Aplicaciones.Select(a => (a.DocumentoId, Monto: a.MontoAplicado)).ToList();
+
+        var errorSolicitud = PagoRules.ValidarSolicitud(aplicaciones.Select(a => a.Monto).ToList(), recibo.MetodoPago);
+        if (errorSolicitud is not null)
         {
-            return BadRequest(new { error = "El pago debe aplicarse al menos a una factura." });
-        }
-        if (recibo.Aplicaciones.Any(a => a.MontoAplicado <= 0))
-        {
-            return BadRequest(new { error = "El monto aplicado a cada factura debe ser mayor a cero." });
-        }
-        if (string.IsNullOrWhiteSpace(recibo.MetodoPago))
-        {
-            return BadRequest(new { error = "El método de pago es obligatorio." });
+            return BadRequest(new { error = errorSolicitud });
         }
 
-        var cliente = await _db.Contrapartes.FindAsync(recibo.ClienteId);
-        if (cliente is null || cliente.Tipo != "Cliente")
+        var (cliente, errorCliente) = await _validacion.ValidarTerceroAsync(recibo.ClienteId, "Cliente");
+        if (errorCliente is not null)
         {
-            return BadRequest(new { error = "El cliente indicado no existe en el catálogo de contrapartes." });
+            return BadRequest(new { error = errorCliente });
         }
 
-        var idsDocumento = recibo.Aplicaciones.Select(a => a.DocumentoId).Distinct().ToList();
-        var documentos = await _db.DocumentosCxC.Where(d => idsDocumento.Contains(d.Id)).ToDictionaryAsync(d => d.Id);
-        var saldos = await _db.SaldosDocumentoCxC.Where(s => idsDocumento.Contains(s.DocumentoId)).ToDictionaryAsync(s => s.DocumentoId);
+        var idsDocumento = aplicaciones.Select(a => a.DocumentoId).Distinct().ToList();
+        var documentos = await (
+            from d in _db.DocumentosCxC
+            join s in _db.SaldosDocumentoCxC on d.Id equals s.DocumentoId
+            where idsDocumento.Contains(d.Id)
+            select new DocumentoPagable(d.Id, d.Numero, d.ClienteId, d.Estado, s.SaldoPendiente)
+            ).ToListAsync();
 
-        var documentosInexistentes = idsDocumento.Where(id => !documentos.ContainsKey(id)).ToList();
-        if (documentosInexistentes.Count > 0)
+        var errorAplicaciones = PagoRules.ValidarAplicaciones("cliente", recibo.ClienteId, aplicaciones, documentos);
+        if (errorAplicaciones is not null)
         {
-            return BadRequest(new { error = $"Las siguientes facturas no existen: {string.Join(", ", documentosInexistentes)}." });
-        }
-        var documentosDeOtroCliente = documentos.Values.Where(d => d.ClienteId != recibo.ClienteId).Select(d => d.Numero).ToList();
-        if (documentosDeOtroCliente.Count > 0)
-        {
-            return BadRequest(new { error = $"Las siguientes facturas no pertenecen al cliente indicado: {string.Join(", ", documentosDeOtroCliente)}." });
-        }
-        var documentosAnulados = documentos.Values.Where(d => d.Estado != "Vigente").Select(d => d.Numero).ToList();
-        if (documentosAnulados.Count > 0)
-        {
-            return BadRequest(new { error = $"Las siguientes facturas no están vigentes: {string.Join(", ", documentosAnulados)}." });
-        }
-
-        // RN-05: varias aplicaciones a la misma factura se suman antes de comparar
-        // contra el saldo (trg_limite_pago_cxc revalida en la BD como respaldo).
-        var aplicadoPorDocumento = recibo.Aplicaciones.GroupBy(a => a.DocumentoId).ToDictionary(g => g.Key, g => g.Sum(a => a.MontoAplicado));
-        var excedidos = aplicadoPorDocumento
-            .Where(kv => kv.Value > saldos[kv.Key].SaldoPendiente)
-            .Select(kv => $"{documentos[kv.Key].Numero} (saldo: {saldos[kv.Key].SaldoPendiente})")
-            .ToList();
-        if (excedidos.Count > 0)
-        {
-            return BadRequest(new { error = $"RN-05: el monto aplicado excede el saldo pendiente de: {string.Join(", ", excedidos)}." });
+            return BadRequest(new { error = errorAplicaciones });
         }
 
         var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
         recibo.Id = 0;
-        recibo.MontoTotal = recibo.Aplicaciones.Sum(a => a.MontoAplicado);
+        recibo.MontoTotal = aplicaciones.Sum(a => a.Monto);
         foreach (var aplicacion in recibo.Aplicaciones)
         {
             aplicacion.Id = 0;
         }
 
-        await using var transaction = await _db.Database.BeginTransactionAsync();
+        await _auditoria.EjecutarAsync(usuarioId, "registrar_pago_cxc", "recibopagocliente", async () =>
+        {
+            _db.RecibosPagoCliente.Add(recibo);
+            await _db.SaveChangesAsync();
 
-        _db.RecibosPagoCliente.Add(recibo);
-        await _db.SaveChangesAsync();
-
-        await _db.Database.ExecuteSqlInterpolatedAsync(
-            $"CALL sp_registrar_auditoria({usuarioId}, {"registrar_pago_cxc"}, {"recibopagocliente"}, {$"Recibo {recibo.Id} (cliente {cliente.Nombre}) registrado, monto {recibo.MontoTotal}"})");
-
-        await transaction.CommitAsync();
+            return $"Recibo {recibo.Id} (cliente {cliente!.Nombre}) registrado, monto {recibo.MontoTotal}";
+        });
 
         return CreatedAtAction(nameof(ListarPagos), new { }, recibo);
-    }
-
-    // ---- Validaciones compartidas --------------------------------------------
-
-    private async Task<IActionResult?> ValidarCuentasAsync(List<int> idsCuentaUsados)
-    {
-        var cuentasUsadas = await _db.CuentasContables.Where(c => idsCuentaUsados.Contains(c.Id)).ToDictionaryAsync(c => c.Id);
-        var idsConHijos = (await _db.CuentasContables
-            .Where(c => c.CuentaPadreId != null && idsCuentaUsados.Contains(c.CuentaPadreId!.Value))
-            .Select(c => c.CuentaPadreId!.Value)
-            .Distinct()
-            .ToListAsync())
-            .ToHashSet();
-
-        var inexistentes = new List<string>();
-        var inactivas = new List<string>();
-        var deMayor = new List<string>();
-        foreach (var cuentaId in idsCuentaUsados)
-        {
-            if (!cuentasUsadas.TryGetValue(cuentaId, out var cuenta))
-            {
-                inexistentes.Add(cuentaId.ToString());
-                continue;
-            }
-            if (!cuenta.Activa)
-            {
-                inactivas.Add(cuenta.Codigo);
-            }
-            if (idsConHijos.Contains(cuentaId))
-            {
-                deMayor.Add(cuenta.Codigo);
-            }
-        }
-        if (inexistentes.Count > 0)
-        {
-            return new BadRequestObjectResult(new { error = $"Las siguientes cuentas no existen: {string.Join(", ", inexistentes)}." });
-        }
-        if (inactivas.Count > 0)
-        {
-            return new BadRequestObjectResult(new { error = $"Las siguientes cuentas están inactivas: {string.Join(", ", inactivas)}." });
-        }
-        if (deMayor.Count > 0)
-        {
-            return new BadRequestObjectResult(new { error = $"Las siguientes cuentas son de mayor (tienen subcuentas) y no pueden recibir movimientos directos: {string.Join(", ", deMayor)}." });
-        }
-        return null;
-    }
-
-    private async Task<IActionResult?> ValidarCentrosCostoAsync(List<int> idsCentroCostoUsados)
-    {
-        if (idsCentroCostoUsados.Count == 0)
-        {
-            return null;
-        }
-        var existentes = (await _db.CentrosCosto.Where(c => idsCentroCostoUsados.Contains(c.Id)).Select(c => c.Id).ToListAsync()).ToHashSet();
-        var inexistentes = idsCentroCostoUsados.Where(id => !existentes.Contains(id)).ToList();
-        if (inexistentes.Count > 0)
-        {
-            return new BadRequestObjectResult(new { error = $"Los siguientes centros de costo no existen: {string.Join(", ", inexistentes)}." });
-        }
-        return null;
     }
 }

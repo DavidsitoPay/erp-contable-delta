@@ -1,5 +1,6 @@
 using System.Text;
 using DeltaERP.Api.Auth;
+using DeltaERP.Api.Services;
 using DeltaERP.Infrastructure.Data;
 using EFCore.NamingConventions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -17,6 +18,9 @@ builder.Services.AddDbContext<DeltaErpDbContext>(options =>
 
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services.AddSingleton<TokenService>();
+builder.Services.AddScoped<ValidacionContable>();
+builder.Services.AddScoped<AuditoriaService>();
+builder.Services.AddScoped<FacturaService>();
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? throw new InvalidOperationException("Falta la sección Jwt en la configuración.");
@@ -73,3 +77,6 @@ app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "Delta ERP Contable API" }));
 
 await app.RunAsync();
+
+// Expone Program a WebApplicationFactory<Program> en las pruebas de integración.
+public partial class Program;

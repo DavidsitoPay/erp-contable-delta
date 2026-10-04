@@ -1,6 +1,6 @@
 namespace DeltaERP.Domain.Entities;
 
-public class LineaDocumentoCxP
+public class LineaDocumentoCxP : ILineaFactura
 {
     public int Id { get; set; }
     public int DocumentoId { get; set; }
