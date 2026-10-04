@@ -308,6 +308,32 @@ public class PeriodosContablesControllerTests
     }
 
     [Fact]
+    public async Task CerrarPeriodoVacioReabrirYCerrar_NumeraElSegundoCierreComoDos()
+    {
+        var contador = await _pg.Data.CrearUsuarioAsync("Contador");
+        var admin = await _pg.Data.CrearUsuarioAsync(Roles.Administrador);
+        var d = await _pg.Data.CrearCuentaAsync("Activo", "Deudora");
+        var k = await _pg.Data.CrearCuentaAsync("Ingreso", "Acreedora");
+        var periodo = await _pg.Data.CrearPeriodoAsync();
+        var clienteContador = _pg.CreateApiClient(contador);
+        var clienteAdmin = _pg.CreateApiClient(admin);
+
+        Assert.Equal(HttpStatusCode.OK, (await clienteContador.PostAsync($"/api/periodos/{periodo}/cerrar", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await clienteAdmin.PostAsync($"/api/periodos/{periodo}/reabrir", null)).StatusCode);
+        await _pg.Data.SembrarAsientoAsync(periodo, contador, d, k, 100m, new DateOnly(2025, 3, 1));
+        Assert.Equal(HttpStatusCode.OK, (await clienteContador.PostAsync($"/api/periodos/{periodo}/cerrar", null)).StatusCode);
+
+        var cierres = await _pg.Data.ScalarAsync<int>("SELECT cierres FROM periodocontable WHERE id = $1", periodo);
+        Assert.Equal(2, cierres);
+        var filasConCierreDos = await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM saldocuentaperiodo WHERE periodo_id = $1 AND cierre_numero = 2", periodo);
+        Assert.Equal(2, filasConCierreDos);
+        var filasTotales = await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM saldocuentaperiodo WHERE periodo_id = $1", periodo);
+        Assert.Equal(2, filasTotales);
+        var filasVigentes = await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM vw_saldocuentaperiodo_vigente WHERE periodo_id = $1", periodo);
+        Assert.Equal(2, filasVigentes);
+    }
+
+    [Fact]
     public async Task Cerrar_ConAsientoReversadoYBorrador_SaldosNetanCeroYExcluyenBorrador()
     {
         var contador = await _pg.Data.CrearUsuarioAsync("Contador");
@@ -318,7 +344,7 @@ public class PeriodosContablesControllerTests
         var numeroOriginal = $"A-{Guid.NewGuid().ToString("N")[..12]}";
         var asientoId = await _pg.Data.SembrarAsientoAsync(periodo, contador, d, k, 100m, new DateOnly(2025, 3, 1),
             new OpcionesAsiento(Numero: numeroOriginal));
-        await _pg.Data.ReversarAsientoAsync(asientoId, contador, numeroOriginal);
+        await _pg.Data.ReversarAsientoAsync(asientoId, contador);
         await _pg.Data.SembrarAsientoAsync(periodo, contador, d, k, 40m, new DateOnly(2025, 3, 2),
             new OpcionesAsiento(Estado: "Borrador"));
 

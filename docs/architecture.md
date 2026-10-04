@@ -117,16 +117,17 @@ Soporte de las pruebas de integración (`Support/`):
 y push a `main` (`sonarcloud-analysis.yml`), este último con cobertura enviada a
 SonarCloud. En los push a `dev`, `backend-build-check.yml` también exige con
 `diff-cover` al menos 80 % de cobertura en las líneas cambiadas respecto a `main` y
-aplica el gate de duplicación de `jscpd` (bloques de 80 tokens o más).
+aplica el gate de duplicación de `jscpd` (bloques de 80 tokens o más) sobre C#, JS y JSX
+en `backend/src` y `frontend/src`.
 
 **Quality gate de SonarCloud.** Cobertura mínima de 80 % sobre código nuevo y
 duplicación máxima de 3 %. Quedan fuera de la cobertura `Program.cs`,
 `DeltaErpDbContext.cs`, `Entities/`, `main.jsx`, hojas de estilo, archivos
 `*.config.js`, `frontend/src/test/` y los propios archivos de prueba. Quedan fuera de la detección de duplicación en SonarCloud `backend/tests/` y las
 pruebas del frontend (`frontend/**/*.test.*`, `frontend/src/test/**`). La carpeta `database/` se
-excluye del análisis de SonarCloud porque su analizador SQL es para Oracle PL/SQL; la
-duplicación en SQL se cubre con el jscpd de `backend-build-check.yml`, que ignora
-`database/04_procedures.sql`.
+excluye del análisis de SonarCloud porque su analizador SQL es para Oracle PL/SQL; el
+SQL tampoco se analiza por duplicación: las migraciones son solo de adición y las correcciones
+redefinen objetos con `CREATE OR REPLACE`, por lo que repiten por diseño cuerpos de scripts anteriores.
 
 ## Arquitectura de despliegue
 

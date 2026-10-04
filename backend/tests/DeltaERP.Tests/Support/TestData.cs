@@ -143,9 +143,9 @@ public sealed class TestData
         await command.ExecuteNonQueryAsync();
     }
 
-    public async Task<int> ReversarAsientoAsync(int asientoId, int usuarioId, string numeroOriginal)
+    public async Task<int> ReversarAsientoAsync(int asientoId, int usuarioId)
     {
         await EjecutarAsync("CALL sp_reversar_asiento($1, $2)", asientoId, usuarioId);
-        return await ScalarAsync<int>("SELECT id FROM asientocontable WHERE numero = $1", $"REV-{numeroOriginal}");
+        return await ScalarAsync<int>("SELECT id FROM asientocontable WHERE reversa_de_id = $1", asientoId);
     }
 }

@@ -42,14 +42,14 @@ public class LibrosControllerTests
 
         var body = await response.LeerJsonAsync();
         var elemD = body.EnumerateArray().Single(x => x.GetProperty("cuentaId").GetInt32() == d);
-        Assert.Equal(100, elemD.GetProperty("totalDebito").GetInt32());
-        Assert.Equal(30, elemD.GetProperty("totalCredito").GetInt32());
-        Assert.Equal(70, elemD.GetProperty("saldo").GetInt32());
+        Assert.Equal(100m, elemD.GetProperty("totalDebito").GetDecimal());
+        Assert.Equal(30m, elemD.GetProperty("totalCredito").GetDecimal());
+        Assert.Equal(70m, elemD.GetProperty("saldo").GetDecimal());
 
         var elemK = body.EnumerateArray().Single(x => x.GetProperty("cuentaId").GetInt32() == k);
-        Assert.Equal(30, elemK.GetProperty("totalDebito").GetInt32());
-        Assert.Equal(100, elemK.GetProperty("totalCredito").GetInt32());
-        Assert.Equal(70, elemK.GetProperty("saldo").GetInt32());
+        Assert.Equal(30m, elemK.GetProperty("totalDebito").GetDecimal());
+        Assert.Equal(100m, elemK.GetProperty("totalCredito").GetDecimal());
+        Assert.Equal(70m, elemK.GetProperty("saldo").GetDecimal());
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public class LibrosControllerTests
         Assert.Equal(a, idList[1]);
 
         var primerAsiento = body.EnumerateArray().First();
-        Assert.Equal(50, primerAsiento.GetProperty("monto").GetInt32());
+        Assert.Equal(50m, primerAsiento.GetProperty("monto").GetDecimal());
         var lineas = primerAsiento.GetProperty("lineas");
         Assert.Equal(2, lineas.GetArrayLength());
         foreach (var linea in lineas.EnumerateArray())
@@ -196,7 +196,7 @@ public class LibrosControllerTests
         var e = await _pg.Data.SembrarEscenarioAsync();
         var numero = $"A-{TestData.Sufijo()}";
         var original = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 100m, new DateOnly(2025, 3, 1), new OpcionesAsiento(Numero: numero));
-        var reversa = await _pg.Data.ReversarAsientoAsync(original, e.UsuarioId, numero);
+        var reversa = await _pg.Data.ReversarAsientoAsync(original, e.UsuarioId);
         var client = _pg.CreateApiClient(e.UsuarioId);
 
         var balance = await (await client.GetAsync("/api/libros/balance-saldos")).LeerJsonAsync();
@@ -246,7 +246,7 @@ public class LibrosControllerTests
         var e = await _pg.Data.SembrarEscenarioAsync();
         var numero = $"A-{TestData.Sufijo()}";
         var original = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 100m, new DateOnly(2025, 3, 1), new OpcionesAsiento(Numero: numero));
-        var reversa = await _pg.Data.ReversarAsientoAsync(original, e.UsuarioId, numero);
+        var reversa = await _pg.Data.ReversarAsientoAsync(original, e.UsuarioId);
         var borrador = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 5m, new DateOnly(2025, 3, 2), new OpcionesAsiento(Estado: "Borrador"));
 
         foreach (var asientoId in new[] { original, reversa, borrador })
@@ -256,7 +256,36 @@ public class LibrosControllerTests
             Assert.Equal("55000", ex.SqlState);
         }
 
-        var reversas = await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM asientocontable WHERE numero = $1", $"REV-{numero}");
+        var reversas = await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM asientocontable WHERE reversa_de_id = $1", original);
         Assert.Equal(1, reversas);
+    }
+
+    [Fact]
+    public async Task ReversarAsiento_ConNumeroManualConPrefijoRev_SeReversaYQuedaVinculado()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var numero = $"REV-{TestData.Sufijo()}";
+        var original = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 100m, new DateOnly(2025, 3, 1), new OpcionesAsiento(Numero: numero));
+
+        var reversa = await _pg.Data.ReversarAsientoAsync(original, e.UsuarioId);
+
+        var estadoOriginal = await _pg.Data.ScalarAsync<string>("SELECT estado FROM asientocontable WHERE id = $1", original);
+        Assert.Equal("Anulado", estadoOriginal);
+        var vinculo = await _pg.Data.ScalarAsync<int>("SELECT reversa_de_id FROM asientocontable WHERE id = $1", reversa);
+        Assert.Equal(original, vinculo);
+    }
+
+    [Fact]
+    public async Task ReversarAsiento_ConNumeroDe30Caracteres_ReversaConNumeroDe30Caracteres()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var numero = Guid.NewGuid().ToString("N")[..30];
+        var original = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 100m, new DateOnly(2025, 3, 1), new OpcionesAsiento(Numero: numero));
+
+        var reversa = await _pg.Data.ReversarAsientoAsync(original, e.UsuarioId);
+
+        var numeroReversa = await _pg.Data.ScalarAsync<string>("SELECT numero FROM asientocontable WHERE id = $1", reversa);
+        Assert.Equal(30, numeroReversa.Length);
+        Assert.Equal($"REV-{numero[..26]}", numeroReversa);
     }
 }

@@ -23,9 +23,17 @@ LEFT JOIN (
 ) ON l.cuenta_id = c.id
 GROUP BY c.id, c.codigo, c.nombre, c.naturaleza;
 
--- 2. Cierres versionados de saldocuentaperiodo
+-- 2. Cierres versionados: contador por periodo y snapshots por cierre
+
+ALTER TABLE periodocontable ADD COLUMN cierres INT NOT NULL DEFAULT 0;
 
 ALTER TABLE saldocuentaperiodo ADD COLUMN cierre_numero INT NOT NULL DEFAULT 1;
+
+UPDATE periodocontable p
+SET cierres = GREATEST(
+    COALESCE((SELECT MAX(s.cierre_numero) FROM saldocuentaperiodo s WHERE s.periodo_id = p.id), 0),
+    CASE WHEN p.estado = 'Cerrado' THEN 1 ELSE 0 END
+);
 
 ALTER TABLE saldocuentaperiodo DROP CONSTRAINT saldocuentaperiodo_periodo_id_cuenta_id_key;
 
@@ -35,9 +43,7 @@ ALTER TABLE saldocuentaperiodo
 CREATE OR REPLACE VIEW vw_saldocuentaperiodo_vigente AS
 SELECT s.id, s.periodo_id, s.cuenta_id, s.total_debito, s.total_credito, s.saldo_final, s.cierre_numero
 FROM saldocuentaperiodo s
-WHERE s.cierre_numero = (
-    SELECT MAX(m.cierre_numero) FROM saldocuentaperiodo m WHERE m.periodo_id = s.periodo_id
-);
+JOIN periodocontable p ON p.id = s.periodo_id AND p.cierres = s.cierre_numero;
 
 -- 3. Cierre y reapertura de periodo: solo desde el estado esperado
 
@@ -46,13 +52,15 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     v_estado_periodo VARCHAR(20);
+    v_cierres        INT;
     v_cierre_numero  INT;
 BEGIN
     IF NOT fn_usuario_tiene_perfil_autorizado(p_usuario_id, fn_perfil_contador(), fn_perfil_administrador_sistema()) THEN
         RAISE EXCEPTION 'El usuario % no tiene perfil autorizado para cerrar un periodo.', p_usuario_id;
     END IF;
 
-    SELECT estado INTO v_estado_periodo FROM periodocontable WHERE id = p_periodo_id FOR UPDATE;
+    SELECT estado, cierres INTO v_estado_periodo, v_cierres
+    FROM periodocontable WHERE id = p_periodo_id FOR UPDATE;
 
     IF NOT FOUND THEN
         RAISE EXCEPTION 'El periodo % no existe.', p_periodo_id USING ERRCODE = 'P0002';
@@ -63,8 +71,7 @@ BEGIN
             USING ERRCODE = '55000';
     END IF;
 
-    SELECT COALESCE(MAX(cierre_numero), 0) + 1 INTO v_cierre_numero
-    FROM saldocuentaperiodo WHERE periodo_id = p_periodo_id;
+    v_cierre_numero := v_cierres + 1;
 
     INSERT INTO saldocuentaperiodo (periodo_id, cierre_numero, cuenta_id, total_debito, total_credito, saldo_final)
     SELECT
@@ -84,7 +91,7 @@ BEGIN
         AND a.estado IN ('Confirmado', 'Anulado')
     GROUP BY c.id, c.naturaleza;
 
-    UPDATE periodocontable SET estado = 'Cerrado' WHERE id = p_periodo_id;
+    UPDATE periodocontable SET estado = 'Cerrado', cierres = v_cierre_numero WHERE id = p_periodo_id;
 
     CALL sp_registrar_auditoria(p_usuario_id, 'cerrar_periodo', 'periodocontable',
         format('Periodo %s cerrado', p_periodo_id));
@@ -119,7 +126,20 @@ BEGIN
 END;
 $$;
 
--- 4. Reversión: solo un asiento Confirmado que no sea a su vez una reversa
+-- 4. Reversión: vínculo real original-reversa; solo un asiento Confirmado que no sea reversa
+
+ALTER TABLE asientocontable ADD COLUMN reversa_de_id INT NULL REFERENCES asientocontable(id);
+
+CREATE UNIQUE INDEX ux_asientocontable_reversa_de_id
+    ON asientocontable (reversa_de_id) WHERE reversa_de_id IS NOT NULL;
+
+UPDATE asientocontable r
+SET reversa_de_id = o.id
+FROM asientocontable o
+WHERE r.reversa_de_id IS NULL
+  AND r.numero = 'REV-' || o.numero
+  AND o.estado = 'Anulado'
+  AND (SELECT COUNT(*) FROM asientocontable o2 WHERE o2.numero = o.numero AND o2.estado = 'Anulado') = 1;
 
 CREATE OR REPLACE PROCEDURE sp_reversar_asiento(p_asiento_id INT, p_usuario_id INT)
 LANGUAGE plpgsql
@@ -128,9 +148,9 @@ DECLARE
     v_nuevo_asiento_id INT;
     v_periodo_id       INT;
     v_estado           VARCHAR(20);
-    v_numero           VARCHAR(30);
+    v_reversa_de_id    INT;
 BEGIN
-    SELECT periodo_id, estado, numero INTO v_periodo_id, v_estado, v_numero
+    SELECT periodo_id, estado, reversa_de_id INTO v_periodo_id, v_estado, v_reversa_de_id
     FROM asientocontable WHERE id = p_asiento_id FOR UPDATE;
 
     IF NOT FOUND THEN
@@ -142,14 +162,13 @@ BEGIN
             USING ERRCODE = '55000';
     END IF;
 
-    -- Las reversas nacen con el prefijo 'REV-' y no se vuelven a reversar.
-    IF v_numero LIKE 'REV-%' THEN
+    IF v_reversa_de_id IS NOT NULL THEN
         RAISE EXCEPTION 'El asiento % es una reversa; no se puede reversar.', p_asiento_id
             USING ERRCODE = '55000';
     END IF;
 
-    INSERT INTO asientocontable (numero, fecha, periodo_id, monto, estado, usuario_id)
-    SELECT 'REV-' || numero, CURRENT_DATE, v_periodo_id, monto, 'Confirmado', p_usuario_id
+    INSERT INTO asientocontable (numero, fecha, periodo_id, monto, estado, usuario_id, reversa_de_id)
+    SELECT LEFT('REV-' || numero, 30), CURRENT_DATE, v_periodo_id, monto, 'Confirmado', p_usuario_id, id
     FROM asientocontable WHERE id = p_asiento_id
     RETURNING id INTO v_nuevo_asiento_id;
 

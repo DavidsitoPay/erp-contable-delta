@@ -146,7 +146,7 @@ describe("iniciarSincronizacionTema", () => {
     it("registra el listener change en matchMedia", () => {
       const addEventListener = vi.fn();
       vi.stubGlobal("matchMedia", vi.fn(() => ({ addEventListener })));
-      const espia = vi.spyOn(window, "addEventListener").mockImplementation(() => {});
+      vi.spyOn(window, "addEventListener").mockImplementation(() => {});
       iniciarSincronizacionTema();
       expect(addEventListener).toHaveBeenCalledWith("change", expect.any(Function));
     });

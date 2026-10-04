@@ -62,8 +62,12 @@ Sin cambios.
 Sin cambios estructurales respecto a la versión anterior.
 
 Estados de `AsientoContable`: `Borrador` (no contabilizado), `Confirmado` y `Anulado`
-(confirmado y ya revertido por su asiento `REV-<numero>`). `Confirmado` y `Anulado`
+(confirmado y ya revertido por su asiento de reversa). `Confirmado` y `Anulado`
 permanecen contabilizados.
+
+| Campo | Tipo | Nulo | Llave | Descripción |
+|---|---|---|---|---|
+| reversa_de_id | INT | Sí | FK -> AsientoContable(id) | En un asiento de reversa, el asiento original que revierte; NULL en los demás. Índice único parcial (`ux_asientocontable_reversa_de_id`, `WHERE reversa_de_id IS NOT NULL`): un asiento tiene a lo sumo una reversa |
 
 ## 4. Cuentas por Cobrar (CxC)
 
@@ -113,6 +117,9 @@ Sin cambios estructurales.
 
 ## 7. Consolidación de Saldos
 
+### PeriodoContable.cierres
+`periodocontable.cierres` (INT, no nulo, por defecto 0) cuenta los cierres del periodo; `sp_cerrar_periodo` lo incrementa en cada cierre, incluso sin movimientos, y su valor es el `cierre_numero` vigente.
+
 ### SaldoCuentaPeriodo
 Fotografía inalterable del saldo de cada cuenta contable al momento del cierre
 contable. Se escribe solo desde `sp_cerrar_periodo`; un trigger impide cualquier
@@ -141,7 +148,7 @@ saldo del periodo en curso se sigue calculando siempre en tiempo real
 | Vista | Reemplaza a | Descripción |
 |---|---|---|
 | `vw_balance_saldos` | `CuentaContable.saldo` (nunca existió como columna) | Saldo en tiempo real por cuenta contable, sobre asientos `Confirmado` y `Anulado` (se excluye `Borrador`) |
-| `vw_saldocuentaperiodo_vigente` | — | Último cierre (`cierre_numero` máximo) de `SaldoCuentaPeriodo` por periodo |
+| `vw_saldocuentaperiodo_vigente` | — | Filas de `SaldoCuentaPeriodo` del cierre vigente de cada periodo (`cierre_numero = PeriodoContable.cierres`); vacía si ese cierre no tuvo movimientos |
 | `vw_saldocuentabancaria` | `CuentaBancaria.saldo` | Saldo en tiempo real por cuenta bancaria |
 | `vw_saldodocumentocxc` | `DocumentoCxC.saldo_pendiente` | Saldo pendiente por documento de CxC |
 | `vw_saldodocumentocxp` | `DocumentoCxP.saldo_pendiente` | Saldo pendiente por documento de CxP |
