@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => {
 
 vi.mock("axios", () => ({ default: { create: mocks.create, get: mocks.get } }));
 
-import api, { checkHealth, contrapartesApi, cuentasApi, cxcApi, cxpApi, librosApi, login } from "./api";
+import api, { checkHealth, contrapartesApi, cuentasApi, cxcApi, cxpApi, librosApi, login, periodosApi } from "./api";
 
 const interceptor = mocks.instance.interceptors.request.use.mock.calls[0][0];
 const opcionesCreate = mocks.create.mock.calls[0][0];
@@ -71,12 +71,12 @@ describe("funciones de la API", () => {
     expect(mocks.instance.get).toHaveBeenNthCalledWith(2, "/cuentas", { params: { incluirInactivas: true } });
   });
 
-  it("codifica el id en la URL al actualizar y desactivar", () => {
-    cuentasApi.actualizar("a/b", { nombre: "x" });
-    cuentasApi.desactivar("a/b");
+  it("convierte el id a número en la URL al actualizar y desactivar", () => {
+    cuentasApi.actualizar("12", { nombre: "x" });
+    cuentasApi.desactivar("12");
 
-    expect(mocks.instance.put).toHaveBeenCalledWith("/cuentas/a%2Fb", { nombre: "x" });
-    expect(mocks.instance.delete).toHaveBeenCalledWith("/cuentas/a%2Fb");
+    expect(mocks.instance.put).toHaveBeenCalledWith("/cuentas/12", { nombre: "x" });
+    expect(mocks.instance.delete).toHaveBeenCalledWith("/cuentas/12");
   });
 
   it("contrapartesApi.listar solo envía tipo cuando se indica", () => {
@@ -104,5 +104,19 @@ describe("funciones de la API", () => {
     expect(mocks.instance.get).toHaveBeenCalledWith(`/${ruta}/facturas/7`);
     expect(mocks.instance.post).toHaveBeenCalledWith(`/${ruta}/facturas`, { numero: "F-1" });
     expect(mocks.instance.post).toHaveBeenCalledWith(`/${ruta}/pagos`, { metodoPago: "Efectivo" });
+  });
+
+  it("periodosApi.cerrar y reabrir envían POST a las rutas correctas", () => {
+    periodosApi.cerrar(1);
+    periodosApi.reabrir(1);
+
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(1, "/periodos/1/cerrar");
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(2, "/periodos/1/reabrir");
+  });
+
+  it("convierte string ids numéricos a números en la URL", () => {
+    cuentasApi.desactivar("7");
+
+    expect(mocks.instance.delete).toHaveBeenCalledWith("/cuentas/7");
   });
 });

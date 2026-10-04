@@ -97,11 +97,11 @@ jobs:
             /o:"davidsitopay" \
             /d:sonar.token="${SONAR_TOKEN}" \
             /d:sonar.host.url="https://sonarcloud.io" \
-            /d:sonar.exclusions="frontend/node_modules/**,frontend/dist/**,frontend/coverage/**,**/bin/**,**/obj/**,graphify-out/**" \
+            /d:sonar.exclusions="frontend/node_modules/**,frontend/dist/**,frontend/coverage/**,**/bin/**,**/obj/**,graphify-out/**,database/**" \
             /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml" \
             /d:sonar.javascript.lcov.reportPaths="frontend/coverage/lcov.info" \
             /d:sonar.coverage.exclusions="**/Program.cs,**/DeltaErpDbContext.cs,**/Entities/**,frontend/src/main.jsx,frontend/src/**/*.css,frontend/**/*.config.js,frontend/src/test/**,**/*.test.*" \
-            /d:sonar.cpd.exclusions="database/04_procedures.sql,backend/tests/**,frontend/**/*.test.*,frontend/src/test/**"
+            /d:sonar.cpd.exclusions="backend/tests/**,frontend/**/*.test.*,frontend/src/test/**"
 
           dotnet test backend/tests/DeltaERP.Tests/DeltaERP.Tests.csproj --configuration Release --logger "trx;LogFileName=backend-tests.trx" --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 

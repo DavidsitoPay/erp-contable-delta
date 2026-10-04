@@ -85,8 +85,13 @@ API.
   `FacturaRules`, `PagoRules`, `PartidaDobleValidator`), sin base de datos.
 - Integración (`Integration/`, trait `Category=Integration`): levantan la API con
   `WebApplicationFactory` contra un PostgreSQL 16 real, de modo que los triggers
-  (RN-01, RN-03, RN-05) actúan igual que en producción. Cubren los controladores de
-  CxC y CxP.
+  (RN-01, RN-03, RN-05) actúan igual que en producción. Cubren todos los controladores
+  de la API: asientos, auth, centros de costo, contrapartes, cuentas contables, CxC,
+  CxP, libros y periodos contables. Las pruebas de login verifican la emisión del
+  token (`AuthController`/`TokenService`) con un cliente anónimo y el esquema JWT
+  real; el resto usa `TestAuthHandler`. Las operaciones cuya autorización vive en un
+  procedimiento almacenado (cerrar y reabrir periodo) se validan contra el perfil
+  del usuario en la base de datos, no contra el encabezado de prueba.
 
 Soporte de las pruebas de integración (`Support/`):
 
@@ -97,24 +102,32 @@ Soporte de las pruebas de integración (`Support/`):
 - Aislamiento: bitácora, saldos, asientos y usuarios son inmutables, así que no hay
   limpieza entre pruebas. Cada prueba siembra sus propias filas con sufijos únicos
   (`TestData`) y nunca cuenta filas globales. Las pruebas comparten una sola base
-  mediante una colección xUnit.
+  mediante una colección xUnit. Los periodos creados vía API usan rangos únicos
+  (años 2100 en adelante, `TestData.RangoPeriodoUnico`), porque la validación de
+  solapamiento es global.
 - Autenticación: `TestAuthHandler` reemplaza el esquema JWT; la identidad y el rol se
   toman de los encabezados `X-Test-User-Id` y `X-Test-Role`.
 
 **Frontend** (Vitest y React Testing Library, `frontend/src/**/*.test.js(x)`).
-`npm run test:ci` ejecuta la suite y genera cobertura en `lcov`.
+`npm run test:ci` ejecuta la suite y genera cobertura en `lcov` (para SonarCloud) y
+`cobertura` (para el gate de `diff-cover`), además de un reporte `junit`.
 
 **Dónde corren.** Ambas suites corren en GitHub Actions con un contenedor de servicio
 `postgres:16`: en cada push a `dev` (`backend-build-check.yml`) y en cada Pull Request
 y push a `main` (`sonarcloud-analysis.yml`), este último con cobertura enviada a
-SonarCloud.
+SonarCloud. En los push a `dev`, `backend-build-check.yml` también exige con
+`diff-cover` al menos 80 % de cobertura en las líneas cambiadas respecto a `main` y
+aplica el gate de duplicación de `jscpd` (bloques de 80 tokens o más) sobre C#, JS y JSX
+en `backend/src` y `frontend/src`.
 
 **Quality gate de SonarCloud.** Cobertura mínima de 80 % sobre código nuevo y
 duplicación máxima de 3 %. Quedan fuera de la cobertura `Program.cs`,
 `DeltaErpDbContext.cs`, `Entities/`, `main.jsx`, hojas de estilo, archivos
-`*.config.js`, `frontend/src/test/` y los propios archivos de prueba. Quedan fuera de
-la detección de duplicación `database/04_procedures.sql`, `backend/tests/` y las
-pruebas del frontend.
+`*.config.js`, `frontend/src/test/` y los propios archivos de prueba. Quedan fuera de la detección de duplicación en SonarCloud `backend/tests/` y las
+pruebas del frontend (`frontend/**/*.test.*`, `frontend/src/test/**`). La carpeta `database/` se
+excluye del análisis de SonarCloud porque su analizador SQL es para Oracle PL/SQL; el
+SQL tampoco se analiza por duplicación: las migraciones son solo de adición y las correcciones
+redefinen objetos con `CREATE OR REPLACE`, por lo que repiten por diseño cuerpos de scripts anteriores.
 
 ## Arquitectura de despliegue
 
@@ -137,8 +150,8 @@ independientes (`.github/workflows/`):
 - `frontend-alias.yml`: tras cada deploy de producción en Vercel, reapunta el
   dominio corto del proyecto al nuevo despliegue.
 - `sonarcloud-analysis.yml`: en cada Pull Request y en cada push a `main` corre las
-  pruebas con cobertura y analiza calidad y seguridad del código (backend, frontend
-  y SQL) en SonarCloud.
+  pruebas con cobertura y analiza calidad y seguridad del código (backend y frontend)
+  en SonarCloud.
 - `backend-build-check.yml`: en cada push a `dev` corre la suite completa de pruebas
   del backend y del frontend, antes de que el cambio llegue a un Pull Request o a `main`.
 

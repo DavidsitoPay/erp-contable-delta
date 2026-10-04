@@ -12,6 +12,8 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+const idRuta = (id) => encodeURIComponent(Number(id));
+
 export function checkHealth() {
   return axios.get((import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace("/api", "/health"));
 }
@@ -23,23 +25,23 @@ export function login(email, password) {
 export const cuentasApi = {
   listar: (incluirInactivas = false) => api.get("/cuentas", { params: { incluirInactivas } }),
   crear: (cuenta) => api.post("/cuentas", cuenta),
-  actualizar: (id, cambios) => api.put(`/cuentas/${encodeURIComponent(id)}`, cambios),
-  desactivar: (id) => api.delete(`/cuentas/${encodeURIComponent(id)}`),
+  actualizar: (id, cambios) => api.put(`/cuentas/${idRuta(id)}`, cambios),
+  desactivar: (id) => api.delete(`/cuentas/${idRuta(id)}`),
 };
 
 export const centrosCostoApi = {
   listar: (incluirInactivos = false) => api.get("/centros-costo", { params: { incluirInactivos } }),
   crear: (centro) => api.post("/centros-costo", centro),
-  actualizar: (id, cambios) => api.put(`/centros-costo/${encodeURIComponent(id)}`, cambios),
-  desactivar: (id) => api.delete(`/centros-costo/${encodeURIComponent(id)}`),
+  actualizar: (id, cambios) => api.put(`/centros-costo/${idRuta(id)}`, cambios),
+  desactivar: (id) => api.delete(`/centros-costo/${idRuta(id)}`),
 };
 
 export const periodosApi = {
   listar: () => api.get("/periodos"),
   crear: (periodo) => api.post("/periodos", periodo),
-  actualizar: (id, cambios) => api.put(`/periodos/${encodeURIComponent(id)}`, cambios),
-  cerrar: (id) => api.post(`/periodos/${encodeURIComponent(id)}/cerrar`),
-  reabrir: (id) => api.post(`/periodos/${encodeURIComponent(id)}/reabrir`),
+  actualizar: (id, cambios) => api.put(`/periodos/${idRuta(id)}`, cambios),
+  cerrar: (id) => api.post(`/periodos/${idRuta(id)}/cerrar`),
+  reabrir: (id) => api.post(`/periodos/${idRuta(id)}/reabrir`),
 };
 
 // Solo existe POST; el backend aún no expone un GET para listar asientos.
@@ -57,12 +59,12 @@ export const librosApi = {
 export const contrapartesApi = {
   listar: (tipo) => api.get("/contrapartes", { params: tipo ? { tipo } : {} }),
   crear: (contraparte) => api.post("/contrapartes", contraparte),
-  actualizar: (id, cambios) => api.put(`/contrapartes/${encodeURIComponent(id)}`, cambios),
+  actualizar: (id, cambios) => api.put(`/contrapartes/${idRuta(id)}`, cambios),
 };
 
 export const cxcApi = {
   listarFacturas: () => api.get("/cxc/facturas"),
-  obtenerFactura: (id) => api.get(`/cxc/facturas/${encodeURIComponent(id)}`),
+  obtenerFactura: (id) => api.get(`/cxc/facturas/${idRuta(id)}`),
   crearFactura: (factura) => api.post("/cxc/facturas", factura),
   listarPagos: () => api.get("/cxc/pagos"),
   crearPago: (pago) => api.post("/cxc/pagos", pago),
@@ -70,7 +72,7 @@ export const cxcApi = {
 
 export const cxpApi = {
   listarFacturas: () => api.get("/cxp/facturas"),
-  obtenerFactura: (id) => api.get(`/cxp/facturas/${encodeURIComponent(id)}`),
+  obtenerFactura: (id) => api.get(`/cxp/facturas/${idRuta(id)}`),
   crearFactura: (factura) => api.post("/cxp/facturas", factura),
   listarPagos: () => api.get("/cxp/pagos"),
   crearPago: (pago) => api.post("/cxp/pagos", pago),
