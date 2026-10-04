@@ -8,9 +8,9 @@ public static class Roles
     public const string Tecnico = "Técnico";
     public const string GestionCatalogo = $"{Administrador},{Contador}";
 
-    // E4: "Como Vendedor, quiero registrar facturas a clientes" (backlog-features-historias.md).
+    // E4: Vendedor factura a clientes, por eso puede gestionar CxC.
     public const string GestionCxC = $"{Administrador},{Contador},{Vendedor}";
 
-    // E5: ambas historias de CxP están redactadas "Como Contador" — sin Vendedor.
+    // E5: CxP excluye a Vendedor.
     public const string GestionCxP = $"{Administrador},{Contador}";
 }

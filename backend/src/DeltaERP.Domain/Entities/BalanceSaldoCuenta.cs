@@ -1,11 +1,7 @@
 namespace DeltaERP.Domain.Entities;
 
-/// <summary>
-/// Fila de database/05_views.sql::vw_balance_saldos (módulo M3). Vista de solo
-/// lectura (sin clave primaria propia — HasNoKey() en DeltaErpDbContext): el
-/// saldo se calcula en tiempo real a partir de LineaAsiento/AsientoContable,
-/// nunca se persiste.
-/// </summary>
+// Vista de solo lectura (sin clave primaria): el saldo se calcula en tiempo
+// real, nunca persiste.
 public class BalanceSaldoCuenta
 {
     public int CuentaId { get; set; }

@@ -1,20 +1,9 @@
 import { useState, useEffect } from "react";
 import { alternarTema, obtenerTemaActual } from "../tema";
 
-/**
- * Botón para alternar entre modo claro y oscuro.
- *
- * - Lee el tema actual desde el DOM (data-theme en <html>)
- * - Al hacer clic, alterna y persiste la elección
- * - Actualiza el aria-pressed y aria-label para a11y
- * - Escucha el evento "delta:tema-cambiado" para sincronizar si el tema cambia
- *   por otros listeners (cambio de SO, sincronización entre pestañas)
- * - Icono SVG inline: sol (claro) / luna (oscuro), sin gradientes ni efectos
- */
 function ToggleTema() {
   const [temaOscuro, setTemaOscuro] = useState(() => obtenerTemaActual() === "oscuro");
 
-  // Escucha cambios de tema disparados por otros listeners (SO, almacenamiento compartido)
   useEffect(() => {
     function handleTemaChanged(e) {
       setTemaOscuro(e.detail === "oscuro");
@@ -45,7 +34,6 @@ function ToggleTema() {
       aria-label={ariaLabel}
       title={title}
     >
-      {/* Icono: sol (claro) o luna (oscuro) */}
       {!temaOscuro ? (
         <svg
           width="16"
@@ -58,7 +46,6 @@ function ToggleTema() {
           strokeLinejoin="round"
           aria-hidden="true"
         >
-          {/* Sol: círculo + rayos */}
           <circle cx="12" cy="12" r="5" />
           <line x1="12" y1="1" x2="12" y2="3" />
           <line x1="12" y1="21" x2="12" y2="23" />
@@ -81,7 +68,6 @@ function ToggleTema() {
           strokeLinejoin="round"
           aria-hidden="true"
         >
-          {/* Luna: media luna estilizada */}
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
         </svg>
       )}

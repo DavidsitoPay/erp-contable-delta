@@ -56,13 +56,6 @@ API.
 
 ## Arquitectura de despliegue
 
-> Actualizado el 23/09/2026 tras la migración a la nube (DevOps 2). La versión
-> anterior de esta sección describía la arquitectura planeada en la etapa de
-> DevOps 1: contenedores Docker locales con una ruta de migración futura a Azure.
-> Esa migración ya ocurrió, y no exactamente como se planeó originalmente — ver
-> `docs/devops2-implementacion.md` para el detalle y la justificación de cada
-> sustitución.
-
 Cada capa se despliega en un servicio administrado independiente, sin infraestructura
 propia que mantener. El backend se empaqueta como imagen Docker (`devops/Dockerfile.backend`,
 dos etapas: compilación y ejecución) y corre en Azure Container Apps. El frontend, al
@@ -72,12 +65,18 @@ de datos PostgreSQL corre en Neon (proveedor sin servidor), con una rama `produc
 —la única que usa el backend desplegado— separada de la rama `development` de uso
 local.
 
-La integración y el despliegue continuo se implementaron en GitHub Actions, no en
-Azure DevOps: cada push a la rama principal del repositorio dispara la validación y
-aplicación del esquema de base de datos, seguida de la construcción y el despliegue
-de la nueva versión del backend, sin intervención manual. Azure Pipelines se conserva
-con un alcance reducido, limitado a verificar que el backend y el frontend compilen
-correctamente, como remanente de la configuración inicial de DevOps 1.
+La integración y el despliegue continuo corren en GitHub Actions, en cuatro workflows
+independientes (`.github/workflows/`):
+
+- `backend-deploy.yml`: en cada push a `main`, aplica las migraciones pendientes
+  contra la rama `production` de Neon y, solo si eso funciona, construye y publica
+  la imagen del backend y actualiza Azure Container Apps.
+- `frontend-alias.yml`: tras cada deploy de producción en Vercel, reapunta el
+  dominio corto del proyecto al nuevo despliegue.
+- `sonarcloud-analysis.yml`: analiza calidad y seguridad del código (backend,
+  frontend y SQL) en cada Pull Request y en cada push a `main`.
+- `backend-build-check.yml`: valida que el backend compile en cada push a `dev`,
+  antes de que el cambio llegue a un Pull Request o a `main`.
 
 Comunicación: navegador → frontend (HTTPS) → backend (HTTPS/JSON) → base de datos
 (SQL vía Npgsql/EF Core); backend → SMTP externo (notificaciones, diseñado, no

@@ -1,8 +1,5 @@
 -- =====================================================================
--- Delta ERP Contable — 01_tables.sql
--- Basado en: Diagrama_Modelo_Relacional_de_Base_de_Datos... (v2, 12/09/2026)
--- Incorpora la corrección oficial: sin saldos precalculados editables,
--- SaldoCuentaPeriodo inmutable, trazabilidad de auditoría vía procedimiento.
+-- 01_tables.sql
 -- =====================================================================
 
 -- 1. Seguridad y Auditoría -------------------------------------------------
@@ -29,9 +26,7 @@ CREATE TABLE bitacoraauditoria (
     tabla_afectada  VARCHAR(100) NOT NULL,
     detalle         TEXT
 );
--- Se puebla EXCLUSIVAMENTE mediante sp_registrar_auditoria (04_procedures.sql),
--- invocado por la API dentro de la misma transacción de negocio. Ver RN-08.
--- Un trigger (03_triggers.sql) impide su modificación o borrado posterior.
+-- RN-08: solo se escribe vía sp_registrar_auditoria; un trigger impide UPDATE/DELETE.
 
 -- 2. Catálogo y Configuración General --------------------------------------
 
@@ -257,12 +252,6 @@ CREATE TABLE saldocuentaperiodo (
     saldo_final    DECIMAL(14,2) NOT NULL,
     UNIQUE (periodo_id, cuenta_id)
 );
--- Fotografía inalterable del saldo de cada cuenta contable al cierre del periodo.
--- Se escribe UNA sola vez desde sp_cerrar_periodo (04_procedures.sql).
--- Un trigger (03_triggers.sql) impide UPDATE/DELETE posterior.
--- El saldo del periodo EN CURSO se sigue calculando en tiempo real (05_views.sql),
--- esta tabla solo aplica a periodos ya cerrados.
+-- Snapshot inmutable al cierre; se escribe una sola vez desde sp_cerrar_periodo.
+-- Un trigger impide UPDATE/DELETE. El periodo en curso se calcula en vivo (05_views.sql).
 
--- =====================================================================
--- Fin de 01_tables.sql — ver 03_triggers.sql, 04_procedures.sql y 05_views.sql
--- =====================================================================

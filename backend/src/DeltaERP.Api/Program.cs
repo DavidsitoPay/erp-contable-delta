@@ -8,18 +8,13 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Capa de datos: PostgreSQL vía Npgsql / EF Core.
-// UseSnakeCaseNamingConvention traduce columnas (PeriodoId -> periodo_id, etc.)
-// para que coincidan con database/01_tables.sql sin mapearlas una por una.
-// Los nombres de tabla (concatenados sin guion bajo) se mantienen explícitos
-// en DeltaErpDbContext.OnModelCreating, que se aplica después y tiene prioridad.
+// UseSnakeCaseNamingConvention traduce columnas (PeriodoId -> periodo_id) para
+// igualar el esquema SQL; los nombres de tabla explícitos en OnModelCreating
+// se aplican después y tienen prioridad.
 builder.Services.AddDbContext<DeltaErpDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Default"))
            .UseSnakeCaseNamingConvention());
 
-// M8 Seguridad: autenticación JWT. Los controladores resuelven el usuario
-// autenticado desde el token (ver AsientosController) en vez de confiar en un
-// usuarioId enviado por el cliente — esto es lo que hace correcta a RN-08.
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services.AddSingleton<TokenService>();
 
@@ -47,8 +42,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Orígenes permitidos configurables (Cors:AllowedOrigins, separados por coma) para no
-// tener que recompilar al cambiar de entorno. Default: solo el frontend local de Vite.
+// Cors:AllowedOrigins es configurable (coma-separado); default: frontend local de Vite.
 var corsOrigins = builder.Configuration.GetValue<string>("Cors:AllowedOrigins")
     ?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
     ?? new[] { "http://localhost:3000" };

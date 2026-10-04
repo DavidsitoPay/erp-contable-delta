@@ -8,10 +8,6 @@ using Npgsql;
 
 namespace DeltaERP.Api.Controllers;
 
-/// <summary>
-/// M1 Catálogo: centros de costo, usados para distribuir líneas de asiento
-/// (LineaAsiento.CentroCostoId).
-/// </summary>
 [ApiController]
 [Route("api/centros-costo")]
 [Authorize]
@@ -60,9 +56,7 @@ public class CentrosCostoController : ControllerBase
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: "23505" })
         {
-            // Segunda red de seguridad: la comprobación AnyAsync de arriba tiene una
-            // ventana de carrera bajo peticiones concurrentes; el UNIQUE en la base
-            // de datos (centrocosto.codigo) es la garantía real.
+            // Fallback ante carrera entre el AnyAsync de arriba y el UNIQUE real en la BD.
             return Conflict(new { error = $"Ya existe un centro de costo con el código {centro.Codigo}." });
         }
         return CreatedAtAction(nameof(Obtener), new { id = centro.Id }, centro);

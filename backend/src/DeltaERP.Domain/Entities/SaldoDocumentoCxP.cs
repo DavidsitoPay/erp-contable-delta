@@ -1,8 +1,6 @@
 namespace DeltaERP.Domain.Entities;
 
-/// <summary>
-/// Mapea vw_saldodocumentocxp (database/05_views.sql). Ver SaldoDocumentoCxC.
-/// </summary>
+// Vista de solo lectura, sin clave primaria propia.
 public class SaldoDocumentoCxP
 {
     public int DocumentoId { get; set; }

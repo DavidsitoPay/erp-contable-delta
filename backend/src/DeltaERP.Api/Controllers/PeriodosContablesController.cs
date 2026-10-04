@@ -9,13 +9,8 @@ using Npgsql;
 
 namespace DeltaERP.Api.Controllers;
 
-/// <summary>
-/// M1 Catálogo: periodos contables. Cerrar/reabrir invocan los procedimientos
-/// de database/04_procedures.sql, que consolidan SaldoCuentaPeriodo de forma
-/// inmutable y validan el perfil autorizado (Contador/Administrador del
-/// sistema para cerrar; solo Administrador del sistema para reabrir) — esa
-/// autorización vive en la base de datos, no se duplica aquí.
-/// </summary>
+// Cerrar/reabrir no llevan [Authorize(Roles = ...)]: sp_cerrar_periodo y
+// sp_reabrir_periodo ya validan el perfil autorizado en la base de datos.
 [ApiController]
 [Route("api/periodos")]
 [Authorize]
@@ -90,11 +85,7 @@ public class PeriodosContablesController : ControllerBase
         return Ok(periodo);
     }
 
-    /// <summary>
-    /// Busca un periodo (distinto de <paramref name="excluirId"/>) cuyo rango de
-    /// fechas se solape con el de <paramref name="periodo"/>. Condición de solapamiento
-    /// estándar: existente.FechaInicio &lt;= nuevo.FechaFin y existente.FechaFin &gt;= nuevo.FechaInicio.
-    /// </summary>
+    // Dos rangos [FechaInicio, FechaFin] se solapan si cada uno empieza antes de que el otro termine.
     private async Task<PeriodoContable?> BuscarPeriodoSolapadoAsync(PeriodoContable periodo, int? excluirId)
     {
         return await _db.PeriodosContables

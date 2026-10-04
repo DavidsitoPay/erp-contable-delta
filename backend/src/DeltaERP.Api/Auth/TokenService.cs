@@ -7,11 +7,6 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace DeltaERP.Api.Auth;
 
-/// <summary>
-/// Emite el JWT que consumen tanto el frontend (para llamar a la API) como los
-/// controladores de la API (para resolver el usuario autenticado en vez de
-/// confiar en un usuarioId enviado por el cliente — ver RN-08, RN-09).
-/// </summary>
 public class TokenService
 {
     private readonly JwtOptions _options;

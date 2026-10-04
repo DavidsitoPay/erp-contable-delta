@@ -1,9 +1,6 @@
 namespace DeltaERP.Domain.Entities;
 
-/// <summary>
-/// Pago a un proveedor, aplicado a una o varias facturas (RN-05). Simétrico a
-/// ReciboPagoCliente — tampoco genera AsientoContable (ver el comentario ahí).
-/// </summary>
+// Simétrico a ReciboPagoCliente: tampoco genera AsientoContable.
 public class PagoProveedorCabecera
 {
     public int Id { get; set; }

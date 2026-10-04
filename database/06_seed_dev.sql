@@ -1,15 +1,8 @@
 -- =====================================================================
 -- 06_seed_dev.sql
--- Usuarios de prueba. El nombre del archivo es histórico (se escribió
--- pensando solo en desarrollo local); hoy también corre contra la branch
--- "production" de Neon vía database/run_migrations.sh, porque es la única
--- forma de entrar al sistema desplegado — no hay flujo de registro de
--- usuarios ni datos reales de clientes que proteger en este proyecto.
--- Contraseñas rotadas (las originales quedaron expuestas en texto plano en
--- README.md, commit 37278ab, repo público) — ver CREDENTIALS.md, que no se
--- sube al repositorio. Los hashes son PBKDF2
--- (Microsoft.AspNetCore.Identity.PasswordHasher, el mismo que usa
--- AuthController.cs), no se pueden editar a mano.
+-- También se aplica en production: es la única forma de crear usuarios,
+-- no hay flujo de registro. Los hashes son PBKDF2
+-- (Microsoft.AspNetCore.Identity.PasswordHasher) — no se editan a mano.
 -- =====================================================================
 
 INSERT INTO perfil (nombre) VALUES

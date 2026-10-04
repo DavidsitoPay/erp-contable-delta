@@ -3,9 +3,8 @@
 -- =====================================================================
 
 -- --- RN-08: registro de auditoría, invocado por la API ----------------------
--- La API resuelve usuario_id desde el token JWT ya validado y llama este
--- procedimiento DENTRO de la misma transacción de la operación de negocio,
--- de modo que si esta se revierte, el registro de auditoría también.
+-- Debe llamarse dentro de la misma transacción de negocio: si esta se
+-- revierte, el registro de auditoría también.
 
 CREATE OR REPLACE PROCEDURE sp_registrar_auditoria(
     p_usuario_id     INT,
@@ -22,12 +21,8 @@ END;
 $$;
 
 -- --- Cierre de periodo contable ----------------------------------------------
--- Consolida el saldo de cada cuenta contable con movimiento en el periodo,
--- de forma inmutable (ver trg_saldoperiodo_inmutable), y cierra el periodo.
--- p_usuario_id se usa para la auditoría; la verificación de perfil
--- (solo un usuario autorizado puede cerrar/reabrir un periodo) se hace aquí
--- mismo, consultando perfil.nombre — perfiles reales del proyecto, ver
--- 06_seed_dev.sql (Administrador del sistema, Contador, Vendedor, Técnico).
+-- Consolida saldos de forma inmutable (trg_saldoperiodo_inmutable) y cierra
+-- el periodo. Requiere perfil Contador o Administrador del sistema.
 
 CREATE OR REPLACE PROCEDURE sp_cerrar_periodo(p_periodo_id INT, p_usuario_id INT)
 LANGUAGE plpgsql
@@ -82,9 +77,8 @@ BEGIN
         RAISE EXCEPTION 'El usuario % no tiene perfil autorizado para reabrir un periodo.', p_usuario_id;
     END IF;
 
-    -- Nota: los registros ya escritos en saldocuentaperiodo para este periodo
-    -- NO se eliminan (son inmutables); un nuevo cierre debe usar otra estrategia
-    -- de conciliación si el periodo se reabre. Definir con el equipo antes de usar.
+    -- saldocuentaperiodo ya escrito para este periodo no se borra (es inmutable);
+    -- un nuevo cierre tras reabrir necesita su propia estrategia de conciliación.
     UPDATE periodocontable SET estado = 'Abierto' WHERE id = p_periodo_id;
 
     CALL sp_registrar_auditoria(p_usuario_id, 'reabrir_periodo', 'periodocontable',
