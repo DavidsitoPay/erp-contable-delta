@@ -80,6 +80,22 @@ public class CxCControllerTests
     }
 
     [Fact]
+    public async Task CrearFactura_ConClienteInexistente_RespondeBadRequestSinCrearNada()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var numero = $"F-{TestData.Sufijo()}";
+        var client = _pg.CreateApiClient(e.UsuarioId);
+
+        var response = await client.PostAsJsonAsync("/api/cxc/facturas", PayloadFactura(e, numero, IdInexistente, e.CuentaIngreso, null));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("error").GetString();
+        Assert.Contains("no existe", error);
+        Assert.Equal(0, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM documentocxc WHERE numero = $1", numero));
+        Assert.Equal(0, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM asientocontable WHERE numero = $1", $"CXC-{numero}"));
+    }
+
+    [Fact]
     public async Task CrearFactura_ConCentroDeCostoInexistente_RespondeBadRequestSinCrearNada()
     {
         var e = await _pg.Data.SembrarEscenarioAsync();

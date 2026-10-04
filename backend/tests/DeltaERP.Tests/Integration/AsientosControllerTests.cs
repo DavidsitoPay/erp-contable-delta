@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using DeltaERP.Api.Auth;
 using DeltaERP.Tests.Support;
+using Npgsql;
 
 namespace DeltaERP.Tests.Integration;
 
@@ -144,5 +145,25 @@ public class AsientosControllerTests
 
         var asientoCount = await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM asientocontable WHERE numero = $1", numero);
         Assert.Equal(0, asientoCount);
+    }
+
+    [Fact]
+    public async Task Bitacora_ConUpdateODeleteDirecto_LaRechazaElTrigger()
+    {
+        var usuarioId = await _pg.Data.CrearUsuarioAsync();
+        var bitacoraId = await _pg.Data.ScalarAsync<int>(
+            "INSERT INTO bitacoraauditoria (usuario_id, accion, tabla_afectada) VALUES ($1, 'prueba_inmutabilidad', 'asientocontable') RETURNING id",
+            usuarioId);
+
+        var update = await Assert.ThrowsAsync<PostgresException>(() =>
+            _pg.Data.EjecutarAsync("UPDATE bitacoraauditoria SET accion = 'alterada' WHERE id = $1", bitacoraId));
+        var delete = await Assert.ThrowsAsync<PostgresException>(() =>
+            _pg.Data.EjecutarAsync("DELETE FROM bitacoraauditoria WHERE id = $1", bitacoraId));
+
+        Assert.Equal("P0001", update.SqlState);
+        Assert.Contains("inmutable", update.MessageText);
+        Assert.Equal("P0001", delete.SqlState);
+        Assert.Contains("inmutable", delete.MessageText);
+        Assert.Equal("prueba_inmutabilidad", await _pg.Data.ScalarAsync<string>("SELECT accion FROM bitacoraauditoria WHERE id = $1", bitacoraId));
     }
 }
