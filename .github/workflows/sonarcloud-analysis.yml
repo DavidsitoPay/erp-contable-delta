@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  checks: write
 
 jobs:
   sonarcloud:
@@ -102,6 +103,47 @@ jobs:
             /d:sonar.coverage.exclusions="**/Program.cs,**/DeltaErpDbContext.cs,**/Entities/**,frontend/src/main.jsx,frontend/src/**/*.css,frontend/**/*.config.js,frontend/src/test/**,**/*.test.*" \
             /d:sonar.cpd.exclusions="database/04_procedures.sql,backend/tests/**,frontend/**/*.test.*,frontend/src/test/**"
 
-          dotnet test backend/tests/DeltaERP.Tests/DeltaERP.Tests.csproj --configuration Release --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+          dotnet test backend/tests/DeltaERP.Tests/DeltaERP.Tests.csproj --configuration Release --logger "trx;LogFileName=backend-tests.trx" --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
           ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
+
+      - name: Pruebas backend
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@v1
+        with:
+          name: Pruebas backend
+          path: backend/tests/DeltaERP.Tests/TestResults/*.trx
+          reporter: dotnet-trx
+          fail-on-error: false
+          fail-on-empty: false
+
+      - name: Pruebas frontend
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@v1
+        with:
+          name: Pruebas frontend
+          path: frontend/test-results/junit.xml
+          reporter: java-junit
+          fail-on-error: false
+          fail-on-empty: false
+
+      - name: Resumen de cobertura
+        if: ${{ !cancelled() }}
+        run: |
+          echo "## Cobertura de pruebas" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f frontend/coverage/coverage-summary.json ]; then
+            FRONTEND_COV=$(jq '.total.lines.pct' frontend/coverage/coverage-summary.json)
+            echo "- Frontend: ${FRONTEND_COV}% de líneas" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f backend/tests/DeltaERP.Tests/TestResults/*/coverage.opencover.xml ]; then
+            BACKEND_COV=$(grep -oP 'sequenceCoverage="\K[^"]+' backend/tests/DeltaERP.Tests/TestResults/*/coverage.opencover.xml | head -1)
+            [ -n "$BACKEND_COV" ] && echo "- Backend: ${BACKEND_COV}% de líneas" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "*Nota: la cobertura mostrada aquí es total; el gate de Sonar mide solo código nuevo.*" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            SONAR_URL="https://sonarcloud.io/summary/new_code?id=DavidsitoPay_erp-contable-delta&pullRequest=${{ github.event.pull_request.number }}"
+          else
+            SONAR_URL="https://sonarcloud.io/summary/new_code?id=DavidsitoPay_erp-contable-delta&branch=main"
+          fi
+          echo "[Análisis completo en SonarCloud]($SONAR_URL)" >> "$GITHUB_STEP_SUMMARY"

@@ -32,7 +32,23 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Aplicar migraciones pendientes
-        run: bash database/run_migrations.sh "${{ secrets.NEON_PROD_CONNECTION_STRING }}"
+        run: bash database/run_migrations.sh "${{ secrets.NEON_PROD_CONNECTION_STRING }}" | tee migraciones.log
+
+      - name: Resumen de migraciones
+        if: ${{ !cancelled() }}
+        run: |
+          {
+            echo "## Migraciones (Neon production)"
+            if [ -f migraciones.log ]; then
+              if grep -qE '^== (Aplicando|Nada nuevo)' migraciones.log; then
+                grep '^== (Aplicando|Nada nuevo)' migraciones.log | sed 's/^== /- /' | sed 's/ ==$//'
+              else
+                echo "- Sin información de migraciones"
+              fi
+            else
+              echo "- Sin información de migraciones"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   build-and-deploy:
     needs: migrate
@@ -88,6 +104,16 @@ jobs:
               --name ca-delta-erp-backend \
               --resource-group rg-delta-erp \
               --image ${{ steps.image.outputs.name }}:${{ github.sha }}
+
+      - name: Resumen del backend desplegado
+        run: |
+          FQDN=$(az containerapp show --name ca-delta-erp-backend --resource-group rg-delta-erp --query properties.configuration.ingress.fqdn -o tsv)
+          {
+            echo "## Backend desplegado"
+            echo "- Imagen: \`${{ steps.image.outputs.name }}:${{ github.sha }}\`"
+            echo "- Commit: ${{ github.sha }}"
+            echo "- Health: https://${FQDN}/health"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Logout de Azure
         if: always()

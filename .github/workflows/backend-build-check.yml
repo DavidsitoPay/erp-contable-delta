@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  checks: write
 
 jobs:
   pruebas:
@@ -37,6 +38,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Configurar .NET
         uses: actions/setup-dotnet@v4
@@ -44,7 +47,7 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Pruebas del backend (unitarias e integración)
-        run: dotnet test backend/tests/DeltaERP.Tests/DeltaERP.Tests.csproj --configuration Release
+        run: dotnet test backend/tests/DeltaERP.Tests/DeltaERP.Tests.csproj --configuration Release --logger "trx;LogFileName=backend-tests.trx" --collect:"XPlat Code Coverage"
 
       - name: Configurar Node
         uses: actions/setup-node@v4
@@ -60,3 +63,36 @@ jobs:
       - name: Pruebas del frontend
         working-directory: frontend
         run: npm run test:ci
+
+      - name: Ajustar rutas en lcov.info
+        run: sed -i 's#^SF:src/#SF:frontend/src/#' frontend/coverage/lcov.info
+
+      - name: Pruebas backend
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@v1
+        with:
+          name: Pruebas backend
+          path: backend/tests/DeltaERP.Tests/TestResults/*.trx
+          reporter: dotnet-trx
+          fail-on-error: false
+          fail-on-empty: false
+
+      - name: Pruebas frontend
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@v1
+        with:
+          name: Pruebas frontend
+          path: frontend/test-results/junit.xml
+          reporter: java-junit
+          fail-on-error: false
+          fail-on-empty: false
+
+      - name: Gate de coverage (líneas cambiadas vs main)
+        run: |
+          pip install diff-cover
+          diff-cover backend/tests/DeltaERP.Tests/TestResults/*/coverage.cobertura.xml frontend/coverage/lcov.info --compare-branch=origin/main --fail-under=80 --markdown-report diff-cover.md --exclude '**/Program.cs' --exclude '**/DeltaErpDbContext.cs' --exclude '**/Entities/*' --exclude 'frontend/src/main.jsx' --exclude '*.css' --exclude '*.config.js' --exclude '*.test.*' --exclude '*/src/test/*'
+
+      - name: Agregar reporte de coverage a GitHub
+        if: ${{ !cancelled() }}
+        run: |
+          [ -f diff-cover.md ] && cat diff-cover.md >> "$GITHUB_STEP_SUMMARY" || true
