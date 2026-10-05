@@ -46,3 +46,5 @@ Crea 8 usuarios, dos por perfil, con la misma contraseña que el usuario semilla
 | Contador | `demo.contador1@delta.com.gt`, `demo.contador2@delta.com.gt` | `contador@delta.com.gt` |
 | Vendedor | `demo.vendedor1@delta.com.gt`, `demo.vendedor2@delta.com.gt` | `vendedor@delta.com.gt` |
 | Técnico | `demo.tecnico1@delta.com.gt`, `demo.tecnico2@delta.com.gt` | `tecnico@delta.com.gt` |
+
+Producción también tiene datos demo de tesorería cargados manualmente desde `database/demo/datos_demo_tesoreria.sql`; `run_migrations.sh` no lo aplica y su guardia impide ejecutarlo dos veces. Crea 2 cuentas bancarias (BAC Monetaria y Banrural Ahorro) ligadas a las cuentas contables `1.1.02.01` y `1.1.02.02`, con saldo de apertura contra Capital social, movimientos manuales, una transferencia entre ambas y cobros/pagos de facturas demo con cuenta bancaria. Incluye una conciliación de septiembre finalizada (diferencia 0) y una de octubre en estado Pendiente con un depósito sin marcar.
