@@ -17,6 +17,7 @@ export function resolverTemaInicial() {
       return guardado;
     }
   } catch (e) {
+    // localStorage no disponible (modo privado): se usa la preferencia del sistema.
   }
 
   try {
@@ -71,8 +72,10 @@ export function iniciarSincronizacionTema() {
           aplicarTema(nuevoTema);
         }
       } catch (err) {
+        // storage no disponible: se mantiene el tema actual.
       }
     });
   } catch (err) {
+    // matchMedia no disponible: no se sincroniza con el sistema.
   }
 }
