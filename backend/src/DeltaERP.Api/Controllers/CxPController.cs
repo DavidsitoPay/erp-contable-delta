@@ -178,7 +178,7 @@ public class CxPController : ControllerBase
             await _tesoreria.RegistrarMovimientoDePagoAsync(
                 desembolso!, Perfil, pago.Fecha, $"Pago {pago.Id} - {proveedor!.Nombre}", pago.ReferenciaBancaria, pago.Id, usuarioId);
 
-            return $"Pago {pago.Id} (proveedor {proveedor!.Nombre}) registrado, monto {pago.MontoTotal}";
+            return $"Pago {pago.Id} (proveedor {proveedor.Nombre}) registrado, monto {pago.MontoTotal}";
         });
 
         return CreatedAtAction(nameof(ListarPagos), new { }, pago);

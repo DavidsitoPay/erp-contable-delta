@@ -178,7 +178,7 @@ public class CxCController : ControllerBase
             await _tesoreria.RegistrarMovimientoDePagoAsync(
                 bancario!, Perfil, recibo.Fecha, $"Cobro {recibo.Id} - {cliente!.Nombre}", recibo.ReferenciaBancaria, recibo.Id, usuarioId);
 
-            return $"Recibo {recibo.Id} (cliente {cliente!.Nombre}) registrado, monto {recibo.MontoTotal}";
+            return $"Recibo {recibo.Id} (cliente {cliente.Nombre}) registrado, monto {recibo.MontoTotal}";
         });
 
         return CreatedAtAction(nameof(ListarPagos), new { }, recibo);

@@ -1,7 +1,7 @@
-const PERFILES_TESORERIA = ["Administrador del sistema", "Contador"];
+const PERFILES_TESORERIA = new Set(["Administrador del sistema", "Contador"]);
 
 export function puedeGestionarTesoreria(perfil) {
-  return PERFILES_TESORERIA.includes(perfil);
+  return PERFILES_TESORERIA.has(perfil);
 }
 
 export function perfilActual() {

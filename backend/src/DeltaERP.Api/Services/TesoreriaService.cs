@@ -29,6 +29,19 @@ public class TesoreriaService
     public static string MensajeSinPeriodo(DateOnly fecha) =>
         $"No existe un periodo contable que contenga la fecha {fecha:yyyy-MM-dd}.";
 
+    private async Task<string?> ValidarContrapartidaAsync(int contrapartidaId, int cuentaContableBancoId)
+    {
+        if (contrapartidaId == cuentaContableBancoId)
+        {
+            return "La contrapartida no puede ser la cuenta contable del banco.";
+        }
+        if (await _db.CuentasBancarias.AnyAsync(b => b.CuentaContableId == contrapartidaId))
+        {
+            return "La contrapartida no puede ser la cuenta contable de una cuenta bancaria; usa una transferencia.";
+        }
+        return await _validacion.ValidarCuentasPorIdAsync([contrapartidaId]);
+    }
+
     public async Task<(CuentaBancaria? Cuenta, string? Error)> ValidarCuentaOperableAsync(int id)
     {
         var cuenta = await _db.CuentasBancarias.FindAsync(id);
@@ -120,11 +133,7 @@ public class TesoreriaService
         {
             return (null, errorPeriodo);
         }
-        var errorContrapartida = req.CuentaContrapartidaId == cuenta!.CuentaContableId
-            ? "La contrapartida no puede ser la cuenta contable del banco."
-            : await _db.CuentasBancarias.AnyAsync(b => b.CuentaContableId == req.CuentaContrapartidaId)
-            ? "La contrapartida no puede ser la cuenta contable de una cuenta bancaria; usa una transferencia."
-            : await _validacion.ValidarCuentasPorIdAsync(new[] { req.CuentaContrapartidaId });
+        var errorContrapartida = await ValidarContrapartidaAsync(req.CuentaContrapartidaId, cuenta!.CuentaContableId);
         if (errorContrapartida is not null)
         {
             return (null, errorContrapartida);

@@ -95,6 +95,18 @@ public class ConciliacionesControllerTests
     }
 
     [Fact]
+    public async Task Crear_SinCuentaBancariaId_Responde400ConErrores()
+    {
+        var (_, client) = await PrepararAsync();
+
+        var response = await client.PostAsJsonAsync(Ruta, new { fecha = new DateOnly(2025, 4, 30), saldoExtracto = 100m });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.LeerJsonAsync();
+        Assert.True(body.TryGetProperty("errors", out _));
+    }
+
+    [Fact]
     public async Task Crear_ConCuentaInactiva_Responde400()
     {
         var (e, client) = await PrepararAsync();
