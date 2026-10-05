@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { movimientosTesoreriaApi } from "../../services/api";
 import Movimientos from "./Movimientos";
@@ -28,9 +28,10 @@ describe("Movimientos", () => {
   it("lista los movimientos con el indicador Conciliado y el aviso de corrección", async () => {
     renderMovimientos();
 
-    expect(await screen.findByText("Depósito inicial")).toBeInTheDocument();
+    const table = await screen.findByRole("table");
+    expect(within(table).getByText("Depósito inicial")).toBeInTheDocument();
     expect(movimientosTesoreriaApi.listar).toHaveBeenCalledWith({});
-    expect(screen.getByText("Conciliado")).toBeInTheDocument();
+    expect(within(table).getByText("Conciliado")).toBeInTheDocument();
     expect(screen.getByText(/registra uno inverso/)).toBeInTheDocument();
   });
 

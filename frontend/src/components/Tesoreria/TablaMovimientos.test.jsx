@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import TablaMovimientos from "./TablaMovimientos";
 
@@ -9,9 +9,10 @@ describe("TablaMovimientos", () => {
   it("muestra los datos del movimiento y la cuenta, sin columna Conciliado ni acción", () => {
     render(<TablaMovimientos movimientos={[{ id: 1, ...base }]} cuentasPorId={cuentasPorId} />);
 
-    expect(screen.getByText("BAC 123")).toBeInTheDocument();
-    expect(screen.getByText("Depósito")).toBeInTheDocument();
-    expect(screen.getByText(/500[.,]00/)).toBeInTheDocument();
+    const table = screen.getByRole("table");
+    expect(within(table).getByText("BAC 123")).toBeInTheDocument();
+    expect(within(table).getByText("Depósito")).toBeInTheDocument();
+    expect(within(table).getByText(/500[.,]00/)).toBeInTheDocument();
     expect(screen.queryByText("Conciliado")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
   });
@@ -24,9 +25,10 @@ describe("TablaMovimientos", () => {
       />
     );
 
-    expect(screen.getByText("Conciliado")).toBeInTheDocument();
-    expect(screen.getByText("Sí")).toBeInTheDocument();
-    expect(screen.getByText("No")).toBeInTheDocument();
+    const table = screen.getByRole("table");
+    expect(within(table).getByText("Conciliado")).toBeInTheDocument();
+    expect(within(table).getByText("Sí")).toBeInTheDocument();
+    expect(within(table).getByText("No")).toBeInTheDocument();
   });
 
   it("renderiza el botón de acción por fila y entrega el movimiento al hacer click", () => {

@@ -42,8 +42,8 @@ describe("CuentasBancarias", () => {
   it("lista las cuentas con saldo, saldo de apertura y estado", () => {
     renderCuentas();
 
-    expect(screen.getByText("BAC")).toBeInTheDocument();
-    expect(screen.getByText("1101 - Banco BAC")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("BAC")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("1101 - Banco BAC")).toBeInTheDocument();
     expect(screen.getByText(/1[,.\s ]?500[.,]00/)).toBeInTheDocument();
     expect(screen.getByText("Activa")).toBeInTheDocument();
     expect(screen.getByText("Inactiva")).toBeInTheDocument();

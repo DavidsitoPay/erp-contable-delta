@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { conciliacionesApi } from "../../services/api";
 import Conciliaciones from "./Conciliaciones";
@@ -29,9 +29,10 @@ describe("Conciliaciones", () => {
   it("lista las conciliaciones con cuenta, fecha de corte y estado", async () => {
     renderConciliaciones();
 
-    expect(await screen.findByText("Pendiente")).toBeInTheDocument();
-    expect(screen.getByText("BAC 123")).toBeInTheDocument();
-    expect(screen.getByText("2025-03-31")).toBeInTheDocument();
+    const table = await screen.findByRole("table");
+    expect(within(table).getByText("Pendiente")).toBeInTheDocument();
+    expect(within(table).getByText("BAC 123")).toBeInTheDocument();
+    expect(within(table).getByText("2025-03-31")).toBeInTheDocument();
     expect(screen.queryByText(/Detalle abierto/)).toBeNull();
   });
 
