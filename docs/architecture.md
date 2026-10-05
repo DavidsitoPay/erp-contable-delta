@@ -28,7 +28,11 @@ su perfil:
   documento nuevo. `PagoRules` valida la solicitud de pago y las aplicaciones,
   incluida la comprobación de RN-05 (varias aplicaciones a la misma factura se suman
   antes de compararlas con el saldo pendiente). `PartidaDobleValidator` valida RN-01
-  en asientos manuales. `IDocumentoFactura` e `ILineaFactura` abstraen los documentos
+  en asientos manuales. `AsientoTesoreriaBuilder` construye el asiento de todo
+  movimiento de tesorería (una línea de banco y una línea por contrapartida, del lado
+  opuesto), por lo que cuadra por construcción; `TesoreriaRules` valida montos,
+  movimientos, transferencias, cuentas bancarias, apertura y saldo de extracto, y agrupa
+  las aplicaciones de un pago por cuenta de control. `IDocumentoFactura` e `ILineaFactura` abstraen los documentos
   y líneas de CxC y CxP.
 - `DeltaERP.Api/Services/`: `ValidacionContable` verifica contra la base la
   contraparte (RN-04), el periodo abierto (RN-02), las cuentas (existentes, activas,
@@ -36,7 +40,20 @@ su perfil:
   persiste asiento y factura. `AuditoriaService` ejecuta la operación y la llamada a
   `sp_registrar_auditoria` (RN-08) en una misma transacción. `PerfilFactura` reúne lo
   que distingue a CxC de CxP (sigla, tipo de tercero, tipos de documento, cuenta de
-  control, lado de control).
+  control, lado de control). `TesoreriaService` (M6) es el único lugar que une cuenta
+  bancaria, periodo abierto, asiento y movimiento: lo usan los movimientos manuales, las
+  transferencias, la apertura de cuentas y los cobros y pagos de CxC/CxP (que derivan la
+  cuenta de control de cada factura aplicada y registran movimiento y asiento dentro de
+  la transacción del pago). `ErroresPostgres` traduce de forma compartida las fallas de
+  los procedimientos almacenados (periodos y conciliaciones): `P0001` a `403`, `P0002`
+  a `404` y `55000` a `409`, y reconoce violaciones de unicidad por nombre de restricción.
+- Endpoints de tesorería (rol Administrador o Contador, `Roles.GestionTesoreria`):
+  `api/cuentas-bancarias` (listar, obtener, crear, actualizar banco/número/tipo,
+  desactivar), `api/movimientos-tesoreria` (listar con filtros, registrar movimiento
+  manual, `POST transferencias`) y `api/conciliaciones` (listar, detalle, crear, editar,
+  `cancelar`, marcar y desmarcar movimientos, `finalizar`). Registrar cobros y pagos
+  (`POST api/cxc/pagos`, `POST api/cxp/pagos`) exige `Roles.RegistroPagos`
+  (Administrador o Contador).
 - `DeltaERP.Api/Models/`: modelos de detalle de factura y de sus líneas que devuelven
   los controladores `CxCController` y `CxPController`.
 
@@ -70,7 +87,7 @@ el administrador, modifique o elimine registros de auditoría ya escritos.
 
 - Núcleo contable (M2, M3) → `AsientoContable`, `LineaAsiento`, `CuentaContable`, `CentroCosto`.
 - CxC/CxP (M4, M5) → `DocumentoCxC`, `DocumentoCxP`, `AplicacionPagoCliente`, `AplicacionPagoProveedor`.
-- Tesorería (M6) → `CuentaBancaria`, `MovimientoTesoreria`, `ConciliacionBancaria`.
+- Tesorería (M6) → `CuentaBancaria`, `MovimientoTesoreria` (cada uno con su asiento), `ConciliacionBancaria`, `DetalleConciliacion`.
 - Seguridad y auditoría (M8) → `Usuario`, `Perfil`, `BitacoraAuditoria` (poblada por la API, no por trigger).
 - Cierre contable → `PeriodoContable` y `SaldoCuentaPeriodo` (saldos consolidados e inmutables por periodo).
 
@@ -82,12 +99,14 @@ API.
 **Backend** (`backend/tests/DeltaERP.Tests`, xUnit). Dos grupos:
 
 - Unitarias (`Unit/`): reglas puras del dominio (`AsientoFacturaBuilder`,
-  `FacturaRules`, `PagoRules`, `PartidaDobleValidator`), sin base de datos.
+  `AsientoTesoreriaBuilder`, `FacturaRules`, `PagoRules`, `PartidaDobleValidator`,
+  `TesoreriaRules`) y `ErroresPostgres`, sin base de datos.
 - Integración (`Integration/`, trait `Category=Integration`): levantan la API con
   `WebApplicationFactory` contra un PostgreSQL 16 real, de modo que los triggers
   (RN-01, RN-03, RN-05) actúan igual que en producción. Cubren todos los controladores
-  de la API: asientos, auth, centros de costo, contrapartes, cuentas contables, CxC,
-  CxP, libros y periodos contables. Las pruebas de login verifican la emisión del
+  de la API: asientos, auth, centros de costo, contrapartes, cuentas bancarias,
+  cuentas contables, conciliaciones, CxC, CxP, libros, movimientos de tesorería y
+  periodos contables. Las pruebas de login verifican la emisión del
   token (`AuthController`/`TokenService`) con un cliente anónimo y el esquema JWT
   real; el resto usa `TestAuthHandler`. Las operaciones cuya autorización vive en un
   procedimiento almacenado (cerrar y reabrir periodo) se validan contra el perfil
@@ -97,7 +116,7 @@ Soporte de las pruebas de integración (`Support/`):
 
 - `PostgresFixture` lee la cadena de conexión de la variable `TEST_PG_CONN`; si falta,
   las pruebas fallan (no se omiten). El nombre de la base debe contener `test`. Al
-  iniciar recrea el esquema `public` y aplica `database/01` a `05` y `07`; no aplica
+  iniciar recrea el esquema `public` y aplica `database/01` a `05` y `07` a `09`; no aplica
   `06` (datos semilla).
 - Aislamiento: bitácora, saldos, asientos y usuarios son inmutables, así que no hay
   limpieza entre pruebas. Cada prueba siembra sus propias filas con sufijos únicos

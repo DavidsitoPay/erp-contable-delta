@@ -6,6 +6,7 @@ import App from "./App";
 
 vi.mock("./services/api", async (importOriginal) => ({ ...(await importOriginal()), checkHealth: vi.fn() }));
 vi.mock("./components/Asientos/RegistrarAsiento", () => ({ default: () => <p>Formulario de asiento</p> }));
+vi.mock("./components/Tesoreria/Tesoreria", () => ({ default: () => <p>Módulo de tesorería</p> }));
 
 function renderApp(perfil, ruta = "/") {
   if (perfil) localStorage.setItem("delta_usuario", JSON.stringify({ nombre: "Ana", perfil }));
@@ -27,8 +28,24 @@ describe("App", () => {
     renderApp("Contador");
 
     expect(await screen.findByText("Conectado a Delta ERP Contable API")).toBeInTheDocument();
-    expect(screen.getAllByRole("link")).toHaveLength(10);
+    expect(screen.getAllByRole("link")).toHaveLength(11);
     expect(screen.getByRole("link", { name: "Registrar asiento" })).toBeInTheDocument();
+  });
+
+  it.each(["Contador", "Administrador del sistema"])("%s ve la pestaña Tesorería y abre su módulo", async (perfil) => {
+    renderApp(perfil, "/tesoreria");
+
+    expect(screen.getByRole("link", { name: "Tesorería" })).toBeInTheDocument();
+    expect(screen.getByText("Módulo de tesorería")).toBeInTheDocument();
+    await screen.findByText("Conectado a Delta ERP Contable API");
+  });
+
+  it.each(["Vendedor", "Técnico"])("%s no ve Tesorería y la ruta queda bloqueada", async (perfil) => {
+    renderApp(perfil, "/tesoreria");
+
+    expect(screen.queryByRole("link", { name: "Tesorería" })).toBeNull();
+    expect(screen.getByText(new RegExp(`No autorizado: tu perfil \\(${perfil}\\) no puede acceder a Tesorería`))).toBeInTheDocument();
+    await screen.findByText("Conectado a Delta ERP Contable API");
   });
 
   it("un vendedor no ve Registrar asiento y la ruta queda bloqueada", async () => {

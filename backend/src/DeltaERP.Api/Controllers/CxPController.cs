@@ -24,13 +24,15 @@ public class CxPController : ControllerBase
     private readonly ValidacionContable _validacion;
     private readonly AuditoriaService _auditoria;
     private readonly FacturaService _facturas;
+    private readonly TesoreriaService _tesoreria;
 
-    public CxPController(DeltaErpDbContext db, ValidacionContable validacion, AuditoriaService auditoria, FacturaService facturas)
+    public CxPController(DeltaErpDbContext db, ValidacionContable validacion, AuditoriaService auditoria, FacturaService facturas, TesoreriaService tesoreria)
     {
         _db = db;
         _validacion = validacion;
         _auditoria = auditoria;
         _facturas = facturas;
+        _tesoreria = tesoreria;
     }
 
     [HttpGet("facturas")]
@@ -123,7 +125,7 @@ public class CxPController : ControllerBase
     }
 
     [HttpPost("pagos")]
-    [Authorize(Roles = Roles.GestionCxP)]
+    [Authorize(Roles = Roles.RegistroPagos)]
     public async Task<IActionResult> CrearPago([FromBody] PagoProveedorCabecera pago)
     {
         var aplicaciones = pago.Aplicaciones.Select(a => (a.DocumentoId, Monto: a.MontoAplicado)).ToList();
@@ -145,13 +147,19 @@ public class CxPController : ControllerBase
             from d in _db.DocumentosCxP
             join s in _db.SaldosDocumentoCxP on d.Id equals s.DocumentoId
             where idsDocumento.Contains(d.Id)
-            select new DocumentoPagable(d.Id, d.Numero, d.ProveedorId, d.Estado, s.SaldoPendiente)
+            select new DocumentoPagable(d.Id, d.Numero, d.ProveedorId, d.Estado, s.SaldoPendiente, d.AsientoId)
             ).ToListAsync();
 
         var errorAplicaciones = PagoRules.ValidarAplicaciones("proveedor", pago.ProveedorId, aplicaciones, documentos);
         if (errorAplicaciones is not null)
         {
             return BadRequest(new { error = errorAplicaciones });
+        }
+
+        var (desembolso, errorDesembolso) = await _tesoreria.PrepararPagoAsync(Perfil, pago.CuentaBancariaId, pago.Fecha, documentos, aplicaciones);
+        if (errorDesembolso is not null)
+        {
+            return BadRequest(new { error = errorDesembolso });
         }
 
         var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -167,8 +175,10 @@ public class CxPController : ControllerBase
         {
             _db.PagosProveedor.Add(pago);
             await _db.SaveChangesAsync();
+            await _tesoreria.RegistrarMovimientoDePagoAsync(
+                desembolso!, Perfil, pago.Fecha, $"Pago {pago.Id} - {proveedor!.Nombre}", pago.ReferenciaBancaria, pago.Id, usuarioId);
 
-            return $"Pago {pago.Id} (proveedor {proveedor!.Nombre}) registrado, monto {pago.MontoTotal}";
+            return $"Pago {pago.Id} (proveedor {proveedor.Nombre}) registrado, monto {pago.MontoTotal}";
         });
 
         return CreatedAtAction(nameof(ListarPagos), new { }, pago);

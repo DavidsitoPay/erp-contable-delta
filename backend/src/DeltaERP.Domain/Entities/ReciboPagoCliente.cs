@@ -1,6 +1,5 @@
 namespace DeltaERP.Domain.Entities;
 
-// No genera AsientoContable: no tiene columna asiento_id (a diferencia de DocumentoCxC).
 public class ReciboPagoCliente
 {
     public int Id { get; set; }

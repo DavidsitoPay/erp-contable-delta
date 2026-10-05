@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => {
 
 vi.mock("axios", () => ({ default: { create: mocks.create, get: mocks.get } }));
 
-import api, { checkHealth, contrapartesApi, cuentasApi, cxcApi, cxpApi, librosApi, login, periodosApi } from "./api";
+import api, { checkHealth, conciliacionesApi, contrapartesApi, cuentasApi, cuentasBancariasApi, cxcApi, cxpApi, librosApi, login, movimientosTesoreriaApi, periodosApi } from "./api";
 
 const interceptor = mocks.instance.interceptors.request.use.mock.calls[0][0];
 const opcionesCreate = mocks.create.mock.calls[0][0];
@@ -118,5 +118,57 @@ describe("funciones de la API", () => {
     cuentasApi.desactivar("7");
 
     expect(mocks.instance.delete).toHaveBeenCalledWith("/cuentas/7");
+  });
+});
+
+describe("tesorería", () => {
+  it("cuentasBancariasApi usa sus rutas y normaliza el id", () => {
+    cuentasBancariasApi.listar();
+    cuentasBancariasApi.listar(true);
+    cuentasBancariasApi.obtener("3");
+    cuentasBancariasApi.crear({ banco: "BAC" });
+    cuentasBancariasApi.actualizar("3", { tipo: "Ahorro" });
+    cuentasBancariasApi.desactivar("3");
+
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(1, "/cuentas-bancarias", { params: { incluirInactivas: false } });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(2, "/cuentas-bancarias", { params: { incluirInactivas: true } });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(3, "/cuentas-bancarias/3");
+    expect(mocks.instance.post).toHaveBeenCalledWith("/cuentas-bancarias", { banco: "BAC" });
+    expect(mocks.instance.put).toHaveBeenCalledWith("/cuentas-bancarias/3", { tipo: "Ahorro" });
+    expect(mocks.instance.delete).toHaveBeenCalledWith("/cuentas-bancarias/3");
+  });
+
+  it("movimientosTesoreriaApi lista con filtros, crea y transfiere", () => {
+    movimientosTesoreriaApi.listar();
+    movimientosTesoreriaApi.listar({ desde: "2025-01-01" });
+    movimientosTesoreriaApi.crear({ monto: 5 });
+    movimientosTesoreriaApi.transferir({ monto: 9 });
+
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(1, "/movimientos-tesoreria", { params: {} });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(2, "/movimientos-tesoreria", { params: { desde: "2025-01-01" } });
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(1, "/movimientos-tesoreria", { monto: 5 });
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(2, "/movimientos-tesoreria/transferencias", { monto: 9 });
+  });
+
+  it("conciliacionesApi cubre listar, obtener, crear, actualizar, cancelar, marcar, desmarcar y finalizar", () => {
+    conciliacionesApi.listar();
+    conciliacionesApi.listar({ estado: "Pendiente" });
+    conciliacionesApi.obtener("4");
+    conciliacionesApi.crear({ saldoExtracto: 1 });
+    conciliacionesApi.actualizar("4", { saldoExtracto: 2 });
+    conciliacionesApi.cancelar("4");
+    conciliacionesApi.marcar("4", "9");
+    conciliacionesApi.desmarcar("4", "9");
+    conciliacionesApi.finalizar("4");
+
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(1, "/conciliaciones", { params: {} });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(2, "/conciliaciones", { params: { estado: "Pendiente" } });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(3, "/conciliaciones/4");
+    expect(mocks.instance.put).toHaveBeenCalledWith("/conciliaciones/4", { saldoExtracto: 2 });
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(1, "/conciliaciones", { saldoExtracto: 1 });
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(2, "/conciliaciones/4/cancelar");
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(3, "/conciliaciones/4/movimientos", { movimientoId: 9 });
+    expect(mocks.instance.delete).toHaveBeenCalledWith("/conciliaciones/4/movimientos/9");
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(4, "/conciliaciones/4/finalizar");
   });
 });

@@ -14,6 +14,8 @@ import LibroMayor from "./components/Libros/LibroMayor";
 import Contrapartes from "./components/Contrapartes/Contrapartes";
 import CuentasPorCobrar from "./components/CxC/CuentasPorCobrar";
 import CuentasPorPagar from "./components/CxP/CuentasPorPagar";
+import Tesoreria from "./components/Tesoreria/Tesoreria";
+import { puedeGestionarTesoreria } from "./utils/perfiles";
 
 function TabLink({ to, children }) {
   return (
@@ -53,12 +55,7 @@ function App() {
     return <Login onLoginExitoso={setUsuario} />;
   }
 
-  // Solo Administrador del sistema y Contador pueden registrar asientos
-  // (el backend ya lo exige en POST /api/asientos); se oculta la entrada de
-  // navegación y se bloquea la ruta para no dejar que un Vendedor/Técnico
-  // llene todo el formulario para toparse con un 403 al final.
-  const puedeRegistrarAsientos =
-    usuario.perfil === "Administrador del sistema" || usuario.perfil === "Contador";
+  const esAdminOContador = puedeGestionarTesoreria(usuario.perfil);
 
   return (
     <div className="app-shell">
@@ -83,7 +80,7 @@ function App() {
       </header>
 
       <nav className="tab-nav">
-        {puedeRegistrarAsientos && <TabLink to="/asientos">Registrar asiento</TabLink>}
+        {esAdminOContador && <TabLink to="/asientos">Registrar asiento</TabLink>}
         <TabLink to="/catalogo/cuentas">Cuentas contables</TabLink>
         <TabLink to="/catalogo/centros-costo">Centros de costo</TabLink>
         <TabLink to="/catalogo/periodos">Periodos</TabLink>
@@ -93,6 +90,7 @@ function App() {
         <TabLink to="/contrapartes">Clientes y proveedores</TabLink>
         <TabLink to="/cxc">Cuentas por cobrar</TabLink>
         <TabLink to="/cxp">Cuentas por pagar</TabLink>
+        {esAdminOContador && <TabLink to="/tesoreria">Tesorería</TabLink>}
       </nav>
 
       <main className="content">
@@ -101,7 +99,7 @@ function App() {
           <Route
             path="/asientos"
             element={
-              puedeRegistrarAsientos ? (
+              esAdminOContador ? (
                 <RegistrarAsiento />
               ) : (
                 <p>No autorizado: tu perfil ({usuario.perfil}) no puede registrar asientos contables.</p>
@@ -117,6 +115,16 @@ function App() {
           <Route path="/contrapartes" element={<Contrapartes />} />
           <Route path="/cxc" element={<CuentasPorCobrar />} />
           <Route path="/cxp" element={<CuentasPorPagar />} />
+          <Route
+            path="/tesoreria"
+            element={
+              esAdminOContador ? (
+                <Tesoreria />
+              ) : (
+                <p>No autorizado: tu perfil ({usuario.perfil}) no puede acceder a Tesorería.</p>
+              )
+            }
+          />
         </Routes>
       </main>
     </div>

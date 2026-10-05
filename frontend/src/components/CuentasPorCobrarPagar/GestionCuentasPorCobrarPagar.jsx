@@ -1,22 +1,15 @@
 import { useEffect, useState } from "react";
-import { centrosCostoApi, contrapartesApi, cuentasApi, periodosApi } from "../../services/api";
+import { centrosCostoApi, contrapartesApi, cuentasApi, cuentasBancariasApi, periodosApi } from "../../services/api";
+import { cuentasHoja } from "../../utils/cuentas";
+import { formatoMoneda, hoyIso, monto } from "../../utils/formato";
+import { perfilActual, puedeGestionarTesoreria } from "../../utils/perfiles";
+import SelectCuentaBancaria from "../Tesoreria/SelectCuentaBancaria";
 import { useLineas } from "../useLineas";
 
 const TIPOS_DOCUMENTO = ["Factura", "NotaCredito", "NotaDebito"];
 
-function hoyIso() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function lineaVacia() {
   return { id: crypto.randomUUID(), descripcion: "", cantidad: "1", precioUnitario: "", porcentajeImpuesto: "0", centroCostoId: "", cuentaContableId: "" };
-}
-
-const formatoMoneda = new Intl.NumberFormat("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-function monto(valor) {
-  const n = Number.parseFloat(valor);
-  return Number.isFinite(n) ? n : 0;
 }
 
 // config aísla las diferencias de terminología/cuenta de control entre CxC y
@@ -41,6 +34,8 @@ function GestionCuentasPorCobrarPagar({ config }) {
   const [periodos, setPeriodos] = useState([]);
   const [facturas, setFacturas] = useState([]);
   const [pagos, setPagos] = useState([]);
+  const [cuentasBancarias, setCuentasBancarias] = useState([]);
+  const [puedeRegistrarPagos] = useState(() => puedeGestionarTesoreria(perfilActual()));
 
   function formFacturaVacio() {
     return { numero: "", tipoDocumento: "Factura", [campoContraparteId]: "", fecha: hoyIso(), fechaVencimiento: hoyIso(), periodoId: "", cuentaControlId: "" };
@@ -54,6 +49,7 @@ function GestionCuentasPorCobrarPagar({ config }) {
   const [errorPago, setErrorPago] = useState("");
   const [enviandoPago, setEnviandoPago] = useState(false);
   const [pagoContraparteId, setPagoContraparteId] = useState("");
+  const [pagoCuentaBancariaId, setPagoCuentaBancariaId] = useState("");
   const [pagoFecha, setPagoFecha] = useState(hoyIso());
   const [pagoMetodo, setPagoMetodo] = useState("");
   const [pagoReferencia, setPagoReferencia] = useState("");
@@ -76,13 +72,14 @@ function GestionCuentasPorCobrarPagar({ config }) {
     void periodosApi.listar().then(({ data }) => setPeriodos(data));
     void cargarFacturas();
     void cargarPagos();
+    if (puedeRegistrarPagos) {
+      void cuentasBancariasApi.listar().then(({ data }) => setCuentasBancarias(data));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tipoContraparte]);
 
-  // Misma regla que RegistrarAsiento: solo cuentas "hoja" reciben movimientos.
-  const idsConHijos = new Set(cuentas.filter((c) => c.cuentaPadreId).map((c) => c.cuentaPadreId));
-  const cuentasHoja = cuentas.filter((c) => c.activa && !idsConHijos.has(c.id));
-  const cuentasControl = cuentasHoja.filter(filtroCuentaControl);
+  const hojas = cuentasHoja(cuentas);
+  const cuentasControl = hojas.filter(filtroCuentaControl);
   const periodosAbiertos = periodos.filter((p) => p.estado === "Abierto");
 
   const totalFactura = lineas.reduce((acc, l) => acc + monto(l.cantidad) * monto(l.precioUnitario) * (1 + monto(l.porcentajeImpuesto) / 100), 0);
@@ -140,7 +137,8 @@ function GestionCuentasPorCobrarPagar({ config }) {
     .map((f) => ({ documentoId: f.id, montoAplicado: monto(montosAplicados[f.id]) }))
     .filter((a) => a.montoAplicado > 0);
 
-  const puedeEnviarPago = !enviandoPago && pagoContraparteId !== "" && pagoMetodo.trim() !== "" && aplicacionesConMonto.length > 0;
+  const puedeEnviarPago =
+    !enviandoPago && pagoContraparteId !== "" && pagoCuentaBancariaId !== "" && pagoMetodo.trim() !== "" && aplicacionesConMonto.length > 0;
 
   async function handleSubmitPago(e) {
     e.preventDefault();
@@ -149,6 +147,7 @@ function GestionCuentasPorCobrarPagar({ config }) {
     try {
       await api.crearPago({
         [campoContraparteId]: Number(pagoContraparteId),
+        cuentaBancariaId: Number(pagoCuentaBancariaId),
         fecha: pagoFecha,
         metodoPago: pagoMetodo.trim(),
         referenciaBancaria: pagoReferencia || null,
@@ -226,7 +225,7 @@ function GestionCuentasPorCobrarPagar({ config }) {
                         <td>
                           <select className="select" aria-label="Cuenta de la línea" value={l.cuentaContableId} onChange={(e) => actualizarLinea(index, "cuentaContableId", e.target.value)}>
                             <option value="">Selecciona cuenta</option>
-                            {cuentasHoja.map((c) => <option key={c.id} value={c.id}>{c.codigo} - {c.nombre}</option>)}
+                            {hojas.map((c) => <option key={c.id} value={c.id}>{c.codigo} - {c.nombre}</option>)}
                           </select>
                         </td>
                         <td>
@@ -293,60 +292,65 @@ function GestionCuentasPorCobrarPagar({ config }) {
 
       {subTab === "pagos" && (
         <>
-          <form onSubmit={handleSubmitPago}>
-            <div className="catalog-form">
-              <select className="select" aria-label={etiquetaContraparte} value={pagoContraparteId} onChange={(e) => { setPagoContraparteId(e.target.value); setMontosAplicados({}); }} required>
-                <option value="">Selecciona {etiquetaContraparte.toLowerCase()}</option>
-                {contrapartes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-              </select>
-              <input type="date" className="input" aria-label="Fecha de pago" value={pagoFecha} onChange={(e) => setPagoFecha(e.target.value)} required />
-              <input className="input" placeholder="Método de pago (Efectivo, Transferencia...)" aria-label="Método de pago" value={pagoMetodo} onChange={(e) => setPagoMetodo(e.target.value)} required />
-              <input className="input" placeholder="Referencia bancaria (opcional)" aria-label="Referencia bancaria" value={pagoReferencia} onChange={(e) => setPagoReferencia(e.target.value)} />
-            </div>
-
-            {pagoContraparteId !== "" && (
-              <div className="table-wrap">
-                <div className="table-scroll">
-                  <table className="data-table">
-                    <thead>
-                      <tr><th>Factura</th><th className="numeric">Saldo pendiente</th><th className="numeric">Monto a aplicar</th></tr>
-                    </thead>
-                    <tbody>
-                      {facturasDeLaContraparte.length === 0 ? (
-                        <tr><td colSpan="3">No hay facturas con saldo pendiente para esta selección.</td></tr>
-                      ) : (
-                        facturasDeLaContraparte.map((f) => (
-                          <tr key={f.id}>
-                            <td>{f.numero}</td>
-                            <td className="numeric">{formatoMoneda.format(f.saldoPendiente)}</td>
-                            <td className="numeric">
-                              <input
-                                type="number"
-                                className="input input-money"
-                                aria-label={`Monto a aplicar a ${f.numero}`}
-                                min="0"
-                                max={f.saldoPendiente}
-                                step="0.01"
-                                placeholder="0.00"
-                                value={montosAplicados[f.id] || ""}
-                                onChange={(e) => actualizarMontoAplicado(f.id, e.target.value)}
-                              />
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+          {puedeRegistrarPagos ? (
+            <form onSubmit={handleSubmitPago}>
+              <div className="catalog-form">
+                <select className="select" aria-label={etiquetaContraparte} value={pagoContraparteId} onChange={(e) => { setPagoContraparteId(e.target.value); setMontosAplicados({}); }} required>
+                  <option value="">Selecciona {etiquetaContraparte.toLowerCase()}</option>
+                  {contrapartes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
+                <SelectCuentaBancaria etiqueta="Cuenta bancaria" valor={pagoCuentaBancariaId} onChange={setPagoCuentaBancariaId} cuentasBancarias={cuentasBancarias} />
+                <input type="date" className="input" aria-label="Fecha de pago" value={pagoFecha} onChange={(e) => setPagoFecha(e.target.value)} required />
+                <input className="input" placeholder="Método de pago (Efectivo, Transferencia...)" aria-label="Método de pago" value={pagoMetodo} onChange={(e) => setPagoMetodo(e.target.value)} required />
+                <input className="input" placeholder="Referencia bancaria (opcional)" aria-label="Referencia bancaria" value={pagoReferencia} onChange={(e) => setPagoReferencia(e.target.value)} />
               </div>
-            )}
 
-            {errorPago && <p className="error-chip">{errorPago}</p>}
+              {pagoContraparteId !== "" && (
+                <div className="table-wrap">
+                  <div className="table-scroll">
+                    <table className="data-table">
+                      <thead>
+                        <tr><th>Factura</th><th className="numeric">Saldo pendiente</th><th className="numeric">Monto a aplicar</th></tr>
+                      </thead>
+                      <tbody>
+                        {facturasDeLaContraparte.length === 0 ? (
+                          <tr><td colSpan="3">No hay facturas con saldo pendiente para esta selección.</td></tr>
+                        ) : (
+                          facturasDeLaContraparte.map((f) => (
+                            <tr key={f.id}>
+                              <td>{f.numero}</td>
+                              <td className="numeric">{formatoMoneda.format(f.saldoPendiente)}</td>
+                              <td className="numeric">
+                                <input
+                                  type="number"
+                                  className="input input-money"
+                                  aria-label={`Monto a aplicar a ${f.numero}`}
+                                  min="0"
+                                  max={f.saldoPendiente}
+                                  step="0.01"
+                                  placeholder="0.00"
+                                  value={montosAplicados[f.id] || ""}
+                                  onChange={(e) => actualizarMontoAplicado(f.id, e.target.value)}
+                                />
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
-            <button type="submit" disabled={!puedeEnviarPago} className="btn btn-primary">
-              {enviandoPago ? "Registrando..." : "Registrar pago"}
-            </button>
-          </form>
+              {errorPago && <p className="error-chip">{errorPago}</p>}
+
+              <button type="submit" disabled={!puedeEnviarPago} className="btn btn-primary">
+                {enviandoPago ? "Registrando..." : "Registrar pago"}
+              </button>
+            </form>
+          ) : (
+            <p>Tu perfil no puede registrar cobros ni pagos.</p>
+          )}
 
           <h3>Pagos registrados</h3>
           <div className="table-wrap">

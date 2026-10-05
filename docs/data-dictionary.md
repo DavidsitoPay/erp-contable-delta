@@ -108,12 +108,60 @@ Sin cambios estructurales.
 | id | SERIAL | No | PK | Identificador único |
 | banco | VARCHAR(100) | No | | Nombre del banco |
 | numero | VARCHAR(50) | No | | Número de cuenta |
-| tipo | VARCHAR(30) | No | | Monetaria/Ahorro |
+| tipo | VARCHAR(30) | No | | Monetaria/Ahorro (`ck_cuentabancaria_tipo`) |
+| activa | BOOLEAN | No | | Por defecto TRUE; sin eliminación física (trigger `trg_prevenir_eliminacion_cuentabancaria`) |
+| cuenta_contable_id | INT | No | FK -> CuentaContable(id) | Cuenta contable de Activo asociada; única (`uq_cuentabancaria_cuenta_contable`) |
+| saldo_apertura | DECIMAL(14,2) | No | | Saldo inicial al crear la cuenta; no negativo |
+| fecha_apertura | DATE | Sí | | Obligatoria si `saldo_apertura > 0` (`ck_cuentabancaria_apertura`) |
+
+`UNIQUE(banco, numero)` (`uq_cuentabancaria_banco_numero`).
 
 **Sin columna `saldo`.** Se calcula en `vw_saldocuentabancaria`.
 
-### MovimientoTesoreria, ConciliacionBancaria, DetalleConciliacion
-Sin cambios estructurales.
+### MovimientoTesoreria
+| Campo | Tipo | Nulo | Llave | Descripción |
+|---|---|---|---|---|
+| id | SERIAL | No | PK | Identificador único |
+| cuenta_bancaria_id | INT | No | FK -> CuentaBancaria(id) | Cuenta afectada |
+| fecha | DATE | No | | Fecha del movimiento |
+| tipo | VARCHAR(20) | No | | Ingreso/Egreso (`ck_movimiento_tipo`) |
+| monto | DECIMAL(14,2) | No | | Mayor que 0 (`ck_movimiento_monto`) |
+| asiento_id | INT | No | FK -> AsientoContable(id) | Asiento que genera el movimiento |
+| descripcion | VARCHAR(255) | No | | Descripción |
+| referencia | VARCHAR(100) | Sí | | Referencia libre |
+| origen | VARCHAR(20) | No | | Manual/Transferencia/CxC/CxP/Apertura (`ck_movimiento_origen`) |
+| transferencia_id | UUID | Sí | | Agrupa el egreso y el ingreso de una transferencia |
+| recibo_pago_id | INT | Sí | FK -> ReciboPagoCliente(id) | Cobro de origen (`origen = 'CxC'`) |
+| pago_proveedor_id | INT | Sí | FK -> PagoProveedorCabecera(id) | Pago de origen (`origen = 'CxP'`) |
+
+`ck_movimiento_vinculo` exige que los campos de vínculo sean coherentes con `origen`: `Manual` y `Apertura` sin vínculos (la apertura solo es `Ingreso`); `Transferencia` con `transferencia_id`; `CxC` con `recibo_pago_id` y tipo `Ingreso`; `CxP` con `pago_proveedor_id` y tipo `Egreso`. Índices únicos parciales: un movimiento por recibo (`ux_movimiento_recibo_pago`), por pago a proveedor (`ux_movimiento_pago_proveedor`), uno de apertura por cuenta (`ux_movimiento_apertura`) y un movimiento por tipo en cada transferencia (`ux_movimiento_transferencia_tipo`); índice `ix_movimiento_cuenta_fecha (cuenta_bancaria_id, fecha)`. Inmutable: el trigger `trg_movimiento_inmutable` bloquea UPDATE y DELETE.
+
+### ConciliacionBancaria
+| Campo | Tipo | Nulo | Llave | Descripción |
+|---|---|---|---|---|
+| id | SERIAL | No | PK | Identificador único |
+| cuenta_bancaria_id | INT | No | FK -> CuentaBancaria(id) | Cuenta conciliada |
+| periodo_id | INT | No | FK -> PeriodoContable(id) | Periodo que contiene la fecha de corte |
+| fecha | DATE | No | | Fecha de corte |
+| estado | VARCHAR(20) | No | | Pendiente/Conciliado/Cancelada (`ck_conciliacion_estado`) |
+| saldo_extracto | DECIMAL(14,2) | No | | Saldo según el estado de cuenta del banco a la fecha de corte (puede ser 0 o negativo) |
+
+Índice único parcial `ux_conciliacion_pendiente_por_cuenta`: una sola conciliación `Pendiente` por cuenta. El trigger `trg_conciliacion_inmutable` bloquea DELETE y cualquier UPDATE sobre una conciliación `Conciliado` o `Cancelada` (código `55000`).
+
+### DetalleConciliacion
+| Campo | Tipo | Nulo | Llave | Descripción |
+|---|---|---|---|---|
+| id | SERIAL | No | PK | Identificador único |
+| conciliacion_id | INT | No | FK -> ConciliacionBancaria(id) | Conciliación |
+| movimiento_id | INT | No | FK -> MovimientoTesoreria(id) | Movimiento marcado; único (`uq_detalleconciliacion_movimiento`): un movimiento pertenece a una sola conciliación |
+
+El trigger `trg_detalle_conciliacion_valida` solo permite insertar o borrar filas si la conciliación está `Pendiente` (si no, `55000`), y al insertar exige que el movimiento sea de la misma cuenta, con fecha no posterior al corte y que no sea de apertura (si no, `23514`).
+
+### vw_conciliacion_resumen
+Una fila por conciliación: `conciliacion_id`, `cuenta_bancaria_id`, `periodo_id`, `fecha`, `estado`, `saldo_extracto`, `saldo_inicial`, `total_marcado`, `saldo_conciliado`, `diferencia` y `cantidad_movimientos`. `saldo_inicial` es el `saldo_extracto` de la conciliación `Conciliado` anterior más reciente de la cuenta, o `cuentabancaria.saldo_apertura` si no existe; `total_marcado` suma los movimientos del detalle (Ingreso +, Egreso -); `saldo_conciliado = saldo_inicial + total_marcado`; `diferencia = saldo_extracto - saldo_conciliado`.
+
+### sp_finalizar_conciliacion(p_conciliacion_id, p_usuario_id)
+Verifica en este orden: perfil Contador o Administrador del sistema (si no, excepción por defecto `P0001`); que la conciliación exista (`P0002`); que no esté `Conciliado` ni `Cancelada` (`55000`); que `diferencia` en `vw_conciliacion_resumen` sea 0 (`55000`). Entonces la pasa a `Conciliado` y registra la auditoría `finalizar_conciliacion`. La API traduce `P0001` a `403`, `P0002` a `404` y `55000` a `409`.
 
 ## 7. Consolidación de Saldos
 
@@ -149,6 +197,7 @@ saldo del periodo en curso se sigue calculando siempre en tiempo real
 |---|---|---|
 | `vw_balance_saldos` | `CuentaContable.saldo` (nunca existió como columna) | Saldo en tiempo real por cuenta contable, sobre asientos `Confirmado` y `Anulado` (se excluye `Borrador`) |
 | `vw_saldocuentaperiodo_vigente` | — | Filas de `SaldoCuentaPeriodo` del cierre vigente de cada periodo (`cierre_numero = PeriodoContable.cierres`); vacía si ese cierre no tuvo movimientos |
-| `vw_saldocuentabancaria` | `CuentaBancaria.saldo` | Saldo en tiempo real por cuenta bancaria |
+| `vw_saldocuentabancaria` | `CuentaBancaria.saldo` | Saldo en tiempo real por cuenta bancaria: suma firmada de sus movimientos (Ingreso +, Egreso -); el saldo de apertura entra por su movimiento de apertura, no se suma aparte |
+| `vw_conciliacion_resumen` | — | Saldo inicial, total marcado, saldo conciliado y diferencia de cada conciliación bancaria (fuente de la matemática de RN-10) |
 | `vw_saldodocumentocxc` | `DocumentoCxC.saldo_pendiente` | Saldo pendiente por documento de CxC |
 | `vw_saldodocumentocxp` | `DocumentoCxP.saldo_pendiente` | Saldo pendiente por documento de CxP |

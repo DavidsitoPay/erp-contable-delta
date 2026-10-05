@@ -1,11 +1,11 @@
 using System.Security.Claims;
 using DeltaERP.Api.Auth;
+using DeltaERP.Api.Services;
 using DeltaERP.Domain.Entities;
 using DeltaERP.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace DeltaERP.Api.Controllers;
 
@@ -112,18 +112,10 @@ public class PeriodosContablesController : ControllerBase
         }
 
         var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        try
+        var fallo = await ErroresPostgres.TraducirProcedimientoAsync(() => ejecutarProcedimiento(usuarioId));
+        if (fallo is not null)
         {
-            await ejecutarProcedimiento(usuarioId);
-        }
-        catch (PostgresException ex) when (ex.SqlState == "P0001")
-        {
-            // RAISE EXCEPTION del procedimiento: el perfil del usuario no está autorizado.
-            return StatusCode(StatusCodes.Status403Forbidden, new { error = ex.MessageText });
-        }
-        catch (PostgresException ex) when (ex.SqlState == "55000")
-        {
-            return Conflict(new { error = ex.MessageText });
+            return fallo;
         }
 
         var periodo = await _db.PeriodosContables.FindAsync(periodoId);

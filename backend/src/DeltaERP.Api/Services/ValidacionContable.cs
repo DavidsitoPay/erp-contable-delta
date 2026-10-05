@@ -53,7 +53,7 @@ public class ValidacionContable
         return (tercero, null);
     }
 
-    private async Task<string?> ValidarPeriodoAbiertoAsync(int periodoId)
+    public async Task<string?> ValidarPeriodoAbiertoAsync(int periodoId, string operacion = "facturas")
     {
         var periodo = await _db.PeriodosContables.FindAsync(periodoId);
         if (periodo is null)
@@ -62,16 +62,19 @@ public class ValidacionContable
         }
         if (periodo.Estado != PeriodoContable.EstadoAbierto)
         {
-            return $"El periodo '{periodo.Nombre}' está en estado '{periodo.Estado}'; no se pueden registrar facturas en un periodo que no esté Abierto.";
+            return $"El periodo '{periodo.Nombre}' está en estado '{periodo.Estado}'; no se pueden registrar {operacion} en un periodo que no esté Abierto.";
         }
         return null;
     }
 
     // Valida cuenta de control y cuentas de línea juntas: ambas terminan en
     // LineaAsiento del asiento generado.
-    private async Task<string?> ValidarCuentasAsync(IDocumentoFactura documento)
+    private Task<string?> ValidarCuentasAsync(IDocumentoFactura documento) =>
+        ValidarCuentasPorIdAsync(documento.Lineas.Select(l => l.CuentaContableId).Append(documento.CuentaControlId).ToList());
+
+    public async Task<string?> ValidarCuentasPorIdAsync(IReadOnlyCollection<int> cuentasId)
     {
-        var idsCuenta = documento.Lineas.Select(l => l.CuentaContableId).Append(documento.CuentaControlId).Distinct().ToList();
+        var idsCuenta = cuentasId.Distinct().ToList();
         var cuentasPorId = await _db.CuentasContables.Where(c => idsCuenta.Contains(c.Id)).ToDictionaryAsync(c => c.Id);
         var idsConSubcuentas = (await _db.CuentasContables
             .Where(c => c.CuentaPadreId != null && idsCuenta.Contains(c.CuentaPadreId.Value))

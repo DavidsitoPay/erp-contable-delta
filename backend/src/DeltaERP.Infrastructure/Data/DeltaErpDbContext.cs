@@ -31,6 +31,13 @@ public class DeltaErpDbContext : DbContext
     public DbSet<AplicacionPagoProveedor> AplicacionesPagoProveedor => Set<AplicacionPagoProveedor>();
     public DbSet<SaldoDocumentoCxP> SaldosDocumentoCxP => Set<SaldoDocumentoCxP>();
 
+    public DbSet<CuentaBancaria> CuentasBancarias => Set<CuentaBancaria>();
+    public DbSet<MovimientoTesoreria> MovimientosTesoreria => Set<MovimientoTesoreria>();
+    public DbSet<ConciliacionBancaria> ConciliacionesBancarias => Set<ConciliacionBancaria>();
+    public DbSet<DetalleConciliacion> DetallesConciliacion => Set<DetalleConciliacion>();
+    public DbSet<SaldoCuentaBancaria> SaldosCuentaBancaria => Set<SaldoCuentaBancaria>();
+    public DbSet<ConciliacionResumen> ResumenesConciliacion => Set<ConciliacionResumen>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // snake_case: debe coincidir con los nombres de tabla reales en la base de datos.
@@ -50,12 +57,19 @@ public class DeltaErpDbContext : DbContext
         modelBuilder.Entity<LineaDocumentoCxP>().ToTable("lineadocumentocxp");
         modelBuilder.Entity<PagoProveedorCabecera>().ToTable("pagoproveedorcabecera");
         modelBuilder.Entity<AplicacionPagoProveedor>().ToTable("aplicacionpagoproveedor");
+        modelBuilder.Entity<CuentaBancaria>().ToTable("cuentabancaria");
+        modelBuilder.Entity<MovimientoTesoreria>().ToTable("movimientotesoreria");
+        modelBuilder.Entity<ConciliacionBancaria>().ToTable("conciliacionbancaria");
+        modelBuilder.Entity<DetalleConciliacion>().ToTable("detalleconciliacion");
 
         // Vistas sin clave primaria: HasNoKey() evita que EF infiera un Id, y ToView
         // (no ToTable) las deja de solo lectura, sin migraciones de escritura.
         modelBuilder.Entity<BalanceSaldoCuenta>().HasNoKey().ToView("vw_balance_saldos");
         modelBuilder.Entity<SaldoDocumentoCxC>().HasNoKey().ToView("vw_saldodocumentocxc");
         modelBuilder.Entity<SaldoDocumentoCxP>().HasNoKey().ToView("vw_saldodocumentocxp");
+        modelBuilder.Entity<SaldoCuentaBancaria>().HasNoKey().ToView("vw_saldocuentabancaria");
+        modelBuilder.Entity<ConciliacionResumen>().HasNoKey().ToView("vw_conciliacion_resumen")
+            .Property(r => r.Id).HasColumnName("conciliacion_id");
 
         // Sin navegación inversa, la convención de EF no reconoce AsientoId como FK
         // y crea una columna sombra (AsientoContableId) inexistente en la base de datos.
