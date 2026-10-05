@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { cuentasApi } from "../../services/api";
+import { sangriaPorProfundidad } from "../../utils/cuentas";
 
 const TIPOS = ["Activo", "Pasivo", "Capital", "Ingreso", "Gasto"];
 const NATURALEZAS = ["Deudora", "Acreedora"];
@@ -186,7 +187,7 @@ function CuentasContables() {
                   const esParent = tieneHijos(c.id);
                   return (
                     <tr key={c.id}>
-                      <td style={{ paddingLeft: `${0.75 + profundidad * 1.25}rem`, fontWeight: esParent ? 600 : 400 }}>{c.codigo}</td>
+                      <td style={{ paddingLeft: sangriaPorProfundidad(profundidad), fontWeight: esParent ? 600 : 400 }}>{c.codigo}</td>
                       <td>{c.nombre}</td>
                       <td>{c.tipo}</td>
                       <td>{c.naturaleza}</td>

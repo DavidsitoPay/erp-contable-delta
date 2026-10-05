@@ -48,3 +48,5 @@ Crea 8 usuarios, dos por perfil, con la misma contraseña que el usuario semilla
 | Técnico | `demo.tecnico1@delta.com.gt`, `demo.tecnico2@delta.com.gt` | `tecnico@delta.com.gt` |
 
 Producción también tiene datos demo de tesorería cargados manualmente desde `database/demo/datos_demo_tesoreria.sql`; `run_migrations.sh` no lo aplica y su guardia impide ejecutarlo dos veces. Crea 2 cuentas bancarias (BAC Monetaria y Banrural Ahorro) ligadas a las cuentas contables `1.1.02.01` y `1.1.02.02`, con saldo de apertura contra Capital social, movimientos manuales, una transferencia entre ambas y cobros/pagos de facturas demo con cuenta bancaria. Incluye una conciliación de septiembre finalizada (diferencia 0) y una de octubre en estado Pendiente con un depósito sin marcar.
+
+Antes de aplicar `database/10_balance_jerarquico.sql`, `database/demo/correccion_saldos_padre.sql` se ejecutó manualmente en producción: reclasifica el saldo propio de `1.1.02` a la nueva hoja `1.1.02.03` «Bancos - Otros» y el de la cuenta inactiva `1234` a `1.1.01` Caja, de modo que ninguna cuenta con subcuentas conserve saldo propio.

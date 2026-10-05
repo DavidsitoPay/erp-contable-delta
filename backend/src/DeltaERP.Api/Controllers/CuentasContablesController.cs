@@ -1,4 +1,5 @@
 using DeltaERP.Api.Auth;
+using DeltaERP.Api.Services;
 using DeltaERP.Domain.Entities;
 using DeltaERP.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -62,6 +63,12 @@ public class CuentasContablesController : ControllerBase
             // Fallback ante carrera entre el AnyAsync de arriba y el UNIQUE real en la BD.
             return Conflict(new { error = $"Ya existe una cuenta con el código {cuenta.Codigo}." });
         }
+        // Npgsql trata 55000 (trg_validar_padre_sin_saldo) como transitorio y lo envuelve en InvalidOperationException.
+        catch (InvalidOperationException ex) when (ex.InnerException is DbUpdateException db
+            && ErroresPostgres.TraducirActualizacionAsync(db) is { } falloTrigger)
+        {
+            return falloTrigger;
+        }
         return CreatedAtAction(nameof(Obtener), new { id = cuenta.Id }, cuenta);
     }
 
@@ -87,7 +94,16 @@ public class CuentasContablesController : ControllerBase
         cuenta.Tipo = cambios.Tipo;
         cuenta.Naturaleza = cambios.Naturaleza;
         cuenta.CuentaPadreId = cambios.CuentaPadreId;
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        // Npgsql trata 55000 (trg_validar_padre_sin_saldo) como transitorio y lo envuelve en InvalidOperationException.
+        catch (InvalidOperationException ex) when (ex.InnerException is DbUpdateException db
+            && ErroresPostgres.TraducirActualizacionAsync(db) is { } falloTrigger)
+        {
+            return falloTrigger;
+        }
         return Ok(cuenta);
     }
 

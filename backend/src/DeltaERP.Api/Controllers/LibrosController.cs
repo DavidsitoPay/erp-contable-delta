@@ -1,4 +1,5 @@
 using DeltaERP.Domain.Entities;
+using DeltaERP.Domain.Rules;
 using DeltaERP.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +19,7 @@ public class LibrosController : ControllerBase
         _db = db;
     }
 
-    // La vista solo suma asientos Confirmado/Anulado y aplica el signo según la naturaleza de la cuenta.
+    // La vista solo suma asientos Confirmado/Anulado, aplica el signo según la naturaleza y acumula las subcuentas en cada cuenta de mayor.
     [HttpGet("balance-saldos")]
     public async Task<IActionResult> BalanceSaldos()
     {
@@ -86,8 +87,15 @@ public class LibrosController : ControllerBase
             return BadRequest(new { error = "El periodo indicado no existe." });
         }
 
+        var catalogo = await _db.CuentasContables
+            .Select(c => new { c.Id, c.Codigo, c.Nombre, c.CuentaPadreId })
+            .ToDictionaryAsync(c => c.Id);
+        var descendientes = JerarquiaCuentas.IdsDescendientes(
+            catalogo.Values.Select(c => (c.Id, c.CuentaPadreId)), cuentaId);
+        var idsCuenta = descendientes.Append(cuentaId).ToList();
+
         var query = _db.LineasAsiento
-            .Where(l => l.CuentaId == cuentaId)
+            .Where(l => idsCuenta.Contains(l.CuentaId))
             .Join(
                 _db.AsientosContables.Where(a => AsientoContable.EstadosContabilizados.Contains(a.Estado)),
                 l => l.AsientoId,
@@ -100,12 +108,13 @@ public class LibrosController : ControllerBase
         }
 
         var movimientos = await query
-            .OrderBy(x => x.Asiento.Fecha).ThenBy(x => x.Asiento.Numero)
+            .OrderBy(x => x.Asiento.Fecha).ThenBy(x => x.Asiento.Numero).ThenBy(x => x.Linea.Id)
             .Select(x => new
             {
                 x.Asiento.Id,
                 x.Asiento.Numero,
                 x.Asiento.Fecha,
+                x.Linea.CuentaId,
                 x.Linea.Debito,
                 x.Linea.Credito,
             })
@@ -117,11 +126,15 @@ public class LibrosController : ControllerBase
         var resultado = movimientos.Select(m =>
         {
             acumulado += esDeudora ? m.Debito - m.Credito : m.Credito - m.Debito;
+            var cuentaMovimiento = catalogo[m.CuentaId];
             return new
             {
                 AsientoId = m.Id,
                 AsientoNumero = m.Numero,
                 m.Fecha,
+                m.CuentaId,
+                CuentaCodigo = cuentaMovimiento.Codigo,
+                CuentaNombre = cuentaMovimiento.Nombre,
                 m.Debito,
                 m.Credito,
                 SaldoAcumulado = acumulado,
@@ -130,7 +143,15 @@ public class LibrosController : ControllerBase
 
         return Ok(new
         {
-            Cuenta = new { cuenta.Id, cuenta.Codigo, cuenta.Nombre, cuenta.Naturaleza },
+            Cuenta = new
+            {
+                cuenta.Id,
+                cuenta.Codigo,
+                cuenta.Nombre,
+                cuenta.Naturaleza,
+                EsHoja = descendientes.Count == 0,
+                Subcuentas = descendientes.Count,
+            },
             Movimientos = resultado,
         });
     }

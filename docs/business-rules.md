@@ -39,6 +39,9 @@ Ninguna entidad almacena un saldo como columna libremente editable:
 - Solo los asientos `Borrador` se excluyen de libro diario, libro mayor, balance de
   saldos (`vw_balance_saldos`) y de la fotografía del cierre; `Confirmado` y `Anulado`
   se contabilizan.
+- `vw_balance_saldos` acumula la jerarquía del catálogo: el saldo de una cuenta padre es su saldo propio más el de todos sus descendientes, con el signo de su naturaleza. El balance de saldos totaliza sumando solo las filas de nivel 1 (para no contar dos veces las subcuentas) y muestra el saldo en columnas Deudor o Acreedor.
+- El libro mayor de una cuenta padre consolida los movimientos de la cuenta y de todos sus descendientes, ordenados por fecha, número de asiento y línea, e identifica la cuenta de cada movimiento. El saldo acumulado corre con la naturaleza de la cuenta seleccionada.
+- Una cuenta con saldo propio contabilizado (neto `Confirmado`/`Anulado` distinto de 0) o con líneas en asientos `Borrador` no puede recibir subcuentas: el trigger `trg_validar_padre_sin_saldo` rechaza el alta o el cambio de padre con `55000`, que la API responde `409 Conflict`. El saldo propio debe reclasificarse antes a una subcuenta.
 - `sp_cerrar_periodo` solo cierra un periodo `Abierto` y `sp_reabrir_periodo` solo
   reabre uno `Cerrado`; en otro estado fallan con el código `55000`, que la API
   responde `409 Conflict`. Las fallas de autorización del procedimiento responden `403`.

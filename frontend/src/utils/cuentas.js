@@ -14,3 +14,11 @@ export function indexarPorId(lista) {
 export function etiquetaCuenta(cuenta) {
   return cuenta ? `${cuenta.banco} ${cuenta.numero}` : "";
 }
+
+export function sangriaPorProfundidad(profundidad) {
+  return `${0.75 + profundidad * 1.25}rem`;
+}
+
+export function etiquetaSubcuentas(cantidad) {
+  return cantidad === 1 ? "1 subcuenta" : `${cantidad} subcuentas`;
+}
