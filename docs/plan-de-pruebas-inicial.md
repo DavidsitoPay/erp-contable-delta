@@ -1,6 +1,6 @@
 # Plan de pruebas — Test Cases (Azure Boards)
 
-Los Test Cases son work items de tipo **Test Case** en Azure Boards (organización `drecinosg2`, proyecto `erp-contable-delta`), con pasos Action / Expected Result y prioridad 1–4 (1 = más alto). Cada uno es **hijo** de la Historia de Usuario (PBI) que verifica, no se usa el link type "Tests". Hay 18, uno por historia (En-F1-Hn) de `docs/backlog-features-historias.md`.
+Los Test Cases son work items de tipo **Test Case** en Azure Boards (organización `drecinosg2`, proyecto `erp-contable-delta`), con pasos Action / Expected Result y prioridad 1–4 (1 = más alto). Cada uno es **hijo** de la Historia de Usuario (PBI) que verifica, no se usa el link type "Tests". Hay 19, uno por historia (En-F1-Hn) de `docs/backlog-features-historias.md`.
 
 La organización está en el nivel gratuito de Azure DevOps, que no incluye el hub "Test Plans" (planes/suites formales); por eso el plan se gestiona con work items Test Case enlazados a sus historias.
 
@@ -28,10 +28,11 @@ Los casos implementados están automatizados con xUnit (backend) y Vitest (front
 | TC-16 - Autorización por rol y auditoría | 183 | E8-F1-H2 | Verifica el control de acceso por rol y que toda acción crítica quede registrada en la bitácora de auditoría de forma inmutable. | 1) Endpoint restringido sin rol correcto → `403`. 2) Acción crítica autorizada (ej. registrar asiento) → genera registro en `BitacoraAuditoria`. 3) `UPDATE`/`DELETE` directo sobre `BitacoraAuditoria` (SQL) → rechazado por trigger. | 1 | Closed | `AsientosControllerTests.Registrar_SegunElRol_AutorizaAdministradorYRechazaVendedorYAnonimo`, `Bitacora_ConUpdateODeleteDirecto_LaRechazaElTrigger` |
 | TC-17 - Validación de archivo CSV (RN-11) | 184 | E9-F1-H1 | Verifica que un archivo CSV con errores se rechace por completo antes de insertar cualquier dato. | 1) Importar CSV con una fila inválida → error reportado con fila/columna, nada se inserta. 2) Importar CSV válido → todas las filas se insertan. | 2 | Design | Pendiente: funcionalidad no implementada |
 | TC-18 - Inserción transaccional (todo o nada) | 185 | E9-F1-H2 | Verifica que la importación de datos sea atómica (todo o nada) y quede registrada en auditoría. | 1) Importar archivo donde falla una fila intermedia → ninguna fila queda insertada (rollback completo). 2) Importación exitosa → queda registrada en `BitacoraAuditoria`. | 2 | Design | Pendiente: funcionalidad no implementada |
+| TC-19 - Balance y libro mayor jerárquicos | 270 | E3-F1 (PBI 269) | Verifica que las cuentas de mayor acumulen el saldo de sus subcuentas y que su libro mayor consolide los movimientos de ellas. | 1) `GET` balance de saldos con una cuenta padre y dos subcuentas con movimientos → el padre acumula débitos/créditos de sus subcuentas, con `nivel` y `esHoja` correctos. 2) `GET` libro mayor de la cuenta padre → lista los movimientos de ambas subcuentas con `cuentaCodigo` y saldo acumulado. | 2 | Closed | `LibrosControllerTests.BalanceSaldos_ConSubcuentas_AcumulaEnElPadreYExponeLaJerarquia`, `Mayor_ConCuentaPadre_IncluyeLosMovimientosDeSusSubcuentas`, `CuentasContablesControllerTests` (409 por padre con saldo), `BalanceJerarquicoEsquemaTests`; frontend `BalanceSaldos.test.jsx`, `LibroMayor.test.jsx` |
 
 ## Resumen de cobertura
 
-- **14 automatizados** (TC-01 a TC-12, TC-15, TC-16): estado Closed, AutomationStatus=Automated, ejecutados en CI.
+- **15 automatizados** (TC-01 a TC-12, TC-15, TC-16, TC-19): estado Closed, AutomationStatus=Automated, ejecutados en CI.
 - **4 pendientes** (TC-13, TC-14, TC-17, TC-18): estado Design; dependen de balance general, estado de resultados e importación CSV, aún no implementados.
 
 ## Datos demo en producción
@@ -49,4 +50,4 @@ Crea 8 usuarios, dos por perfil, con la misma contraseña que el usuario semilla
 
 Producción también tiene datos demo de tesorería cargados manualmente desde `database/demo/datos_demo_tesoreria.sql`; `run_migrations.sh` no lo aplica y su guardia impide ejecutarlo dos veces. Crea 2 cuentas bancarias (BAC Monetaria y Banrural Ahorro) ligadas a las cuentas contables `1.1.02.01` y `1.1.02.02`, con saldo de apertura contra Capital social, movimientos manuales, una transferencia entre ambas y cobros/pagos de facturas demo con cuenta bancaria. Incluye una conciliación de septiembre finalizada (diferencia 0) y una de octubre en estado Pendiente con un depósito sin marcar.
 
-Antes de aplicar `database/10_balance_jerarquico.sql`, `database/demo/correccion_saldos_padre.sql` se ejecutó manualmente en producción: reclasifica el saldo propio de `1.1.02` a la nueva hoja `1.1.02.03` «Bancos - Otros» y el de la cuenta inactiva `1234` a `1.1.01` Caja, de modo que ninguna cuenta con subcuentas conserve saldo propio.
+`database/demo/correccion_saldos_padre.sql` se ejecutó manualmente en producción: crea la hoja `1.1.02.03`, reclasifica el saldo propio de `1.1.02` a esa hoja «Bancos - Otros» (que luego cuelga de `1.1.02`) y el de la cuenta inactiva `1234` a `1.1.01` Caja, de modo que ninguna cuenta con subcuentas conserve saldo propio.

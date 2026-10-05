@@ -1,11 +1,11 @@
--- Reclasifica el saldo propio de cuentas de mayor a subcuentas hoja. Se aplica antes de 10_balance_jerarquico.sql; run_migrations.sh no lo ejecuta.
+-- Reclasifica el saldo propio de cuentas de mayor a subcuentas hoja; run_migrations.sh no lo ejecuta.
 
 BEGIN;
 
 -- 1. Subcuenta hoja para el saldo propio de Bancos ----------------------------
 
 INSERT INTO cuentacontable (codigo, nombre, tipo, naturaleza, cuenta_padre_id)
-SELECT '1.1.02.03', 'Bancos - Otros', p.tipo, p.naturaleza, p.id
+SELECT '1.1.02.03', 'Bancos - Otros', p.tipo, p.naturaleza, NULL
 FROM cuentacontable p
 WHERE p.codigo = '1.1.02'
   AND NOT EXISTS (SELECT 1 FROM cuentacontable WHERE codigo = '1.1.02.03');
@@ -62,6 +62,12 @@ END $$;
 
 SELECT pg_temp.corr_reclasificar('1.1.02', '1.1.02.03', '2026-10-31', 'contador@delta.com.gt');
 SELECT pg_temp.corr_reclasificar('1234',   '1.1.01',    '2026-10-31', 'contador@delta.com.gt');
+
+-- 1.1.02.03 se cuelga de 1.1.02 cuando este ya no tiene saldo propio (trg_validar_padre_sin_saldo).
+UPDATE cuentacontable h
+SET cuenta_padre_id = p.id
+FROM cuentacontable p
+WHERE h.codigo = '1.1.02.03' AND p.codigo = '1.1.02' AND h.cuenta_padre_id IS DISTINCT FROM p.id;
 
 DROP FUNCTION pg_temp.corr_reclasificar(TEXT, TEXT, DATE, TEXT);
 
