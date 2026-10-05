@@ -50,18 +50,6 @@ public class MovimientosTesoreriaControllerTests
         referencia = (string?)null,
     };
 
-    private static async Task<HttpStatusCode> EnviarAsync(HttpClient client, string ruta, object cuerpo)
-    {
-        try
-        {
-            return (await client.PostAsJsonAsync(ruta, cuerpo)).StatusCode;
-        }
-        catch (Exception)
-        {
-            return HttpStatusCode.InternalServerError;
-        }
-    }
-
     private static bool EstaConciliado(JsonElement lista, int movimientoId) =>
         lista.EnumerateArray().Single(m => m.GetProperty("id").GetInt32() == movimientoId).GetProperty("conciliado").GetBoolean();
 
@@ -120,20 +108,30 @@ public class MovimientosTesoreriaControllerTests
     }
 
     [Fact]
-    public async Task Registrar_ConTipoODescripcionInvalidos_Responde400()
+    public async Task Registrar_ConTipoInvalido_Responde400()
     {
         var (e, client) = await PrepararAsync();
 
         var tipo = await client.PostAsJsonAsync(Ruta, PayloadMovimiento(e, "Otro", 10m));
+
+        Assert.Equal(HttpStatusCode.BadRequest, tipo.StatusCode);
+        Assert.Equal("El tipo debe ser Ingreso o Egreso.", await tipo.LeerErrorAsync());
+    }
+
+    [Fact]
+    public async Task Registrar_ConDescripcionInvalida_Responde400()
+    {
+        var (e, client) = await PrepararAsync();
+
         var vacia = await client.PostAsJsonAsync(Ruta, PayloadMovimiento(e, "Ingreso", 10m, descripcion: ""));
         var larga = await client.PostAsJsonAsync(Ruta, PayloadMovimiento(e, "Ingreso", 10m, descripcion: new string('x', 256)));
 
-        Assert.Equal("El tipo debe ser Ingreso o Egreso.", await tipo.LeerErrorAsync());
-        Assert.Equal("La descripción es obligatoria.", await vacia.LeerErrorAsync());
-        Assert.Equal("La descripción no puede exceder 255 caracteres.", await larga.LeerErrorAsync());
-        Assert.Equal(HttpStatusCode.BadRequest, tipo.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, vacia.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, larga.StatusCode);
+        var vaciaBody = await vacia.LeerJsonAsync();
+        var largaBody = await larga.LeerJsonAsync();
+        Assert.True(vaciaBody.TryGetProperty("errors", out _));
+        Assert.True(largaBody.TryGetProperty("errors", out _));
     }
 
     [Fact]

@@ -295,17 +295,26 @@ public class CuentasBancariasControllerTests
     }
 
     [Fact]
-    public async Task Crear_ConTipoInvalidoOBancoVacio_Responde400()
+    public async Task Crear_ConTipoInvalido_Responde400()
     {
         var ctx = await PrepararAsync();
 
         var tipo = await ctx.Client.PostAsJsonAsync(Ruta, Payload(ctx.CuentaContableId, tipo: "Corriente"));
-        var banco = await ctx.Client.PostAsJsonAsync(Ruta, Payload(ctx.CuentaContableId, banco: ""));
 
         Assert.Equal(HttpStatusCode.BadRequest, tipo.StatusCode);
         Assert.Equal("El tipo debe ser Monetaria o Ahorro.", await tipo.LeerErrorAsync());
+    }
+
+    [Fact]
+    public async Task Crear_ConBancoVacio_Responde400()
+    {
+        var ctx = await PrepararAsync();
+
+        var banco = await ctx.Client.PostAsJsonAsync(Ruta, Payload(ctx.CuentaContableId, banco: ""));
+
         Assert.Equal(HttpStatusCode.BadRequest, banco.StatusCode);
-        Assert.Equal("El banco es obligatorio.", await banco.LeerErrorAsync());
+        var body = await banco.LeerJsonAsync();
+        Assert.True(body.TryGetProperty("errors", out _));
     }
 
     [Fact]

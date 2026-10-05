@@ -51,23 +51,28 @@ public class TesoreriaEsquemaTests
             _pg.Data.EjecutarAsync("DELETE FROM cuentabancaria WHERE id = $1", e.CuentaBancaria));
 
         Assert.Equal("P0001", ex.SqlState);
-        Assert.Contains("eliminacion", ex.MessageText);
+        Assert.Contains("no se elimina", ex.MessageText);
     }
 
     [Fact]
     public async Task AperturaUnica_SegundaApertura_ViolaUniqueIndex()
     {
         var e = await _pg.Data.SembrarTesoreriaAsync();
-        var (cuenta2, ctaBanco2) = await _pg.Data.CrearCuentaBancariaAsync();
         var cuentaCapital = await _pg.Data.CrearCuentaAsync("Capital", "Acreedora");
 
-        var asientoApertura = await _pg.Data.SembrarAsientoAsync(
+        var asientoPrimera = await _pg.Data.SembrarAsientoAsync(
             e.Periodo, e.Usuario, e.CuentaContableBanco, cuentaCapital, 500m, e.Inicio);
+        await _pg.Data.EjecutarAsync(
+            "INSERT INTO movimientotesoreria (cuenta_bancaria_id, fecha, tipo, monto, asiento_id, descripcion, origen) VALUES ($1, $2, 'Ingreso', 500, $3, 'Primera apertura', 'Apertura')",
+            e.CuentaBancaria, e.Inicio, asientoPrimera);
+
+        var asientoSegunda = await _pg.Data.SembrarAsientoAsync(
+            e.Periodo, e.Usuario, e.CuentaContableBanco, cuentaCapital, 600m, e.Inicio.AddDays(1));
 
         var ex = await Assert.ThrowsAsync<PostgresException>(() =>
             _pg.Data.EjecutarAsync(
-                "INSERT INTO movimientotesoreria (cuenta_bancaria_id, fecha, tipo, monto, asiento_id, descripcion, origen) VALUES ($1, $2, 'Ingreso', 500, $3, 'Segunda apertura', 'Apertura')",
-                e.CuentaBancaria, e.Inicio, asientoApertura));
+                "INSERT INTO movimientotesoreria (cuenta_bancaria_id, fecha, tipo, monto, asiento_id, descripcion, origen) VALUES ($1, $2, 'Ingreso', 600, $3, 'Segunda apertura', 'Apertura')",
+                e.CuentaBancaria, e.Inicio.AddDays(1), asientoSegunda));
 
         Assert.Equal("23505", ex.SqlState);
         Assert.Contains("ux_movimiento_apertura", ex.ConstraintName);
