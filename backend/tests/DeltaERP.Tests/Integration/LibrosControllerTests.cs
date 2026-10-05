@@ -14,6 +14,7 @@ public class LibrosControllerTests
     private readonly PostgresFixture _pg;
     private static readonly decimal[] SaldosAcumuladosMovimientos = { 100m, 70m, 75m };
     private static readonly decimal[] SaldosAcumuladosFiltro = { 100m, 70m };
+    private static readonly decimal[] SaldosAcumuladosConsolidado = { 100m, 150m };
 
     public LibrosControllerTests(PostgresFixture pg)
     {
@@ -354,7 +355,7 @@ public class LibrosControllerTests
 
         var movimientos = body.GetProperty("movimientos").EnumerateArray().ToArray();
         Assert.Equal(new[] { codigoA, codigoB }, movimientos.Select(m => m.GetProperty("cuentaCodigo").GetString()).ToArray());
-        Assert.Equal(new[] { 100m, 150m }, movimientos.Select(m => m.GetProperty("saldoAcumulado").GetDecimal()).ToArray());
+        Assert.Equal(SaldosAcumuladosConsolidado, movimientos.Select(m => m.GetProperty("saldoAcumulado").GetDecimal()).ToArray());
     }
 
     [Fact]
