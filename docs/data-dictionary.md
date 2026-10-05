@@ -53,6 +53,8 @@ oficial (05/09, sección 2).
 **Sin columna `saldo`.** Se calcula en `vw_balance_saldos` (periodo en curso /
 histórico) y se consolida de forma inmutable en `SaldoCuentaPeriodo` al cerrar cada periodo.
 
+El trigger `trg_validar_padre_sin_saldo` (BEFORE INSERT o UPDATE de `cuenta_padre_id`) impide asignar como padre una cuenta con saldo propio contabilizado distinto de 0 o con líneas en asientos `Borrador` (código `55000`).
+
 ### CentroCosto
 Sin cambios.
 
@@ -195,7 +197,7 @@ saldo del periodo en curso se sigue calculando siempre en tiempo real
 
 | Vista | Reemplaza a | Descripción |
 |---|---|---|
-| `vw_balance_saldos` | `CuentaContable.saldo` (nunca existió como columna) | Saldo en tiempo real por cuenta contable, sobre asientos `Confirmado` y `Anulado` (se excluye `Borrador`) |
+| `vw_balance_saldos` | `CuentaContable.saldo` (nunca existió como columna) | Saldo en tiempo real por cuenta contable, sobre asientos `Confirmado` y `Anulado` (se excluye `Borrador`). `total_debito`, `total_credito` y `saldo` están acumulados: cuenta propia más todos sus descendientes. Además expone `nivel` (1 = raíz), `cuenta_padre_id`, `es_hoja`, `activa` y los valores sin jerarquía `debito_propio` y `credito_propio` |
 | `vw_saldocuentaperiodo_vigente` | — | Filas de `SaldoCuentaPeriodo` del cierre vigente de cada periodo (`cierre_numero = PeriodoContable.cierres`); vacía si ese cierre no tuvo movimientos |
 | `vw_saldocuentabancaria` | `CuentaBancaria.saldo` | Saldo en tiempo real por cuenta bancaria: suma firmada de sus movimientos (Ingreso +, Egreso -); el saldo de apertura entra por su movimiento de apertura, no se suma aparte |
 | `vw_conciliacion_resumen` | — | Saldo inicial, total marcado, saldo conciliado y diferencia de cada conciliación bancaria (fuente de la matemática de RN-10) |

@@ -1,4 +1,5 @@
 using DeltaERP.Api.Auth;
+using DeltaERP.Api.Services;
 using DeltaERP.Domain.Entities;
 using DeltaERP.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -62,6 +63,16 @@ public class CuentasContablesController : ControllerBase
             // Fallback ante carrera entre el AnyAsync de arriba y el UNIQUE real en la BD.
             return Conflict(new { error = $"Ya existe una cuenta con el código {cuenta.Codigo}." });
         }
+        catch (DbUpdateException ex)
+        {
+            // trg_validar_padre_sin_saldo (55000): una cuenta con saldo propio no admite subcuentas.
+            var falloTrigger = ErroresPostgres.TraducirActualizacionAsync(ex);
+            if (falloTrigger is null)
+            {
+                throw;
+            }
+            return falloTrigger;
+        }
         return CreatedAtAction(nameof(Obtener), new { id = cuenta.Id }, cuenta);
     }
 
@@ -87,7 +98,19 @@ public class CuentasContablesController : ControllerBase
         cuenta.Tipo = cambios.Tipo;
         cuenta.Naturaleza = cambios.Naturaleza;
         cuenta.CuentaPadreId = cambios.CuentaPadreId;
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex)
+        {
+            var falloTrigger = ErroresPostgres.TraducirActualizacionAsync(ex);
+            if (falloTrigger is null)
+            {
+                throw;
+            }
+            return falloTrigger;
+        }
         return Ok(cuenta);
     }
 

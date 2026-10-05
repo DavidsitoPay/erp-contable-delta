@@ -211,4 +211,47 @@ public class CuentasContablesControllerTests
         var getResponse = await anonClient.GetAsync("/api/cuentas");
         Assert.Equal(HttpStatusCode.Unauthorized, getResponse.StatusCode);
     }
+
+    [Theory]
+    [InlineData("Confirmado")]
+    [InlineData("Borrador")]
+    public async Task Crear_ConPadreConSaldoPropioOBorrador_Responde409(string estado)
+    {
+        var padre = await _pg.Data.CrearCuentaConSaldoPropioAsync(estado);
+        var client = _pg.CreateApiClient(await _pg.Data.CrearUsuarioAsync());
+
+        var response = await client.PostAsJsonAsync("/api/cuentas", Payload(CodigoNuevo(), cuentaPadreId: padre));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("saldo propio", await response.LeerErrorAsync());
+    }
+
+    [Fact]
+    public async Task Crear_ConPadreConSaldoNetoCero_Responde201()
+    {
+        var padre = await _pg.Data.CrearCuentaAsync("Activo", "Deudora");
+        var (asiento, usuario) = await _pg.Data.SembrarSaldoPropioAsync(padre);
+        await _pg.Data.ReversarAsientoAsync(asiento, usuario);
+        var client = _pg.CreateApiClient(usuario);
+
+        var response = await client.PostAsJsonAsync("/api/cuentas", Payload(CodigoNuevo(), cuentaPadreId: padre));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Actualizar_ConNuevoPadreConSaldo_Responde409YConElMismoPadreSigueFuncionando()
+    {
+        var conSaldo = await _pg.Data.CrearCuentaConSaldoPropioAsync();
+        var (padre, hijo) = await _pg.Data.CrearCuentaConSubcuentasAsync("Activo", "Deudora");
+        await _pg.Data.SembrarSaldoPropioAsync(padre);
+        var client = _pg.CreateApiClient(await _pg.Data.CrearUsuarioAsync());
+
+        var conflicto = await client.PutAsJsonAsync($"/api/cuentas/{hijo}", Payload("X", cuentaPadreId: conSaldo));
+        Assert.Equal(HttpStatusCode.Conflict, conflicto.StatusCode);
+        Assert.Contains("saldo propio", await conflicto.LeerErrorAsync());
+
+        var mismoPadre = await client.PutAsJsonAsync($"/api/cuentas/{hijo}", Payload("X", nombre: "Renombrada", cuentaPadreId: padre));
+        Assert.Equal(HttpStatusCode.OK, mismoPadre.StatusCode);
+    }
 }

@@ -429,6 +429,23 @@ input[type="radio"]:focus-visible {
   border-bottom: 1px solid var(--color-border);
 }
 
+.data-table tbody tr.row-parent td {
+  font-weight: 600;
+}
+
+.data-table tfoot td {
+  padding: 0.5rem 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-body);
+  background: var(--color-bg-subtle);
+  border-top: 1px solid var(--color-border-strong);
+}
+
+.text-danger,
+.data-table tfoot td.text-danger {
+  color: var(--color-danger);
+}
+
 .data-table tbody tr:nth-child(even) {
   background: var(--color-row-alt);
 }

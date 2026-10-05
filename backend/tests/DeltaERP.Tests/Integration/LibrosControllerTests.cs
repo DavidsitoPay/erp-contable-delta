@@ -290,4 +290,86 @@ public class LibrosControllerTests
         Assert.Equal(30, numeroReversa.Length);
         Assert.Equal($"REV-{numero[..26]}", numeroReversa);
     }
+
+    private static JsonElement FilaBalance(JsonElement balance, int cuentaId) =>
+        balance.EnumerateArray().Single(x => x.GetProperty("cuentaId").GetInt32() == cuentaId);
+
+    [Fact]
+    public async Task BalanceSaldos_ConSubcuentas_AcumulaEnElPadreYExponeLaJerarquia()
+    {
+        var e = await _pg.Data.SembrarJerarquiaConSaldosAsync();
+        var client = _pg.CreateApiClient(e.Usuario);
+
+        var response = await client.GetAsync("/api/libros/balance-saldos");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var balance = await response.LeerJsonAsync();
+
+        var padre = FilaBalance(balance, e.Padre);
+        Assert.Equal(150m, padre.GetProperty("totalDebito").GetDecimal());
+        Assert.Equal(150m, padre.GetProperty("saldo").GetDecimal());
+        Assert.Equal(0m, padre.GetProperty("debitoPropio").GetDecimal());
+        Assert.Equal(1, padre.GetProperty("nivel").GetInt32());
+        Assert.False(padre.GetProperty("esHoja").GetBoolean());
+
+        var hijoA = FilaBalance(balance, e.HijoA);
+        Assert.Equal(100m, hijoA.GetProperty("totalDebito").GetDecimal());
+        Assert.Equal(100m, hijoA.GetProperty("debitoPropio").GetDecimal());
+        Assert.Equal(2, hijoA.GetProperty("nivel").GetInt32());
+        Assert.True(hijoA.GetProperty("esHoja").GetBoolean());
+        Assert.Equal(e.Padre, hijoA.GetProperty("cuentaPadreId").GetInt32());
+
+        var ingreso = FilaBalance(balance, e.Ingreso);
+        Assert.Equal(150m, ingreso.GetProperty("totalCredito").GetDecimal());
+    }
+
+    [Fact]
+    public async Task BalanceSaldos_FilasDeNivelUno_DebitoIgualaCredito()
+    {
+        var e = await _pg.Data.SembrarJerarquiaConSaldosAsync();
+        var client = _pg.CreateApiClient(e.Usuario);
+
+        var balance = await (await client.GetAsync("/api/libros/balance-saldos")).LeerJsonAsync();
+        var raices = new[] { FilaBalance(balance, e.Padre), FilaBalance(balance, e.Ingreso) };
+
+        Assert.Equal(
+            raices.Sum(f => f.GetProperty("totalDebito").GetDecimal()),
+            raices.Sum(f => f.GetProperty("totalCredito").GetDecimal()));
+    }
+
+    [Fact]
+    public async Task Mayor_ConCuentaPadre_IncluyeLosMovimientosDeSusSubcuentas()
+    {
+        var e = await _pg.Data.SembrarJerarquiaConSaldosAsync();
+        var codigoA = await _pg.Data.ScalarAsync<string>("SELECT codigo FROM cuentacontable WHERE id = $1", e.HijoA);
+        var codigoB = await _pg.Data.ScalarAsync<string>("SELECT codigo FROM cuentacontable WHERE id = $1", e.HijoB);
+        var client = _pg.CreateApiClient(e.Usuario);
+
+        var response = await client.GetAsync($"/api/libros/mayor?cuentaId={e.Padre}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.LeerJsonAsync();
+
+        var cuenta = body.GetProperty("cuenta");
+        Assert.False(cuenta.GetProperty("esHoja").GetBoolean());
+        Assert.Equal(2, cuenta.GetProperty("subcuentas").GetInt32());
+
+        var movimientos = body.GetProperty("movimientos").EnumerateArray().ToArray();
+        Assert.Equal(new[] { codigoA, codigoB }, movimientos.Select(m => m.GetProperty("cuentaCodigo").GetString()).ToArray());
+        Assert.Equal(new[] { 100m, 150m }, movimientos.Select(m => m.GetProperty("saldoAcumulado").GetDecimal()).ToArray());
+    }
+
+    [Fact]
+    public async Task Mayor_ConCuentaHoja_ExponeEsHojaYSinSubcuentas()
+    {
+        var e = await _pg.Data.SembrarJerarquiaConSaldosAsync();
+        var codigoA = await _pg.Data.ScalarAsync<string>("SELECT codigo FROM cuentacontable WHERE id = $1", e.HijoA);
+        var client = _pg.CreateApiClient(e.Usuario);
+
+        var body = await (await client.GetAsync($"/api/libros/mayor?cuentaId={e.HijoA}")).LeerJsonAsync();
+
+        var cuenta = body.GetProperty("cuenta");
+        Assert.True(cuenta.GetProperty("esHoja").GetBoolean());
+        Assert.Equal(0, cuenta.GetProperty("subcuentas").GetInt32());
+        var movimiento = body.GetProperty("movimientos").EnumerateArray().Single();
+        Assert.Equal(codigoA, movimiento.GetProperty("cuentaCodigo").GetString());
+    }
 }

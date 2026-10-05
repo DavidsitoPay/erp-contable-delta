@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { cuentasApi, librosApi, periodosApi } from "../../services/api";
-
-const formatoMoneda = new Intl.NumberFormat("es-GT", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+import { formatoMoneda } from "../../utils/formato";
+import { etiquetaSubcuentas } from "../../utils/cuentas";
 
 function LibroMayor() {
   const [cuentas, setCuentas] = useState([]);
@@ -33,6 +30,8 @@ function LibroMayor() {
       .catch((err) => setError(err.response?.data?.error || "No se pudo cargar el libro mayor."))
       .finally(() => setCargando(false));
   }, [cuentaId, periodoId]);
+
+  const consolidado = resultado?.cuenta.esHoja === false;
 
   return (
     <div>
@@ -68,6 +67,7 @@ function LibroMayor() {
             </strong>{" "}
             ({resultado.cuenta.naturaleza})
           </p>
+          {consolidado && <p>Consolidado de {etiquetaSubcuentas(resultado.cuenta.subcuentas)}</p>}
 
           {resultado.movimientos.length === 0 ? (
             <p>Esta cuenta no tiene movimientos confirmados{periodoId ? " en el periodo seleccionado" : ""}.</p>
@@ -79,6 +79,7 @@ function LibroMayor() {
                     <tr>
                       <th>Fecha</th>
                       <th>Asiento</th>
+                      {consolidado && <th>Cuenta</th>}
                       <th className="numeric">Débito</th>
                       <th className="numeric">Crédito</th>
                       <th className="numeric">Saldo acumulado</th>
@@ -86,9 +87,10 @@ function LibroMayor() {
                   </thead>
                   <tbody>
                     {resultado.movimientos.map((m, i) => (
-                      <tr key={`${m.asientoId}-${i}`}>
+                      <tr key={`${m.asientoId}-${m.cuentaId}-${i}`}>
                         <td>{m.fecha}</td>
                         <td>{m.asientoNumero}</td>
+                        {consolidado && <td>{`${m.cuentaCodigo} - ${m.cuentaNombre}`}</td>}
                         <td className="numeric">{m.debito > 0 ? formatoMoneda.format(m.debito) : ""}</td>
                         <td className="numeric">{m.credito > 0 ? formatoMoneda.format(m.credito) : ""}</td>
                         <td className="numeric">{formatoMoneda.format(m.saldoAcumulado)}</td>

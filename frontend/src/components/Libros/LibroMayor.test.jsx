@@ -25,10 +25,16 @@ const CUENTAS = [
 ];
 const PERIODOS = [{ id: 7, nombre: "Enero 2025" }];
 const RESULTADO = {
-  cuenta: { codigo: "1.1", nombre: "Caja", naturaleza: "Deudora" },
+  cuenta: { id: 1, codigo: "1.1", nombre: "Caja", naturaleza: "Deudora", esHoja: true, subcuentas: 0 },
   movimientos: [
-    { asientoId: 1, fecha: "2025-01-05", asientoNumero: "AS-001", debito: 100.5, credito: 0, saldoAcumulado: 100.5 },
-    { asientoId: 2, fecha: "2025-01-06", asientoNumero: "AS-002", debito: 0, credito: 40, saldoAcumulado: 60.5 },
+    { asientoId: 1, fecha: "2025-01-05", asientoNumero: "AS-001", debito: 100.5, credito: 0, saldoAcumulado: 100.5, cuentaId: 1, cuentaCodigo: "1.1", cuentaNombre: "Caja" },
+    { asientoId: 2, fecha: "2025-01-06", asientoNumero: "AS-002", debito: 0, credito: 40, saldoAcumulado: 60.5, cuentaId: 1, cuentaCodigo: "1.1", cuentaNombre: "Caja" },
+  ],
+};
+const CONSOLIDADO = {
+  cuenta: { id: 5, codigo: "1.1", nombre: "Caja", naturaleza: "Deudora", esHoja: false, subcuentas: 2 },
+  movimientos: [
+    { asientoId: 1, fecha: "2025-01-05", asientoNumero: "AS-001", debito: 100.5, credito: 0, saldoAcumulado: 100.5, cuentaId: 6, cuentaCodigo: "1.1.1", cuentaNombre: "Efectivo" },
   ],
 };
 
@@ -70,6 +76,22 @@ describe("LibroMayor", () => {
     expect(within(filas[1]).getAllByText("100.50")).toHaveLength(2);
     expect(within(filas[2]).getByText("40.00")).toBeInTheDocument();
     expect(within(filas[2]).getByText("60.50")).toBeInTheDocument();
+  });
+
+  it("consolidado: muestra la columna Cuenta y la nota de subcuentas", async () => {
+    librosApi.mayor.mockResolvedValue({ data: CONSOLIDADO });
+    await seleccionarCuenta();
+    await screen.findByText("AS-001");
+    expect(screen.getByRole("columnheader", { name: "Cuenta" })).toBeInTheDocument();
+    expect(screen.getByText("1.1.1 - Efectivo")).toBeInTheDocument();
+    expect(screen.getByText("Consolidado de 2 subcuentas")).toBeInTheDocument();
+  });
+
+  it("cuenta hoja: sin columna Cuenta ni nota", async () => {
+    await seleccionarCuenta();
+    await screen.findByText("AS-001");
+    expect(screen.queryByRole("columnheader", { name: "Cuenta" })).toBeNull();
+    expect(screen.queryByText(/Consolidado de/)).toBeNull();
   });
 
   it("consulta con el periodo elegido", async () => {

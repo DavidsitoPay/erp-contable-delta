@@ -16,6 +16,8 @@ public sealed record Escenario(
 
 public sealed record EscenarioTesoreria(int Usuario, int Periodo, DateOnly Inicio, int CuentaBancaria, int CuentaContableBanco, int Contrapartida);
 
+public sealed record EscenarioJerarquia(int Usuario, int Periodo, int Padre, int HijoA, int HijoB, int Ingreso);
+
 public sealed record OpcionesAsiento(string Estado = "Confirmado", int? CentroCostoId = null, string? Numero = null);
 
 // Bitácora, saldos, asientos y usuarios son inmutables: no hay limpieza posible, por
@@ -92,6 +94,41 @@ public sealed class TestData
             "INSERT INTO cuentacontable (codigo, nombre, tipo, naturaleza, cuenta_padre_id) VALUES ($1, $2, $3, $4, $5) RETURNING id",
             $"H{sufijo}", $"Hijo {tipo}", tipo, naturaleza, padreId);
         return (padreId, hijoId);
+    }
+
+    public Task<int> CrearSubcuentaAsync(int padreId, string tipo, string naturaleza) =>
+        ScalarAsync<int>(
+            "INSERT INTO cuentacontable (codigo, nombre, tipo, naturaleza, cuenta_padre_id) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+            $"S{Sufijo()}", $"Sub {tipo}", tipo, naturaleza, padreId);
+
+    public async Task<(int AsientoId, int UsuarioId)> SembrarSaldoPropioAsync(int cuentaId, string estado = "Confirmado")
+    {
+        var usuario = await CrearUsuarioAsync();
+        var periodo = await CrearPeriodoAsync();
+        var contrapartida = await CrearCuentaAsync("Ingreso", "Acreedora");
+        var asiento = await SembrarAsientoAsync(
+            periodo, usuario, cuentaId, contrapartida, 100m, new DateOnly(2025, 3, 1), new OpcionesAsiento(Estado: estado));
+        return (asiento, usuario);
+    }
+
+    public async Task<int> CrearCuentaConSaldoPropioAsync(string estado = "Confirmado")
+    {
+        var cuenta = await CrearCuentaAsync("Activo", "Deudora");
+        await SembrarSaldoPropioAsync(cuenta, estado);
+        return cuenta;
+    }
+
+    public async Task<EscenarioJerarquia> SembrarJerarquiaConSaldosAsync()
+    {
+        var usuario = await CrearUsuarioAsync();
+        var periodo = await CrearPeriodoAsync();
+        var padre = await CrearCuentaAsync("Activo", "Deudora");
+        var hijoA = await CrearSubcuentaAsync(padre, "Activo", "Deudora");
+        var hijoB = await CrearSubcuentaAsync(padre, "Activo", "Deudora");
+        var ingreso = await CrearCuentaAsync("Ingreso", "Acreedora");
+        await SembrarAsientoAsync(periodo, usuario, hijoA, ingreso, 100m, new DateOnly(2025, 1, 10));
+        await SembrarAsientoAsync(periodo, usuario, hijoB, ingreso, 50m, new DateOnly(2025, 1, 20));
+        return new EscenarioJerarquia(usuario, periodo, padre, hijoA, hijoB, ingreso);
     }
 
     public async Task<Escenario> SembrarEscenarioAsync() => new(
