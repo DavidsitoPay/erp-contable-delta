@@ -114,14 +114,15 @@ public class CxCControllerTests
     public async Task CrearPago_QueExcedeElSaldo_RespondeRN05YNoAlteraElSaldo()
     {
         var e = await _pg.Data.SembrarEscenarioAsync();
+        var cuenta = await _pg.Data.CrearCuentaBancariaAsync();
         var client = _pg.CreateApiClient(e.UsuarioId);
         var documentoId = await CrearFacturaAsync(client, e, e.ClienteId);
 
-        var pagoValido = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 40m));
+        var pagoValido = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 40m, cuenta.Id));
         Assert.Equal(HttpStatusCode.Created, pagoValido.StatusCode);
         Assert.Equal(60m, await ObtenerSaldoAsync(client, documentoId));
 
-        var pagoExcedido = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 60.01m));
+        var pagoExcedido = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 60.01m, cuenta.Id));
 
         Assert.Equal(HttpStatusCode.BadRequest, pagoExcedido.StatusCode);
         var error = (await pagoExcedido.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("error").GetString();
@@ -134,11 +135,12 @@ public class CxCControllerTests
     public async Task CrearPago_AFacturaDeOtroCliente_RespondeBadRequestSinRegistrarElRecibo()
     {
         var e = await _pg.Data.SembrarEscenarioAsync();
+        var cuenta = await _pg.Data.CrearCuentaBancariaAsync();
         var otroClienteId = await _pg.Data.CrearContraparteAsync("Cliente");
         var client = _pg.CreateApiClient(e.UsuarioId);
         var documentoId = await CrearFacturaAsync(client, e, e.ClienteId);
 
-        var response = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(otroClienteId, documentoId, 10m));
+        var response = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(otroClienteId, documentoId, 10m, cuenta.Id));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal(0, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM recibopagocliente WHERE cliente_id = $1", otroClienteId));
@@ -191,9 +193,10 @@ public class CxCControllerTests
     public async Task ListarPagos_ConPagoCreado_DevuelvePagoConClienteNombre()
     {
         var e = await _pg.Data.SembrarEscenarioAsync();
+        var cuenta = await _pg.Data.CrearCuentaBancariaAsync();
         var client = _pg.CreateApiClient(e.UsuarioId);
         var documentoId = await CrearFacturaAsync(client, e, e.ClienteId);
-        await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 50m));
+        await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 50m, cuenta.Id));
 
         var response = await client.GetFromJsonAsync<JsonElement>("/api/cxc/pagos");
 
@@ -288,10 +291,11 @@ public class CxCControllerTests
     public async Task CrearPago_RegistraAuditoriaConAccion()
     {
         var e = await _pg.Data.SembrarEscenarioAsync();
+        var cuenta = await _pg.Data.CrearCuentaBancariaAsync();
         var client = _pg.CreateApiClient(e.UsuarioId);
         var documentoId = await CrearFacturaAsync(client, e, e.ClienteId);
 
-        await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 50m));
+        await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 50m, cuenta.Id));
 
         var auditorias = await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM bitacoraauditoria WHERE usuario_id = $1 AND accion = 'registrar_pago_cxc'", e.UsuarioId);
         Assert.Equal(1, auditorias);
@@ -311,16 +315,166 @@ public class CxCControllerTests
     }
 
     [Fact]
-    public async Task CrearPago_ComoVendedor_Exitoso()
+    public async Task CrearPago_ComoVendedor_Responde403()
     {
         var e = await _pg.Data.SembrarEscenarioAsync();
+        var cuenta = await _pg.Data.CrearCuentaBancariaAsync();
         var client = _pg.CreateApiClient(e.UsuarioId, Roles.Vendedor);
         var documentoId = await CrearFacturaAsync(client, e, e.ClienteId);
 
-        var response = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 50m));
+        var response = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 50m, cuenta.Id));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(0, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM recibopagocliente WHERE cliente_id = $1", e.ClienteId));
+    }
+
+    [Fact]
+    public async Task CrearPago_SinCuentaBancaria_Responde400()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var client = _pg.CreateApiClient(e.UsuarioId);
+        var documentoId = await CrearFacturaAsync(client, e, e.ClienteId);
+
+        var response = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 50m, null));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("La cuenta bancaria es obligatoria para registrar un cobro o un pago.", await response.LeerErrorAsync());
+        Assert.Equal(0, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM recibopagocliente WHERE cliente_id = $1", e.ClienteId));
+        Assert.Equal(100m, await ObtenerSaldoAsync(client, documentoId));
+    }
+
+    [Fact]
+    public async Task CrearPago_CreaMovimientoYAsientoConControlDerivado()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var cuenta = await _pg.Data.CrearCuentaBancariaAsync();
+        var client = _pg.CreateApiClient(e.UsuarioId);
+        var documentoId = await CrearFacturaAsync(client, e, e.ClienteId);
+
+        var response = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 40m, cuenta.Id));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        Assert.Equal(1, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM recibopagocliente WHERE cliente_id = $1", e.ClienteId));
+        var reciboId = (await response.LeerJsonAsync()).GetProperty("id").GetInt32();
+        Assert.Equal("Ingreso", await _pg.Data.ScalarAsync<string>("SELECT tipo FROM movimientotesoreria WHERE recibo_pago_id = $1", reciboId));
+        Assert.Equal("CxC", await _pg.Data.ScalarAsync<string>("SELECT origen FROM movimientotesoreria WHERE recibo_pago_id = $1", reciboId));
+        Assert.Equal(40m, await _pg.Data.ScalarAsync<decimal>("SELECT monto FROM movimientotesoreria WHERE recibo_pago_id = $1", reciboId));
+        Assert.Equal(cuenta.Id, await _pg.Data.ScalarAsync<int>("SELECT cuenta_bancaria_id FROM movimientotesoreria WHERE recibo_pago_id = $1", reciboId));
+        var asientoId = await _pg.Data.ScalarAsync<int>("SELECT asiento_id FROM movimientotesoreria WHERE recibo_pago_id = $1", reciboId);
+        Assert.Equal(2, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM lineaasiento WHERE asiento_id = $1", asientoId));
+        Assert.Equal(40m, await _pg.Data.DebitoAsync(asientoId, cuenta.CuentaContableId));
+        Assert.Equal(40m, await _pg.Data.CreditoAsync(asientoId, e.CuentaCxC));
+        Assert.Equal(40m, await _pg.Data.SaldoBancarioAsync(cuenta.Id));
+        Assert.Equal(1, await _pg.Data.ContarAuditoriaAsync(e.UsuarioId, "registrar_pago_cxc"));
+    }
+
+    [Fact]
+    public async Task CrearPago_ConFacturasDeControlesDistintos_GeneraUnaLineaPorControl()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var otraCuentaCxC = await _pg.Data.CrearCuentaAsync("Activo", "Deudora");
+        var cuenta = await _pg.Data.CrearCuentaBancariaAsync();
+        var client = _pg.CreateApiClient(e.UsuarioId);
+        var primeraId = await CrearFacturaAsync(client, e, e.ClienteId);
+        var segundaId = await CrearFacturaAsync(client, e with { CuentaCxC = otraCuentaCxC }, e.ClienteId);
+
+        var response = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPagoMultiple(e.ClienteId, cuenta.Id, (primeraId, 30m), (segundaId, 20m)));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var reciboId = (await response.LeerJsonAsync()).GetProperty("id").GetInt32();
+        var asientoId = await _pg.Data.ScalarAsync<int>("SELECT asiento_id FROM movimientotesoreria WHERE recibo_pago_id = $1", reciboId);
+        Assert.Equal(3, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM lineaasiento WHERE asiento_id = $1", asientoId));
+        Assert.Equal(50m, await _pg.Data.DebitoAsync(asientoId, cuenta.CuentaContableId));
+        Assert.Equal(30m, await _pg.Data.CreditoAsync(asientoId, e.CuentaCxC));
+        Assert.Equal(20m, await _pg.Data.CreditoAsync(asientoId, otraCuentaCxC));
+        Assert.Equal(50m, await _pg.Data.ScalarAsync<decimal>("SELECT monto FROM movimientotesoreria WHERE recibo_pago_id = $1", reciboId));
+    }
+
+    [Fact]
+    public async Task CrearPago_ConFacturaSinAsiento_Responde400()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var cuenta = await _pg.Data.CrearCuentaBancariaAsync();
+        var client = _pg.CreateApiClient(e.UsuarioId);
+        var numero = $"F-{TestData.Sufijo()}";
+        var documentoId = await _pg.Data.ScalarAsync<int>(
+            "INSERT INTO documentocxc (numero, tipo_documento, cliente_id, fecha, fecha_vencimiento, monto_total, estado) VALUES ($1, 'Factura', $2, $3, $4, 100, 'Vigente') RETURNING id",
+            numero, e.ClienteId, new DateOnly(2025, 3, 15), new DateOnly(2025, 4, 15));
+
+        var response = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 50m, cuenta.Id));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal($"No se pudo determinar la cuenta de control de la factura {numero}.", await response.LeerErrorAsync());
+        Assert.Equal(0, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM recibopagocliente WHERE cliente_id = $1", e.ClienteId));
+    }
+
+    [Fact]
+    public async Task CrearPago_ConSaldoRN05Excedido_NoCreaMovimiento()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var cuenta = await _pg.Data.CrearCuentaBancariaAsync();
+        var client = _pg.CreateApiClient(e.UsuarioId);
+        var documentoId = await CrearFacturaAsync(client, e, e.ClienteId);
+        Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 40m, cuenta.Id))).StatusCode);
+
+        var excedido = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 60.01m, cuenta.Id));
+
+        Assert.Equal(HttpStatusCode.BadRequest, excedido.StatusCode);
+        Assert.Equal(1, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM movimientotesoreria WHERE cuenta_bancaria_id = $1", cuenta.Id));
+        Assert.Equal(40m, await _pg.Data.SaldoBancarioAsync(cuenta.Id));
+    }
+
+    [Fact]
+    public async Task CrearPago_ConCuentaBancariaInactivaOInexistente_Responde400()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var cuenta = await _pg.Data.CrearCuentaBancariaAsync();
+        var client = _pg.CreateApiClient(e.UsuarioId);
+        var documentoId = await CrearFacturaAsync(client, e, e.ClienteId);
+        await _pg.Data.EjecutarAsync("UPDATE cuentabancaria SET activa = false WHERE id = $1", cuenta.Id);
+
+        var inexistente = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 50m, IdInexistente));
+        var inactiva = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 50m, cuenta.Id));
+
+        Assert.Equal(HttpStatusCode.BadRequest, inexistente.StatusCode);
+        Assert.Equal("La cuenta bancaria indicada no existe.", await inexistente.LeerErrorAsync());
+        Assert.Equal(HttpStatusCode.BadRequest, inactiva.StatusCode);
+        Assert.Contains("está inactiva", await inactiva.LeerErrorAsync());
+        Assert.Equal(0, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM recibopagocliente WHERE cliente_id = $1", e.ClienteId));
+    }
+
+    [Fact]
+    public async Task CrearPago_EnPeriodoCerradoOSinPeriodo_Responde400YNoDejaRecibo()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var cuenta = await _pg.Data.CrearCuentaBancariaAsync();
+        var client = _pg.CreateApiClient(e.UsuarioId);
+        var documentoId = await CrearFacturaAsync(client, e, e.ClienteId);
+        var (inicio, fin) = TestData.RangoPeriodoUnico();
+        await _pg.Data.CrearPeriodoEnRangoAsync(inicio, fin, "Cerrado");
+
+        var cerrado = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 50m, cuenta.Id, inicio.AddDays(2).ToString("yyyy-MM-dd")));
+        var sinPeriodo = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 50m, cuenta.Id, TestData.FechaSinPeriodo.ToString("yyyy-MM-dd")));
+
+        Assert.Equal(HttpStatusCode.BadRequest, cerrado.StatusCode);
+        Assert.Contains("no esté Abierto", await cerrado.LeerErrorAsync());
+        Assert.Equal(HttpStatusCode.BadRequest, sinPeriodo.StatusCode);
+        Assert.Contains("No existe un periodo contable", await sinPeriodo.LeerErrorAsync());
+        Assert.Equal(0, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM recibopagocliente WHERE cliente_id = $1", e.ClienteId));
+    }
+
+    [Fact]
+    public async Task CrearPago_ConMontoDeTresDecimales_Responde400()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var cuenta = await _pg.Data.CrearCuentaBancariaAsync();
+        var client = _pg.CreateApiClient(e.UsuarioId);
+        var documentoId = await CrearFacturaAsync(client, e, e.ClienteId);
+
+        var response = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 10.005m, cuenta.Id));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("Los montos del pago no pueden tener más de 2 decimales.", await response.LeerErrorAsync());
+        Assert.Equal(100m, await ObtenerSaldoAsync(client, documentoId));
     }
 
     private static object PayloadFactura(Escenario e, string numero, int clienteId, int cuentaLineaId, int? centroCostoId) => new
@@ -338,12 +492,22 @@ public class CxCControllerTests
         },
     };
 
-    private static object PayloadPago(int clienteId, int documentoId, decimal monto) => new
+    private static object PayloadPago(int clienteId, int documentoId, decimal monto, int? cuentaBancariaId, string fecha = "2025-03-20") => new
+    {
+        clienteId,
+        fecha,
+        metodoPago = "Efectivo",
+        cuentaBancariaId,
+        aplicaciones = new object[] { new { documentoId, montoAplicado = monto } },
+    };
+
+    private static object PayloadPagoMultiple(int clienteId, int cuentaBancariaId, params (int DocumentoId, decimal Monto)[] aplicaciones) => new
     {
         clienteId,
         fecha = "2025-03-20",
         metodoPago = "Efectivo",
-        aplicaciones = new object[] { new { documentoId, montoAplicado = monto } },
+        cuentaBancariaId,
+        aplicaciones = aplicaciones.Select(a => new { documentoId = a.DocumentoId, montoAplicado = a.Monto }).ToArray(),
     };
 
     private static async Task<int> CrearFacturaAsync(HttpClient client, Escenario e, int clienteId)

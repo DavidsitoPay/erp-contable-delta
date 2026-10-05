@@ -78,4 +78,29 @@ export const cxpApi = {
   crearPago: (pago) => api.post("/cxp/pagos", pago),
 };
 
+export const cuentasBancariasApi = {
+  listar: (incluirInactivas = false) => api.get("/cuentas-bancarias", { params: { incluirInactivas } }),
+  obtener: (id) => api.get(`/cuentas-bancarias/${idRuta(id)}`),
+  crear: (cuenta) => api.post("/cuentas-bancarias", cuenta),
+  actualizar: (id, cambios) => api.put(`/cuentas-bancarias/${idRuta(id)}`, cambios),
+  desactivar: (id) => api.delete(`/cuentas-bancarias/${idRuta(id)}`),
+};
+
+export const movimientosTesoreriaApi = {
+  listar: (filtros = {}) => api.get("/movimientos-tesoreria", { params: filtros }),
+  crear: (movimiento) => api.post("/movimientos-tesoreria", movimiento),
+  transferir: (transferencia) => api.post("/movimientos-tesoreria/transferencias", transferencia),
+};
+
+export const conciliacionesApi = {
+  listar: (filtros = {}) => api.get("/conciliaciones", { params: filtros }),
+  obtener: (id) => api.get(`/conciliaciones/${idRuta(id)}`),
+  crear: (conciliacion) => api.post("/conciliaciones", conciliacion),
+  actualizar: (id, cambios) => api.put(`/conciliaciones/${idRuta(id)}`, cambios),
+  cancelar: (id) => api.post(`/conciliaciones/${idRuta(id)}/cancelar`),
+  marcar: (conciliacionId, movimientoId) => api.post(`/conciliaciones/${idRuta(conciliacionId)}/movimientos`, { movimientoId: Number(movimientoId) }),
+  desmarcar: (conciliacionId, movimientoId) => api.delete(`/conciliaciones/${idRuta(conciliacionId)}/movimientos/${idRuta(movimientoId)}`),
+  finalizar: (id) => api.post(`/conciliaciones/${idRuta(id)}/finalizar`),
+};
+
 export default api;

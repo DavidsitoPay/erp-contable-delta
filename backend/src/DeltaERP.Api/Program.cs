@@ -21,6 +21,7 @@ builder.Services.AddSingleton<TokenService>();
 builder.Services.AddScoped<ValidacionContable>();
 builder.Services.AddScoped<AuditoriaService>();
 builder.Services.AddScoped<FacturaService>();
+builder.Services.AddScoped<TesoreriaService>();
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? throw new InvalidOperationException("Falta la sección Jwt en la configuración.");

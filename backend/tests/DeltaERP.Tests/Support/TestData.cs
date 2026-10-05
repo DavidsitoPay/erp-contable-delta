@@ -14,6 +14,8 @@ public sealed record Escenario(
     int CuentaGasto,
     int CentroCostoId);
 
+public sealed record EscenarioTesoreria(int Usuario, int Periodo, DateOnly Inicio, int CuentaBancaria, int CuentaContableBanco, int Contrapartida);
+
 public sealed record OpcionesAsiento(string Estado = "Confirmado", int? CentroCostoId = null, string? Numero = null);
 
 // Bitácora, saldos, asientos y usuarios son inmutables: no hay limpieza posible, por
@@ -22,6 +24,7 @@ public sealed class TestData
 {
     private readonly NpgsqlDataSource _db;
     private static int _anioPeriodoUnico = 2099;
+    public static readonly DateOnly FechaSinPeriodo = new(1990, 6, 15);
 
     public TestData(NpgsqlDataSource db)
     {
@@ -148,4 +151,60 @@ public sealed class TestData
         await EjecutarAsync("CALL sp_reversar_asiento($1, $2)", asientoId, usuarioId);
         return await ScalarAsync<int>("SELECT id FROM asientocontable WHERE reversa_de_id = $1", asientoId);
     }
+
+    public async Task<(int Id, int CuentaContableId)> CrearCuentaBancariaAsync(string tipo = "Monetaria")
+    {
+        var cuentaContableId = await CrearCuentaAsync("Activo", "Deudora");
+        var id = await ScalarAsync<int>(
+            "INSERT INTO cuentabancaria (banco, numero, tipo, cuenta_contable_id, saldo_apertura) VALUES ($1, $2, $3, $4, 0) RETURNING id",
+            $"Banco {Sufijo()}", $"N{Sufijo()}", tipo, cuentaContableId);
+        return (id, cuentaContableId);
+    }
+
+    public async Task<int> CrearMovimientoAsync(
+        int cuentaBancariaId, int cuentaContableBancoId, int contrapartidaId, string tipo, decimal monto, DateOnly fecha, int periodoId, int usuarioId)
+    {
+        var esIngreso = tipo == "Ingreso";
+        var asientoId = await SembrarAsientoAsync(
+            periodoId, usuarioId,
+            esIngreso ? cuentaContableBancoId : contrapartidaId,
+            esIngreso ? contrapartidaId : cuentaContableBancoId,
+            monto, fecha);
+        return await ScalarAsync<int>(
+            "INSERT INTO movimientotesoreria (cuenta_bancaria_id, fecha, tipo, monto, asiento_id, descripcion, origen) VALUES ($1, $2, $3, $4, $5, 'Movimiento de prueba', 'Manual') RETURNING id",
+            cuentaBancariaId, fecha, tipo, monto, asientoId);
+    }
+
+    public Task<int> CrearConciliacionAsync(int cuentaBancariaId, int periodoId, DateOnly fecha, decimal saldoExtracto, string estado = "Pendiente") =>
+        ScalarAsync<int>(
+            "INSERT INTO conciliacionbancaria (cuenta_bancaria_id, periodo_id, fecha, estado, saldo_extracto) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+            cuentaBancariaId, periodoId, fecha, estado, saldoExtracto);
+
+    public Task MarcarMovimientoAsync(int conciliacionId, int movimientoId) =>
+        EjecutarAsync("INSERT INTO detalleconciliacion (conciliacion_id, movimiento_id) VALUES ($1, $2)", conciliacionId, movimientoId);
+
+    public Task ForzarEstadoConciliacionAsync(int conciliacionId, string estado) =>
+        EjecutarAsync("UPDATE conciliacionbancaria SET estado = $1 WHERE id = $2", estado, conciliacionId);
+
+    public async Task<EscenarioTesoreria> SembrarTesoreriaAsync()
+    {
+        var (inicio, fin) = RangoPeriodoUnico();
+        var usuario = await CrearUsuarioAsync();
+        var periodo = await CrearPeriodoEnRangoAsync(inicio, fin);
+        var (cuentaBancaria, cuentaContableBanco) = await CrearCuentaBancariaAsync();
+        var contrapartida = await CrearCuentaAsync("Ingreso", "Acreedora");
+        return new EscenarioTesoreria(usuario, periodo, inicio, cuentaBancaria, cuentaContableBanco, contrapartida);
+    }
+
+    public Task<decimal> SaldoBancarioAsync(int cuentaBancariaId) =>
+        ScalarAsync<decimal>("SELECT saldo FROM vw_saldocuentabancaria WHERE cuenta_bancaria_id = $1", cuentaBancariaId);
+
+    public Task<decimal> DebitoAsync(int asientoId, int cuentaId) =>
+        ScalarAsync<decimal>("SELECT COALESCE(SUM(debito), 0) FROM lineaasiento WHERE asiento_id = $1 AND cuenta_id = $2", asientoId, cuentaId);
+
+    public Task<decimal> CreditoAsync(int asientoId, int cuentaId) =>
+        ScalarAsync<decimal>("SELECT COALESCE(SUM(credito), 0) FROM lineaasiento WHERE asiento_id = $1 AND cuenta_id = $2", asientoId, cuentaId);
+
+    public Task<long> ContarAuditoriaAsync(int usuarioId, string accion) =>
+        ScalarAsync<long>("SELECT COUNT(*) FROM bitacoraauditoria WHERE usuario_id = $1 AND accion = $2", usuarioId, accion);
 }

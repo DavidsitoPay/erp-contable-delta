@@ -1,6 +1,5 @@
 namespace DeltaERP.Domain.Entities;
 
-// Simétrico a ReciboPagoCliente: tampoco genera AsientoContable.
 public class PagoProveedorCabecera
 {
     public int Id { get; set; }

@@ -1,9 +1,9 @@
-export function FormularioCatalogo({ onSubmit, cargando, error, children }) {
+export function FormularioCatalogo({ onSubmit, cargando, error, etiquetaBoton = "Agregar", children }) {
   return (
     <>
       <form onSubmit={onSubmit} className="catalog-form">
         {children}
-        <button type="submit" disabled={cargando} className="btn btn-primary">Agregar</button>
+        <button type="submit" disabled={cargando} className="btn btn-primary">{etiquetaBoton}</button>
       </form>
       {error && <p className="error-chip">{error}</p>}
     </>

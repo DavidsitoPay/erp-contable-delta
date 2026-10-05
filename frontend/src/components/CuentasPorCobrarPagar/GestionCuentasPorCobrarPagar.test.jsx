@@ -1,18 +1,23 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { centrosCostoApi, contrapartesApi, cuentasApi, periodosApi } from "../../services/api";
+import { centrosCostoApi, contrapartesApi, cuentasApi, cuentasBancariasApi, periodosApi } from "../../services/api";
 import GestionCuentasPorCobrarPagar from "./GestionCuentasPorCobrarPagar";
 
 vi.mock("../../services/api", () => ({
   centrosCostoApi: { listar: vi.fn() },
   contrapartesApi: { listar: vi.fn() },
   cuentasApi: { listar: vi.fn() },
+  cuentasBancariasApi: { listar: vi.fn() },
   periodosApi: { listar: vi.fn() },
 }));
 
 const cuentas = [
   { id: 1, codigo: "1101", nombre: "Clientes", tipo: "Activo", naturaleza: "Deudora", activa: true, cuentaPadreId: null },
   { id: 2, codigo: "4101", nombre: "Ventas", tipo: "Ingreso", naturaleza: "Acreedora", activa: true, cuentaPadreId: null },
+];
+const cuentasBancarias = [
+  { id: 7, banco: "BAC", numero: "123", activa: true },
+  { id: 8, banco: "Viejo", numero: "000", activa: false },
 ];
 const contrapartes = [{ id: 5, nombre: "ACME" }, { id: 6, nombre: "Otra" }];
 const periodos = [{ id: 10, nombre: "Enero 2025", estado: "Abierto" }];
@@ -53,12 +58,19 @@ async function renderCargado() {
   await screen.findByText("F-1");
 }
 
+function iniciarSesionComo(perfil) {
+  localStorage.setItem("delta_usuario", JSON.stringify({ nombre: "Ana", perfil }));
+}
+
 describe("GestionCuentasPorCobrarPagar", () => {
   beforeEach(() => {
+    iniciarSesionComo("Contador");
     contrapartesApi.listar.mockResolvedValue({ data: contrapartes });
     cuentasApi.listar.mockResolvedValue({ data: cuentas });
     centrosCostoApi.listar.mockResolvedValue({ data: [] });
     periodosApi.listar.mockResolvedValue({ data: periodos });
+    cuentasBancariasApi.listar.mockClear();
+    cuentasBancariasApi.listar.mockResolvedValue({ data: cuentasBancarias });
   });
 
   it("calcula el total de la factura con impuesto y suma varias líneas", async () => {
@@ -122,7 +134,7 @@ describe("GestionCuentasPorCobrarPagar", () => {
     });
   });
 
-  it("en pagos solo lista facturas vigentes con saldo de la contraparte elegida y envía las aplicaciones", async () => {
+  it("en pagos exige cuenta bancaria, lista facturas vigentes con saldo y envía cuentaBancariaId y aplicaciones", async () => {
     await renderCargado();
     fireEvent.click(screen.getByRole("button", { name: "Pagos" }));
 
@@ -133,10 +145,15 @@ describe("GestionCuentasPorCobrarPagar", () => {
     expect(screen.queryByLabelText("Monto a aplicar a F-3")).toBeNull();
     expect(screen.queryByLabelText("Monto a aplicar a F-4")).toBeNull();
 
+    const cuenta = screen.getByLabelText("Cuenta bancaria");
+    await within(cuenta).findByRole("option", { name: "BAC 123" });
+    expect(within(cuenta).queryByRole("option", { name: "Viejo 000" })).toBeNull();
+
     fireEvent.change(screen.getByLabelText("Método de pago"), { target: { value: "Efectivo" } });
+    fireEvent.change(screen.getByLabelText("Monto a aplicar a F-1"), { target: { value: "40" } });
     expect(screen.getByRole("button", { name: "Registrar pago" })).toBeDisabled();
 
-    fireEvent.change(screen.getByLabelText("Monto a aplicar a F-1"), { target: { value: "40" } });
+    fireEvent.change(cuenta, { target: { value: "7" } });
     expect(screen.getByRole("button", { name: "Registrar pago" })).toBeEnabled();
 
     fireEvent.click(screen.getByRole("button", { name: "Registrar pago" }));
@@ -144,11 +161,24 @@ describe("GestionCuentasPorCobrarPagar", () => {
     await waitFor(() => expect(api.crearPago).toHaveBeenCalledTimes(1));
     expect(api.crearPago).toHaveBeenCalledWith({
       clienteId: 5,
+      cuentaBancariaId: 7,
       fecha: expect.any(String),
       metodoPago: "Efectivo",
       referenciaBancaria: null,
       aplicaciones: [{ documentoId: 1, montoAplicado: 40 }],
     });
     await waitFor(() => expect(api.listarFacturas).toHaveBeenCalledTimes(2));
+  });
+
+  it("un vendedor no ve el formulario de pagos ni consulta cuentas bancarias, pero sí la lista de pagos", async () => {
+    iniciarSesionComo("Vendedor");
+    await renderCargado();
+    fireEvent.click(screen.getByRole("button", { name: "Pagos" }));
+
+    expect(await screen.findByText("Tu perfil no puede registrar cobros ni pagos.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Cuenta bancaria")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Registrar pago" })).toBeNull();
+    expect(screen.getByText("Pagos registrados")).toBeInTheDocument();
+    expect(cuentasBancariasApi.listar).not.toHaveBeenCalled();
   });
 });
