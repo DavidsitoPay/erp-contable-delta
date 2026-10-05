@@ -63,14 +63,10 @@ public class CuentasContablesController : ControllerBase
             // Fallback ante carrera entre el AnyAsync de arriba y el UNIQUE real en la BD.
             return Conflict(new { error = $"Ya existe una cuenta con el código {cuenta.Codigo}." });
         }
-        catch (DbUpdateException ex)
+        // Npgsql trata 55000 (trg_validar_padre_sin_saldo) como transitorio y lo envuelve en InvalidOperationException.
+        catch (InvalidOperationException ex) when (ex.InnerException is DbUpdateException db
+            && ErroresPostgres.TraducirActualizacionAsync(db) is { } falloTrigger)
         {
-            // trg_validar_padre_sin_saldo (55000): una cuenta con saldo propio no admite subcuentas.
-            var falloTrigger = ErroresPostgres.TraducirActualizacionAsync(ex);
-            if (falloTrigger is null)
-            {
-                throw;
-            }
             return falloTrigger;
         }
         return CreatedAtAction(nameof(Obtener), new { id = cuenta.Id }, cuenta);
@@ -102,13 +98,10 @@ public class CuentasContablesController : ControllerBase
         {
             await _db.SaveChangesAsync();
         }
-        catch (DbUpdateException ex)
+        // Npgsql trata 55000 (trg_validar_padre_sin_saldo) como transitorio y lo envuelve en InvalidOperationException.
+        catch (InvalidOperationException ex) when (ex.InnerException is DbUpdateException db
+            && ErroresPostgres.TraducirActualizacionAsync(db) is { } falloTrigger)
         {
-            var falloTrigger = ErroresPostgres.TraducirActualizacionAsync(ex);
-            if (falloTrigger is null)
-            {
-                throw;
-            }
             return falloTrigger;
         }
         return Ok(cuenta);
