@@ -36,6 +36,41 @@ public class AsientosControllerTests
         lineas,
     };
 
+    private async Task<(HttpClient Cliente, int AdministradorId)> ClienteAdministradorAsync()
+    {
+        var administrador = await _pg.Data.CrearUsuarioAsync(Roles.Administrador);
+        return (_pg.CreateApiClient(administrador, Roles.Administrador), administrador);
+    }
+
+    private async Task<(Escenario E, int AsientoId)> SembrarAsientoReversibleAsync(OpcionesAsiento? opciones = null)
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var asiento = await _pg.Data.SembrarAsientoAsync(
+            e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 100m, new DateOnly(2025, 3, 1), opciones);
+        return (e, asiento);
+    }
+
+    private static Task<HttpResponseMessage> ReversarAsync(HttpClient client, int asientoId, string? motivo = "Motivo de prueba") =>
+        client.PostAsJsonAsync($"/api/asientos/{asientoId}/reversar", new { motivo });
+
+    private async Task<string?> ReversarConConflictoAsync(int asientoId)
+    {
+        var (client, _) = await ClienteAdministradorAsync();
+        var response = await ReversarAsync(client, asientoId);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        return await response.LeerErrorAsync();
+    }
+
+    private static async Task<decimal> SaldoAsync(HttpClient client, int cuentaId)
+    {
+        var balance = await (await client.GetAsync("/api/libros/balance-saldos")).LeerJsonAsync();
+        var fila = balance.EnumerateArray().Single(x => x.GetProperty("cuentaId").GetInt32() == cuentaId);
+        return fila.GetProperty("saldo").GetDecimal();
+    }
+
+    private Task<string> EstadoAsync(int asientoId) =>
+        _pg.Data.ScalarAsync<string>("SELECT estado FROM asientocontable WHERE id = $1", asientoId);
+
     [Fact]
     public async Task Registrar_ConPartidaDobleValida_Responde201ConMontoYUsuarioDelServidorYAuditoria()
     {
@@ -145,6 +180,326 @@ public class AsientosControllerTests
 
         var asientoCount = await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM asientocontable WHERE numero = $1", numero);
         Assert.Equal(0, asientoCount);
+    }
+
+    [Fact]
+    public async Task Reversar_ComoAdministradorConMotivo_Responde200AnulaOriginalYCreaReversaConfirmada()
+    {
+        var (e, original) = await SembrarAsientoReversibleAsync();
+        var numeroOriginal = await _pg.Data.ScalarAsync<string>("SELECT numero FROM asientocontable WHERE id = $1", original);
+        var (client, _) = await ClienteAdministradorAsync();
+
+        var response = await ReversarAsync(client, original);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.LeerJsonAsync();
+        var reversa = body.GetProperty("reversaId").GetInt32();
+        Assert.Equal(original, body.GetProperty("originalId").GetInt32());
+        Assert.Equal(numeroOriginal, body.GetProperty("originalNumero").GetString());
+        Assert.Equal($"REV-{numeroOriginal}", body.GetProperty("reversaNumero").GetString());
+        Assert.Equal("Anulado", await EstadoAsync(original));
+        Assert.Equal("Confirmado", await EstadoAsync(reversa));
+        Assert.Equal(original, await _pg.Data.ScalarAsync<int>("SELECT reversa_de_id FROM asientocontable WHERE id = $1", reversa));
+        Assert.Equal(e.PeriodoId, await _pg.Data.ScalarAsync<int>("SELECT periodo_id FROM asientocontable WHERE id = $1", reversa));
+        Assert.Equal(100m, await _pg.Data.CreditoAsync(reversa, e.CuentaCxC));
+        Assert.Equal(0m, await _pg.Data.DebitoAsync(reversa, e.CuentaCxC));
+        Assert.Equal(100m, await _pg.Data.DebitoAsync(reversa, e.CuentaIngreso));
+        Assert.Equal(0m, await _pg.Data.CreditoAsync(reversa, e.CuentaIngreso));
+    }
+
+    [Fact]
+    public async Task Reversar_FechaDeLaReversa_EsHoyDentroDelPeriodoOFinDePeriodoSiHoyLoSupera()
+    {
+        var (e, original) = await SembrarAsientoReversibleAsync();
+        var (client, _) = await ClienteAdministradorAsync();
+
+        var response = await ReversarAsync(client, original);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var reversa = (await response.LeerJsonAsync()).GetProperty("reversaId").GetInt32();
+        var fechaReversa = await _pg.Data.ScalarAsync<string>("SELECT fecha::text FROM asientocontable WHERE id = $1", reversa);
+        var fechaEsperada = await _pg.Data.ScalarAsync<string>(
+            "SELECT LEAST(CURRENT_DATE, fecha_fin)::text FROM periodocontable WHERE id = $1", e.PeriodoId);
+        Assert.Equal(fechaEsperada, fechaReversa);
+        var noAnteriorAlOriginal = await _pg.Data.ScalarAsync<bool>(
+            "SELECT r.fecha >= o.fecha FROM asientocontable r JOIN asientocontable o ON o.id = r.reversa_de_id WHERE r.id = $1", reversa);
+        Assert.True(noAnteriorAlOriginal);
+    }
+
+    [Fact]
+    public async Task Reversar_RegistraAuditoriaConElMotivo()
+    {
+        var (_, original) = await SembrarAsientoReversibleAsync();
+        var (client, administrador) = await ClienteAdministradorAsync();
+        var motivo = $"Error de captura {TestData.Sufijo()}";
+
+        var response = await ReversarAsync(client, original, motivo);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, await _pg.Data.ContarAuditoriaAsync(administrador, "reversar_asiento"));
+        var detalle = await _pg.Data.ScalarAsync<string>(
+            "SELECT detalle FROM bitacoraauditoria WHERE usuario_id = $1 AND accion = 'reversar_asiento'", administrador);
+        Assert.Contains(motivo, detalle);
+    }
+
+    [Fact]
+    public async Task Reversar_AplicaYNetaBalance_DejaSaldoNetoCero()
+    {
+        var (e, original) = await SembrarAsientoReversibleAsync();
+        var (client, _) = await ClienteAdministradorAsync();
+        Assert.Equal(100m, await SaldoAsync(client, e.CuentaCxC));
+        Assert.Equal(100m, await SaldoAsync(client, e.CuentaIngreso));
+
+        var response = await ReversarAsync(client, original);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(0m, await SaldoAsync(client, e.CuentaCxC));
+        Assert.Equal(0m, await SaldoAsync(client, e.CuentaIngreso));
+    }
+
+    [Fact]
+    public async Task Reversar_ConMotivoDe250Caracteres_Responde200()
+    {
+        var (_, original) = await SembrarAsientoReversibleAsync();
+        var (client, _) = await ClienteAdministradorAsync();
+
+        var response = await ReversarAsync(client, original, new string('m', 250));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Reversar_ComoContador_Responde403SinReversar()
+    {
+        var (e, original) = await SembrarAsientoReversibleAsync();
+        var client = _pg.CreateApiClient(e.UsuarioId);
+
+        var response = await ReversarAsync(client, original);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal("Confirmado", await EstadoAsync(original));
+    }
+
+    [Fact]
+    public async Task Reversar_SinToken_Responde401()
+    {
+        var client = _pg.Factory.CreateClient();
+
+        var response = await ReversarAsync(client, IdInexistente);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Reversar_AsientoInexistente_Responde404()
+    {
+        var (client, _) = await ClienteAdministradorAsync();
+
+        var response = await ReversarAsync(client, IdInexistente);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Contains("no existe", await response.LeerErrorAsync());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Reversar_SinMotivoOEnBlanco_Responde400SinReversar(string? motivo)
+    {
+        var (_, original) = await SembrarAsientoReversibleAsync();
+        var (client, _) = await ClienteAdministradorAsync();
+
+        var response = await ReversarAsync(client, original, motivo);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("obligatorio", await response.LeerErrorAsync());
+        Assert.Equal("Confirmado", await EstadoAsync(original));
+    }
+
+    [Fact]
+    public async Task Reversar_ConMotivoDeMasDe250Caracteres_Responde400SinReversar()
+    {
+        var (_, original) = await SembrarAsientoReversibleAsync();
+        var (client, _) = await ClienteAdministradorAsync();
+
+        var response = await ReversarAsync(client, original, new string('m', 251));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("250", await response.LeerErrorAsync());
+        Assert.Equal("Confirmado", await EstadoAsync(original));
+    }
+
+    [Fact]
+    public async Task Reversar_AsientoAnulado_Responde409()
+    {
+        var (_, anulado) = await SembrarAsientoReversibleAsync(new OpcionesAsiento(Estado: "Anulado"));
+
+        var error = await ReversarConConflictoAsync(anulado);
+
+        Assert.Contains("no está Confirmado", error);
+    }
+
+    [Fact]
+    public async Task Reversar_DosVeces_Responde409LaSegunda()
+    {
+        var (_, original) = await SembrarAsientoReversibleAsync();
+        var (client, _) = await ClienteAdministradorAsync();
+        var primera = await ReversarAsync(client, original);
+        Assert.Equal(HttpStatusCode.OK, primera.StatusCode);
+
+        var error = await ReversarConConflictoAsync(original);
+
+        Assert.Contains("no está Confirmado", error);
+        Assert.Equal(1, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM asientocontable WHERE reversa_de_id = $1", original));
+    }
+
+    [Fact]
+    public async Task Reversar_UnaReversa_Responde409()
+    {
+        var (_, original) = await SembrarAsientoReversibleAsync();
+        var reversa = await _pg.Data.ReversarAsientoAsync(original);
+
+        var error = await ReversarConConflictoAsync(reversa);
+
+        Assert.Contains("es una reversa", error);
+    }
+
+    [Fact]
+    public async Task Reversar_PeriodoCerrado_Responde409()
+    {
+        var (e, original) = await SembrarAsientoReversibleAsync();
+        await _pg.Data.CerrarPeriodoDirectoAsync(e.PeriodoId);
+
+        var error = await ReversarConConflictoAsync(original);
+
+        Assert.Contains("periodo Abierto", error);
+        Assert.Equal("Confirmado", await EstadoAsync(original));
+    }
+
+    [Fact]
+    public async Task Reversar_AsientoDeFacturaCxC_Responde409()
+    {
+        var (e, original) = await SembrarAsientoReversibleAsync();
+        await _pg.Data.VincularFacturaCxCAsync(e.ClienteId, original, new DateOnly(2025, 3, 1));
+
+        var error = await ReversarConConflictoAsync(original);
+
+        Assert.Contains("cuentas por cobrar", error);
+        Assert.Equal("Confirmado", await EstadoAsync(original));
+    }
+
+    [Fact]
+    public async Task Reversar_AsientoDeFacturaCxP_Responde409()
+    {
+        var (e, original) = await SembrarAsientoReversibleAsync();
+        await _pg.Data.VincularFacturaCxPAsync(e.ProveedorId, original, new DateOnly(2025, 3, 1));
+
+        var error = await ReversarConConflictoAsync(original);
+
+        Assert.Contains("cuentas por pagar", error);
+        Assert.Equal("Confirmado", await EstadoAsync(original));
+    }
+
+    [Fact]
+    public async Task Reversar_AsientoDeMovimientoTesoreria_Responde409()
+    {
+        var asientoTesoreria = await _pg.Data.SembrarAsientoDeTesoreriaAsync();
+
+        var error = await ReversarConConflictoAsync(asientoTesoreria);
+
+        Assert.Contains("desincronizaría", error);
+        Assert.Equal("Confirmado", await EstadoAsync(asientoTesoreria));
+    }
+
+    [Fact]
+    public async Task Reversar_ConClaimAdministradorYPerfilContadorEnLaBd_Responde403SinReversar()
+    {
+        var (e, original) = await SembrarAsientoReversibleAsync();
+        var client = _pg.CreateApiClient(e.UsuarioId, Roles.Administrador);
+
+        var response = await ReversarAsync(client, original);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Contains("no tiene perfil autorizado", await response.LeerErrorAsync());
+        Assert.Equal("Confirmado", await EstadoAsync(original));
+        Assert.Equal(0, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM asientocontable WHERE reversa_de_id = $1", original));
+    }
+
+    [Fact]
+    public async Task Reversar_ConAsientoPosteriorAHoyEnPeriodoFuturo_ConservaLaFechaOriginal()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var (inicio, fin) = TestData.RangoPeriodoUnico();
+        var periodoFuturo = await _pg.Data.CrearPeriodoEnRangoAsync(inicio, fin);
+        var fechaFutura = inicio.AddDays(10);
+        var original = await _pg.Data.SembrarAsientoAsync(periodoFuturo, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 100m, fechaFutura);
+        var (client, _) = await ClienteAdministradorAsync();
+
+        var response = await ReversarAsync(client, original);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var reversa = (await response.LeerJsonAsync()).GetProperty("reversaId").GetInt32();
+        var fechaReversa = await _pg.Data.ScalarAsync<string>("SELECT fecha::text FROM asientocontable WHERE id = $1", reversa);
+        Assert.Equal(fechaFutura.ToString("yyyy-MM-dd"), fechaReversa);
+    }
+
+    [Fact]
+    public async Task Reversar_ProcedimientoConPerfilNoAdministrador_LanzaP0001()
+    {
+        var (e, original) = await SembrarAsientoReversibleAsync();
+
+        var ex = await Assert.ThrowsAsync<PostgresException>(() =>
+            _pg.Data.EjecutarAsync("CALL sp_reversar_asiento($1, $2, $3)", original, e.UsuarioId, "Motivo de prueba"));
+
+        Assert.Equal("P0001", ex.SqlState);
+    }
+
+    [Fact]
+    public async Task Reversar_ProcedimientoConMotivoEnBlanco_Lanza22023()
+    {
+        var (_, original) = await SembrarAsientoReversibleAsync();
+        var administrador = await _pg.Data.CrearUsuarioAsync(Roles.Administrador);
+
+        var ex = await Assert.ThrowsAsync<PostgresException>(() =>
+            _pg.Data.EjecutarAsync("CALL sp_reversar_asiento($1, $2, $3)", original, administrador, "   "));
+
+        Assert.Equal("22023", ex.SqlState);
+    }
+
+    [Fact]
+    public async Task Reversar_ProcedimientoDeDosArgumentos_NoExiste42883()
+    {
+        var (e, original) = await SembrarAsientoReversibleAsync();
+
+        var ex = await Assert.ThrowsAsync<PostgresException>(() =>
+            _pg.Data.EjecutarAsync("CALL sp_reversar_asiento($1, $2)", original, e.UsuarioId));
+
+        Assert.Equal("42883", ex.SqlState);
+    }
+
+    [Fact]
+    public async Task Registrar_IgnoraReversaDeIdDelCliente()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var otro = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 10m, new DateOnly(2025, 3, 1));
+        var numero = $"AS-{TestData.Sufijo()}";
+        var client = _pg.CreateApiClient(e.UsuarioId);
+        var cuerpo = new
+        {
+            numero,
+            fecha = "2025-03-15",
+            periodoId = e.PeriodoId,
+            estado = "Confirmado",
+            reversaDeId = otro,
+            lineas = LineasBalanceadas(e),
+        };
+
+        var response = await client.PostAsJsonAsync("/api/asientos", cuerpo);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var sinReversaDe = await _pg.Data.ScalarAsync<bool>("SELECT reversa_de_id IS NULL FROM asientocontable WHERE numero = $1", numero);
+        Assert.True(sinReversaDe);
     }
 
     [Fact]

@@ -347,7 +347,7 @@ public class PeriodosContablesControllerTests
         var numeroOriginal = $"A-{Guid.NewGuid().ToString("N")[..12]}";
         var asientoId = await _pg.Data.SembrarAsientoAsync(periodo, contador, d, k, 100m, new DateOnly(2025, 3, 1),
             new OpcionesAsiento(Numero: numeroOriginal));
-        await _pg.Data.ReversarAsientoAsync(asientoId, contador);
+        await _pg.Data.ReversarAsientoAsync(asientoId);
         await _pg.Data.SembrarAsientoAsync(periodo, contador, d, k, 40m, new DateOnly(2025, 3, 2),
             new OpcionesAsiento(Estado: "Borrador"));
 

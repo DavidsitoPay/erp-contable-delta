@@ -179,7 +179,7 @@ public class ReportesControllerTests
         await SembrarAsync(periodo, c.Usuario, c.Activo, c.Capital, 200m);
         await SembrarAsync(periodo, c.Usuario, c.Activo, c.Capital, 999m, "Borrador");
         var original = await SembrarAsync(periodo, c.Usuario, c.Activo, c.Capital, 70m);
-        await _pg.Data.ReversarAsientoAsync(original, c.Usuario);
+        await _pg.Data.ReversarAsientoAsync(original);
 
         var balance = await ConsultarAsync(_pg.CreateApiClient(c.Usuario), BalanceGeneral, periodo.Id);
 

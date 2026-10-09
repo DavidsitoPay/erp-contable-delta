@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { perfilActual, puedeGestionarTesoreria } from "./perfiles";
+import { perfilActual, puedeGestionarTesoreria, puedeReversarAsientos } from "./perfiles";
 
 describe("perfiles", () => {
   it.each([
@@ -9,6 +9,14 @@ describe("perfiles", () => {
     [null, false],
   ])("puedeGestionarTesoreria(%s) = %s", (perfil, esperado) => {
     expect(puedeGestionarTesoreria(perfil)).toBe(esperado);
+  });
+
+  it.each([
+    ["Administrador del sistema", true],
+    ["Contador", false],
+    [null, false],
+  ])("puedeReversarAsientos(%s) = %s", (perfil, esperado) => {
+    expect(puedeReversarAsientos(perfil)).toBe(esperado);
   });
 
   it("perfilActual lee el perfil guardado", () => {

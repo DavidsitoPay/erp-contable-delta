@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using DeltaERP.Api.Auth;
+using DeltaERP.Api.Services;
 using DeltaERP.Domain.Entities;
 using DeltaERP.Domain.Rules;
 using DeltaERP.Infrastructure.Data;
@@ -59,6 +60,7 @@ public class AsientosController : ControllerBase
         // registrar un asiento a nombre de otro usuario (RN-08, RN-09).
         var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         asiento.UsuarioId = usuarioId;
+        asiento.ReversaDeId = null; // RN-03: las reversas solo las crea sp_reversar_asiento.
 
         if (asiento.Estado != "Confirmado")
         {
@@ -84,6 +86,62 @@ public class AsientosController : ControllerBase
         await transaction.CommitAsync();
 
         return CreatedAtAction(nameof(Registrar), new { id = asiento.Id }, asiento);
+    }
+
+    [HttpPost("{id:int}/reversar")]
+    [Authorize(Roles = Roles.Administrador)]
+    public async Task<IActionResult> Reversar(int id, [FromBody] ReversarAsientoRequest request)
+    {
+        var motivo = request.Motivo?.Trim();
+        if (string.IsNullOrEmpty(motivo))
+        {
+            return BadRequest(new { error = ReversaAsiento.MotivoObligatorio });
+        }
+        if (motivo.Length > ReversaAsiento.MotivoMaximo)
+        {
+            return BadRequest(new { error = ReversaAsiento.MotivoDemasiadoLargo });
+        }
+
+        var original = await _db.AsientosContables.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id);
+        if (original is null)
+        {
+            return NotFound(new { error = "El asiento indicado no existe." });
+        }
+
+        var periodo = await _db.PeriodosContables.AsNoTracking().SingleAsync(p => p.Id == original.PeriodoId);
+        var vinculos = new VinculosAsiento(
+            await _db.DocumentosCxC.AnyAsync(d => d.AsientoId == id),
+            await _db.DocumentosCxP.AnyAsync(d => d.AsientoId == id),
+            await _db.MovimientosTesoreria.AnyAsync(m => m.AsientoId == id));
+        var bloqueo = ReversaAsiento.ObtenerBloqueo(original, periodo, vinculos);
+        if (bloqueo is not null)
+        {
+            return Conflict(new { error = bloqueo });
+        }
+
+        var usuarioId = this.UsuarioId();
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+        var fallo = await ErroresPostgres.TraducirProcedimientoAsync(() =>
+            _db.Database.ExecuteSqlInterpolatedAsync($"CALL sp_reversar_asiento({id}, {usuarioId}, {motivo})"));
+        if (fallo is not null)
+        {
+            return fallo;
+        }
+
+        var reversa = await _db.AsientosContables
+            .AsNoTracking()
+            .Where(a => a.ReversaDeId == id)
+            .Select(a => new { a.Id, a.Numero })
+            .SingleAsync();
+        await transaction.CommitAsync();
+
+        return Ok(new
+        {
+            originalId = original.Id,
+            originalNumero = original.Numero,
+            reversaId = reversa.Id,
+            reversaNumero = reversa.Numero,
+        });
     }
 
     private async Task<string?> ValidarCuentasAsync(AsientoContable asiento)
@@ -158,3 +216,5 @@ public class AsientosController : ControllerBase
         return null;
     }
 }
+
+public sealed record ReversarAsientoRequest(string? Motivo);

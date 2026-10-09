@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { centrosCostoApi, librosApi, periodosApi } from "../../services/api";
+import { asientosApi, centrosCostoApi, librosApi, periodosApi } from "../../services/api";
 import LibroDiario from "./LibroDiario";
 
 vi.mock("../../services/api", () => ({
   librosApi: { diario: vi.fn() },
   periodosApi: { listar: vi.fn() },
   centrosCostoApi: { listar: vi.fn() },
+  asientosApi: { reversar: vi.fn() },
 }));
 
 function deferred() {
@@ -33,7 +34,8 @@ const ASIENTOS = [
 ];
 
 beforeEach(() => {
-  [librosApi, periodosApi, centrosCostoApi].forEach((api) => Object.values(api).forEach((fn) => fn.mockReset()));
+  localStorage.clear();
+  [librosApi, periodosApi, centrosCostoApi, asientosApi].forEach((api) => Object.values(api).forEach((fn) => fn.mockReset()));
   periodosApi.listar.mockResolvedValue({ data: PERIODOS });
   centrosCostoApi.listar.mockResolvedValue({ data: [{ id: 10, nombre: "Ventas" }] });
   librosApi.diario.mockResolvedValue({ data: ASIENTOS });
@@ -119,5 +121,148 @@ describe("LibroDiario", () => {
     fireEvent.change(screen.getByLabelText("Periodo"), { target: { value: "" } });
     await waitFor(() => expect(screen.queryByText("AS-001")).toBeNull());
     expect(librosApi.diario).toHaveBeenCalledTimes(1);
+  });
+});
+
+const PERFIL_ADMIN = "Administrador del sistema";
+const ASIENTOS_REVERSA = [
+  { id: 1, numero: "AS-001", fecha: "2025-01-05", estado: "Confirmado", reversible: true, reversaDeId: null, reversadoPorId: null, lineas: ASIENTOS[0].lineas },
+  { id: 2, numero: "AS-002", fecha: "2025-01-06", estado: "Anulado", reversible: false, reversaDeId: null, reversadoPorId: 3, reversadoPorNumero: "REV-AS-002", lineas: ASIENTOS[0].lineas },
+  { id: 3, numero: "REV-AS-002", fecha: "2025-01-07", estado: "Confirmado", reversible: false, reversaDeId: 2, reversaDeNumero: "AS-002", reversadoPorId: null, lineas: ASIENTOS[0].lineas },
+];
+
+async function abrirDialogoReversa() {
+  localStorage.setItem("delta_usuario", JSON.stringify({ perfil: PERFIL_ADMIN }));
+  librosApi.diario.mockResolvedValue({ data: ASIENTOS_REVERSA });
+  await seleccionarPeriodo();
+  const boton = await screen.findByRole("button", { name: "Reversar" });
+  boton.focus();
+  fireEvent.click(boton);
+  return screen.findByRole("dialog", { name: "Reversar asiento" });
+}
+
+function confirmarConMotivo(motivo) {
+  fireEvent.change(screen.getByLabelText("Motivo"), { target: { value: motivo } });
+  fireEvent.click(screen.getByRole("button", { name: "Reversar asiento" }));
+}
+
+function cancelarDialogo(dialogo) {
+  return fireEvent(dialogo, new Event("cancel", { cancelable: true }));
+}
+
+describe("LibroDiario reversa de asientos", () => {
+  it("muestra las insignias de Anulado y Reversa a cualquier perfil", async () => {
+    localStorage.setItem("delta_usuario", JSON.stringify({ perfil: "Contador" }));
+    librosApi.diario.mockResolvedValue({ data: ASIENTOS_REVERSA });
+    await seleccionarPeriodo();
+    expect(await screen.findByText("Anulado — reversado por REV-AS-002")).toBeInTheDocument();
+    expect(screen.getByText("Reversa de AS-002")).toBeInTheDocument();
+  });
+
+  it("oculta el boton Reversar al Contador", async () => {
+    localStorage.setItem("delta_usuario", JSON.stringify({ perfil: "Contador" }));
+    librosApi.diario.mockResolvedValue({ data: ASIENTOS_REVERSA });
+    await seleccionarPeriodo();
+    await screen.findByText("AS-001");
+    expect(screen.queryByRole("button", { name: "Reversar" })).toBeNull();
+  });
+
+  it("al Administrador le muestra Reversar solo en el asiento reversible y abre el dialogo con el texto de confirmacion", async () => {
+    await abrirDialogoReversa();
+    expect(screen.getByText(/Se anulará el asiento/).textContent).toBe(
+      "Se anulará el asiento AS-001 y se generará REV-AS-001 con las líneas invertidas. Esta acción no se puede deshacer."
+    );
+    expect(screen.getAllByRole("button", { name: "Reversar" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(asientosApi.reversar).not.toHaveBeenCalled();
+  });
+
+  it("deshabilita confirmar mientras el motivo esta en blanco", async () => {
+    await abrirDialogoReversa();
+    const confirmar = screen.getByRole("button", { name: "Reversar asiento" });
+    expect(confirmar).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Motivo"), { target: { value: "   " } });
+    expect(confirmar).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Motivo"), { target: { value: "Error de captura" } });
+    expect(confirmar).toBeEnabled();
+  });
+
+  it("cierra el dialogo al cancelar con Escape sin llamar a la API", async () => {
+    const dialogo = await abrirDialogoReversa();
+    expect(cancelarDialogo(dialogo)).toBe(false);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(asientosApi.reversar).not.toHaveBeenCalled();
+  });
+
+  it("confirma la reversa con el motivo, recarga el diario y muestra el exito", async () => {
+    asientosApi.reversar.mockResolvedValue({
+      data: { originalId: 1, originalNumero: "AS-001", reversaId: 4, reversaNumero: "REV-AS-001" },
+    });
+    await abrirDialogoReversa();
+    confirmarConMotivo("  Error de captura  ");
+    expect(await screen.findByText("Asiento AS-001 anulado. Reversa REV-AS-001 registrada.")).toBeInTheDocument();
+    expect(asientosApi.reversar).toHaveBeenCalledWith(1, "Error de captura");
+    expect(librosApi.diario).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("muestra el mensaje del API cuando la reversa responde 409 y conserva el dialogo", async () => {
+    asientosApi.reversar.mockRejectedValue({ response: { data: { error: "El asiento 1 pertenece a un periodo cerrado." } } });
+    await abrirDialogoReversa();
+    confirmarConMotivo("Motivo");
+    expect(await screen.findByText("El asiento 1 pertenece a un periodo cerrado.")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(librosApi.diario).toHaveBeenCalledTimes(1);
+  });
+
+  it("usa un mensaje por defecto si el error no trae respuesta", async () => {
+    asientosApi.reversar.mockRejectedValue(new Error("red"));
+    await abrirDialogoReversa();
+    confirmarConMotivo("Motivo");
+    expect(await screen.findByText("No se pudo reversar el asiento.")).toBeInTheDocument();
+  });
+
+  it("abre el dialogo como modal cuando el navegador implementa showModal", async () => {
+    const showModal = vi.fn(function abrir() {
+      this.setAttribute("open", "");
+    });
+    HTMLDialogElement.prototype.showModal = showModal;
+    try {
+      await abrirDialogoReversa();
+      expect(showModal).toHaveBeenCalledTimes(1);
+      expect(screen.getByLabelText("Motivo")).toHaveFocus();
+    } finally {
+      delete HTMLDialogElement.prototype.showModal;
+    }
+  });
+
+  it("limita el motivo a 250 caracteres y enfoca el campo al abrir", async () => {
+    await abrirDialogoReversa();
+    const motivo = screen.getByLabelText("Motivo");
+    expect(motivo).toHaveAttribute("maxlength", "250");
+    expect(motivo).toHaveFocus();
+  });
+
+  it("devuelve el foco al boton Reversar al cerrar el dialogo", async () => {
+    await abrirDialogoReversa();
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByRole("button", { name: "Reversar" })).toHaveFocus();
+  });
+
+  it("bloquea confirmar y Escape mientras se envia la reversa", async () => {
+    const d = deferred();
+    asientosApi.reversar.mockReturnValue(d.promise);
+    const dialogo = await abrirDialogoReversa();
+    confirmarConMotivo("Motivo");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Reversar asiento" })).toBeDisabled());
+    expect(screen.getByRole("button", { name: "Cancelar" })).toBeDisabled();
+    expect(cancelarDialogo(dialogo)).toBe(false);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await act(async () => {
+      d.resolve({ data: { originalNumero: "AS-001", reversaNumero: "REV-AS-001" } });
+    });
+    expect(await screen.findByText("Asiento AS-001 anulado. Reversa REV-AS-001 registrada.")).toBeInTheDocument();
   });
 });

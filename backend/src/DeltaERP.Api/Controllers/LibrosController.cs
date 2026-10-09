@@ -1,3 +1,4 @@
+using DeltaERP.Api.Services;
 using DeltaERP.Domain.Entities;
 using DeltaERP.Domain.Rules;
 using DeltaERP.Infrastructure.Data;
@@ -50,25 +51,47 @@ public class LibrosController : ControllerBase
             .Where(c => idsCuenta.Contains(c.Id))
             .ToDictionaryAsync(c => c.Id);
 
-        var resultado = asientos.Select(a => new
+        var idsAsiento = asientos.Select(a => a.Id).ToList();
+        var conCxC = await IdsComoConjuntoAsync(
+            _db.DocumentosCxC.Where(d => d.AsientoId != null && idsAsiento.Contains(d.AsientoId.Value)).Select(d => d.AsientoId!.Value));
+        var conCxP = await IdsComoConjuntoAsync(
+            _db.DocumentosCxP.Where(d => d.AsientoId != null && idsAsiento.Contains(d.AsientoId.Value)).Select(d => d.AsientoId!.Value));
+        var conTesoreria = await IdsComoConjuntoAsync(
+            _db.MovimientosTesoreria.Where(m => idsAsiento.Contains(m.AsientoId)).Select(m => m.AsientoId));
+        var porId = asientos.ToDictionary(a => a.Id);
+        var reversaPorOriginal = asientos.Where(a => a.ReversaDeId != null).ToDictionary(a => a.ReversaDeId!.Value);
+
+        var resultado = asientos.Select(a =>
         {
-            a.Id,
-            a.Numero,
-            a.Fecha,
-            a.Monto,
-            Lineas = a.Lineas.Select(l =>
+            var reversa = reversaPorOriginal.GetValueOrDefault(a.Id);
+            var original = a.ReversaDeId is { } idOriginal ? porId.GetValueOrDefault(idOriginal) : null;
+            var vinculos = new VinculosAsiento(conCxC.Contains(a.Id), conCxP.Contains(a.Id), conTesoreria.Contains(a.Id));
+            return new
             {
-                cuentas.TryGetValue(l.CuentaId, out var cuenta);
-                return new
+                a.Id,
+                a.Numero,
+                a.Fecha,
+                a.Monto,
+                a.Estado,
+                a.ReversaDeId,
+                ReversaDeNumero = original?.Numero,
+                ReversadoPorId = reversa?.Id,
+                ReversadoPorNumero = reversa?.Numero,
+                Reversible = ReversaAsiento.ObtenerBloqueo(a, periodo, vinculos) is null,
+                Lineas = a.Lineas.Select(l =>
                 {
-                    l.CuentaId,
-                    CuentaCodigo = cuenta?.Codigo,
-                    CuentaNombre = cuenta?.Nombre,
-                    l.CentroCostoId,
-                    l.Debito,
-                    l.Credito,
-                };
-            }),
+                    cuentas.TryGetValue(l.CuentaId, out var cuenta);
+                    return new
+                    {
+                        l.CuentaId,
+                        CuentaCodigo = cuenta?.Codigo,
+                        CuentaNombre = cuenta?.Nombre,
+                        l.CentroCostoId,
+                        l.Debito,
+                        l.Credito,
+                    };
+                }),
+            };
         });
 
         return Ok(resultado);
@@ -155,4 +178,7 @@ public class LibrosController : ControllerBase
             Movimientos = resultado,
         });
     }
+
+    private static async Task<HashSet<int>> IdsComoConjuntoAsync(IQueryable<int> consulta) =>
+        (await consulta.ToListAsync()).ToHashSet();
 }

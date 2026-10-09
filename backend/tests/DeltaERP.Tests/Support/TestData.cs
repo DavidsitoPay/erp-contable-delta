@@ -211,11 +211,41 @@ public sealed class TestData
         await command.ExecuteNonQueryAsync();
     }
 
-    public async Task<int> ReversarAsientoAsync(int asientoId, int usuarioId)
+    public async Task<int> ReversarAsientoAsync(int asientoId, string motivo = "Reversa de prueba")
     {
-        await EjecutarAsync("CALL sp_reversar_asiento($1, $2)", asientoId, usuarioId);
+        var administrador = await CrearUsuarioAsync("Administrador del sistema");
+        await EjecutarAsync("CALL sp_reversar_asiento($1, $2, $3)", asientoId, administrador, motivo);
         return await ScalarAsync<int>("SELECT id FROM asientocontable WHERE reversa_de_id = $1", asientoId);
     }
+
+    public Task<int> VincularFacturaCxCAsync(int clienteId, int asientoId, DateOnly fecha) =>
+        ScalarAsync<int>(
+            "INSERT INTO documentocxc (numero, tipo_documento, cliente_id, fecha, fecha_vencimiento, monto_total, estado, asiento_id) VALUES ($1, 'Factura', $2, $3, $3, 100, 'Vigente', $4) RETURNING id",
+            $"F-{Sufijo()}", clienteId, fecha, asientoId);
+
+    public Task<int> VincularFacturaCxPAsync(int proveedorId, int asientoId, DateOnly fecha) =>
+        ScalarAsync<int>(
+            "INSERT INTO documentocxp (numero, tipo_documento, proveedor_id, fecha, fecha_vencimiento, monto_total, estado, asiento_id) VALUES ($1, 'Factura', $2, $3, $3, 100, 'Vigente', $4) RETURNING id",
+            $"F-{Sufijo()}", proveedorId, fecha, asientoId);
+
+    public async Task<int> SembrarAsientoDeTesoreriaAsync()
+    {
+        var t = await SembrarTesoreriaAsync();
+        var cuentas = new CuentasMovimiento(t.CuentaBancaria, t.CuentaContableBanco, t.Contrapartida);
+        var movimiento = await CrearMovimientoAsync(cuentas, "Ingreso", 100m, t.Inicio, t.Periodo, t.Usuario);
+        return await ScalarAsync<int>("SELECT asiento_id FROM movimientotesoreria WHERE id = $1", movimiento);
+    }
+
+    public async Task VincularMovimientoTesoreriaAsync(int asientoId, DateOnly fecha)
+    {
+        var (cuentaBancaria, _) = await CrearCuentaBancariaAsync();
+        await EjecutarAsync(
+            "INSERT INTO movimientotesoreria (cuenta_bancaria_id, fecha, tipo, monto, asiento_id, descripcion, origen) VALUES ($1, $2, 'Ingreso', 100, $3, 'Movimiento de prueba', 'Manual')",
+            cuentaBancaria, fecha, asientoId);
+    }
+
+    public Task CerrarPeriodoDirectoAsync(int periodoId) =>
+        EjecutarAsync("UPDATE periodocontable SET estado = 'Cerrado' WHERE id = $1", periodoId);
 
     public async Task<(int Id, int CuentaContableId)> CrearCuentaBancariaAsync(string tipo = "Monetaria")
     {

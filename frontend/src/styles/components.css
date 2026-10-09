@@ -618,3 +618,34 @@ input[type="radio"]:focus-visible {
     transition: none;
   }
 }
+
+/* ---------- Diálogo de confirmación ---------- */
+
+.dialogo {
+  width: min(32rem, calc(100% - 2 * var(--space-md)));
+  padding: var(--space-lg);
+  background: var(--color-surface);
+  color: var(--color-text-body);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.dialogo::backdrop {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.dialogo-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+.dialogo .input {
+  resize: vertical;
+}
+
+.dialogo-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}

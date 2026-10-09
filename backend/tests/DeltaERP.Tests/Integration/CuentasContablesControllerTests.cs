@@ -231,7 +231,7 @@ public class CuentasContablesControllerTests
     {
         var padre = await _pg.Data.CrearCuentaAsync("Activo", "Deudora");
         var (asiento, usuario) = await _pg.Data.SembrarSaldoPropioAsync(padre);
-        await _pg.Data.ReversarAsientoAsync(asiento, usuario);
+        await _pg.Data.ReversarAsientoAsync(asiento);
         var client = _pg.CreateApiClient(usuario);
 
         var response = await client.PostAsJsonAsync("/api/cuentas", Payload(CodigoNuevo(), cuentaPadreId: padre));
