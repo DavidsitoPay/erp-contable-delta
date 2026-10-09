@@ -223,7 +223,7 @@ public class MovimientosTesoreriaControllerTests
     public async Task Listar_IndicaConciliadoSoloSiLaConciliacionEstaFinalizada()
     {
         var (e, client) = await PrepararAsync();
-        var movimientoId = await _pg.Data.CrearMovimientoAsync(e.CuentaBancaria, e.CuentaContableBanco, e.Contrapartida, "Ingreso", 100m, e.Inicio.AddDays(2), e.Periodo, e.Usuario);
+        var movimientoId = await _pg.Data.CrearMovimientoAsync(new(e.CuentaBancaria, e.CuentaContableBanco, e.Contrapartida), "Ingreso", 100m, e.Inicio.AddDays(2), e.Periodo, e.Usuario);
         var conciliacionId = await _pg.Data.CrearConciliacionAsync(e.CuentaBancaria, e.Periodo, e.Inicio.AddDays(30), 0m);
         var ruta = $"{Ruta}?cuentaBancariaId={e.CuentaBancaria}";
 
@@ -253,10 +253,10 @@ public class MovimientosTesoreriaControllerTests
     public async Task Listar_FiltraPorCuentaFechasYOrigen()
     {
         var (e, client) = await PrepararAsync();
-        var primero = await _pg.Data.CrearMovimientoAsync(e.CuentaBancaria, e.CuentaContableBanco, e.Contrapartida, "Ingreso", 10m, e.Inicio.AddDays(1), e.Periodo, e.Usuario);
-        var segundo = await _pg.Data.CrearMovimientoAsync(e.CuentaBancaria, e.CuentaContableBanco, e.Contrapartida, "Egreso", 5m, e.Inicio.AddDays(20), e.Periodo, e.Usuario);
+        var primero = await _pg.Data.CrearMovimientoAsync(new(e.CuentaBancaria, e.CuentaContableBanco, e.Contrapartida), "Ingreso", 10m, e.Inicio.AddDays(1), e.Periodo, e.Usuario);
+        var segundo = await _pg.Data.CrearMovimientoAsync(new(e.CuentaBancaria, e.CuentaContableBanco, e.Contrapartida), "Egreso", 5m, e.Inicio.AddDays(20), e.Periodo, e.Usuario);
         var (otraCuentaId, otraContableId) = await _pg.Data.CrearCuentaBancariaAsync();
-        var ajeno = await _pg.Data.CrearMovimientoAsync(otraCuentaId, otraContableId, e.Contrapartida, "Ingreso", 1m, e.Inicio.AddDays(1), e.Periodo, e.Usuario);
+        var ajeno = await _pg.Data.CrearMovimientoAsync(new(otraCuentaId, otraContableId, e.Contrapartida), "Ingreso", 1m, e.Inicio.AddDays(1), e.Periodo, e.Usuario);
         var corte = e.Inicio.AddDays(10).ToString("yyyy-MM-dd");
         var baseRuta = $"{Ruta}?cuentaBancariaId={e.CuentaBancaria}";
 

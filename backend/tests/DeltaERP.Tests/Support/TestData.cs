@@ -22,6 +22,8 @@ public sealed record PeriodoSembrado(int Id, DateOnly Inicio, DateOnly Fin);
 
 public sealed record CuentasReporte(int Usuario, int Activo, int Pasivo, int Capital, int Ingreso, int Gasto);
 
+public record CuentasMovimiento(int CuentaBancariaId, int CuentaContableBancoId, int ContrapartidaId);
+
 public sealed record OpcionesAsiento(string Estado = "Confirmado", int? CentroCostoId = null, string? Numero = null);
 
 // Bitácora, saldos, asientos y usuarios son inmutables: no hay limpieza posible, por
@@ -225,17 +227,17 @@ public sealed class TestData
     }
 
     public async Task<int> CrearMovimientoAsync(
-        int cuentaBancariaId, int cuentaContableBancoId, int contrapartidaId, string tipo, decimal monto, DateOnly fecha, int periodoId, int usuarioId)
+        CuentasMovimiento cuentas, string tipo, decimal monto, DateOnly fecha, int periodoId, int usuarioId)
     {
         var esIngreso = tipo == "Ingreso";
         var asientoId = await SembrarAsientoAsync(
             periodoId, usuarioId,
-            esIngreso ? cuentaContableBancoId : contrapartidaId,
-            esIngreso ? contrapartidaId : cuentaContableBancoId,
+            esIngreso ? cuentas.CuentaContableBancoId : cuentas.ContrapartidaId,
+            esIngreso ? cuentas.ContrapartidaId : cuentas.CuentaContableBancoId,
             monto, fecha);
         return await ScalarAsync<int>(
             "INSERT INTO movimientotesoreria (cuenta_bancaria_id, fecha, tipo, monto, asiento_id, descripcion, origen) VALUES ($1, $2, $3, $4, $5, 'Movimiento de prueba', 'Manual') RETURNING id",
-            cuentaBancariaId, fecha, tipo, monto, asientoId);
+            cuentas.CuentaBancariaId, fecha, tipo, monto, asientoId);
     }
 
     public Task<int> CrearConciliacionAsync(int cuentaBancariaId, int periodoId, DateOnly fecha, decimal saldoExtracto, string estado = "Pendiente") =>

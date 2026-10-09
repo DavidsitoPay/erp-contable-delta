@@ -56,7 +56,7 @@ describe("PaginaReporte", () => {
 
     fireEvent.click(screen.getByLabelText("Mostrar cuentas en cero"));
 
-    await screen.findByText("periodo 2 ceros true");
+    expect(await screen.findByText("periodo 2 ceros true")).toBeInTheDocument();
   });
 
   it("muestra Cargando mientras llega el reporte", async () => {
@@ -79,7 +79,7 @@ describe("PaginaReporte", () => {
     obtener.mockRejectedValue(new Error("red"));
     renderizar();
 
-    await screen.findByText(MENSAJE);
+    expect(await screen.findByText(MENSAJE)).toBeInTheDocument();
   });
 
   it("avisa si no se pueden cargar los periodos", async () => {
@@ -148,6 +148,6 @@ describe("PaginaReporte", () => {
     obtener.mockImplementation(responder({ incluyePeriodosAbiertos: true }));
     renderizar();
 
-    await screen.findByText(/Incluye periodos abiertos anteriores/);
+    expect(await screen.findByText(/Incluye periodos abiertos anteriores/)).toBeInTheDocument();
   });
 });

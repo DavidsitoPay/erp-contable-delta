@@ -19,7 +19,7 @@ public class TesoreriaEsquemaTests
     {
         var e = await _pg.Data.SembrarTesoreriaAsync();
         var movId = await _pg.Data.CrearMovimientoAsync(
-            e.CuentaBancaria, e.CuentaContableBanco, e.Contrapartida, "Ingreso", 100m, e.Inicio.AddDays(5), e.Periodo, e.Usuario);
+            new(e.CuentaBancaria, e.CuentaContableBanco, e.Contrapartida), "Ingreso", 100m, e.Inicio.AddDays(5), e.Periodo, e.Usuario);
 
         var ex = await Assert.ThrowsAsync<PostgresException>(() =>
             _pg.Data.EjecutarAsync("UPDATE movimientotesoreria SET descripcion = 'Alterado' WHERE id = $1", movId));
@@ -33,7 +33,7 @@ public class TesoreriaEsquemaTests
     {
         var e = await _pg.Data.SembrarTesoreriaAsync();
         var movId = await _pg.Data.CrearMovimientoAsync(
-            e.CuentaBancaria, e.CuentaContableBanco, e.Contrapartida, "Ingreso", 100m, e.Inicio.AddDays(5), e.Periodo, e.Usuario);
+            new(e.CuentaBancaria, e.CuentaContableBanco, e.Contrapartida), "Ingreso", 100m, e.Inicio.AddDays(5), e.Periodo, e.Usuario);
 
         var ex = await Assert.ThrowsAsync<PostgresException>(() =>
             _pg.Data.EjecutarAsync("DELETE FROM movimientotesoreria WHERE id = $1", movId));
@@ -111,7 +111,7 @@ public class TesoreriaEsquemaTests
     {
         var e = await _pg.Data.SembrarTesoreriaAsync();
         var movId = await _pg.Data.CrearMovimientoAsync(
-            e.CuentaBancaria, e.CuentaContableBanco, e.Contrapartida, "Ingreso", 100m, e.Inicio.AddDays(5), e.Periodo, e.Usuario);
+            new(e.CuentaBancaria, e.CuentaContableBanco, e.Contrapartida), "Ingreso", 100m, e.Inicio.AddDays(5), e.Periodo, e.Usuario);
         var concilId = await _pg.Data.CrearConciliacionAsync(e.CuentaBancaria, e.Periodo, e.Inicio.AddDays(10), 1000m);
         await _pg.Data.ForzarEstadoConciliacionAsync(concilId, "Conciliado");
 
@@ -128,7 +128,7 @@ public class TesoreriaEsquemaTests
         var e = await _pg.Data.SembrarTesoreriaAsync();
         var (cuenta2, ctaBanco2) = await _pg.Data.CrearCuentaBancariaAsync();
         var movOtraCuenta = await _pg.Data.CrearMovimientoAsync(
-            cuenta2, ctaBanco2, e.Contrapartida, "Ingreso", 100m, e.Inicio.AddDays(5), e.Periodo, e.Usuario);
+            new(cuenta2, ctaBanco2, e.Contrapartida), "Ingreso", 100m, e.Inicio.AddDays(5), e.Periodo, e.Usuario);
         var concilId = await _pg.Data.CrearConciliacionAsync(e.CuentaBancaria, e.Periodo, e.Inicio.AddDays(10), 1000m);
 
         var ex = await Assert.ThrowsAsync<PostgresException>(() =>

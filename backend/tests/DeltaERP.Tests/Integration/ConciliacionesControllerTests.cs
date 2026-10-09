@@ -45,7 +45,7 @@ public class ConciliacionesControllerTests
         _pg.Data.CrearConciliacionAsync(e.CuentaBancaria, e.Periodo, e.Inicio.AddDays(30), extracto, estado);
 
     private Task<int> NuevoMovimientoAsync(EscenarioTesoreria e, string tipo, decimal monto, int dia = 5) =>
-        _pg.Data.CrearMovimientoAsync(e.CuentaBancaria, e.CuentaContableBanco, e.Contrapartida, tipo, monto, e.Inicio.AddDays(dia), e.Periodo, e.Usuario);
+        _pg.Data.CrearMovimientoAsync(new(e.CuentaBancaria, e.CuentaContableBanco, e.Contrapartida), tipo, monto, e.Inicio.AddDays(dia), e.Periodo, e.Usuario);
 
     private static Task<HttpResponseMessage> MarcarAsync(HttpClient client, int conciliacionId, int movimientoId) =>
         client.PostAsJsonAsync($"{Ruta}/{conciliacionId}/movimientos", new { movimientoId });
@@ -186,7 +186,7 @@ public class ConciliacionesControllerTests
     public async Task Obtener_NoOfreceElMovimientoDeAperturaComoDisponible()
     {
         var a = await CrearConAperturaAsync();
-        var manualId = await _pg.Data.CrearMovimientoAsync(a.CuentaId, a.ContableBanco, a.Contrapartida, "Ingreso", 50m, a.Inicio.AddDays(5), a.Periodo, a.Usuario);
+        var manualId = await _pg.Data.CrearMovimientoAsync(new(a.CuentaId, a.ContableBanco, a.Contrapartida), "Ingreso", 50m, a.Inicio.AddDays(5), a.Periodo, a.Usuario);
         var conciliacionId = await _pg.Data.CrearConciliacionAsync(a.CuentaId, a.Periodo, a.Inicio.AddDays(30), 0m);
 
         var body = await (await a.Client.GetAsync($"{Ruta}/{conciliacionId}")).LeerJsonAsync();
@@ -363,7 +363,7 @@ public class ConciliacionesControllerTests
         var (e, client) = await PrepararAsync();
         var conciliacionId = await NuevaConciliacionAsync(e);
         var (otraCuentaId, otraContableId) = await _pg.Data.CrearCuentaBancariaAsync();
-        var ajenoId = await _pg.Data.CrearMovimientoAsync(otraCuentaId, otraContableId, e.Contrapartida, "Ingreso", 10m, e.Inicio.AddDays(5), e.Periodo, e.Usuario);
+        var ajenoId = await _pg.Data.CrearMovimientoAsync(new(otraCuentaId, otraContableId, e.Contrapartida), "Ingreso", 10m, e.Inicio.AddDays(5), e.Periodo, e.Usuario);
 
         var response = await MarcarAsync(client, conciliacionId, ajenoId);
 
