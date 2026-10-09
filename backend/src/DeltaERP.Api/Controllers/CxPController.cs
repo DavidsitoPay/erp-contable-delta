@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using DeltaERP.Api.Auth;
 using DeltaERP.Api.Services;
 using DeltaERP.Domain.Entities;
@@ -15,25 +14,15 @@ namespace DeltaERP.Api.Controllers;
 [ApiController]
 [Route("api/cxp")]
 [Authorize]
-public class CxPController : ControllerBase
+public class CxPController : FacturaControllerBase
 {
     private static readonly PerfilFactura Perfil = new(
         "CxP", "Proveedor", DocumentoCxP.TiposDocumentoValidos, "Pasivo", "Acreedora", "Cuentas por pagar", LadoControl.Credito,
         Impuesto.AmbitoCompras, "IVA crédito fiscal", false);
 
-    private readonly DeltaErpDbContext _db;
-    private readonly ValidacionContable _validacion;
-    private readonly AuditoriaService _auditoria;
-    private readonly FacturaService _facturas;
-    private readonly TesoreriaService _tesoreria;
-
     public CxPController(DeltaErpDbContext db, ValidacionContable validacion, AuditoriaService auditoria, FacturaService facturas, TesoreriaService tesoreria)
+        : base(db, validacion, auditoria, facturas, tesoreria)
     {
-        _db = db;
-        _validacion = validacion;
-        _auditoria = auditoria;
-        _facturas = facturas;
-        _tesoreria = tesoreria;
     }
 
     [HttpGet("facturas")]
@@ -81,29 +70,8 @@ public class CxPController : ControllerBase
 
     [HttpPost("facturas")]
     [Authorize(Roles = Roles.GestionCxP)]
-    public async Task<IActionResult> CrearFactura([FromBody] DocumentoCxP documento)
-    {
-        // RN-04
-        var (proveedor, error) = await _validacion.ValidarFacturaAsync(documento, documento.ProveedorId, Perfil);
-        if (error is not null)
-        {
-            return BadRequest(new { error });
-        }
-
-        if (proveedor is null)
-        {
-            return BadRequest(new { error });
-        }
-
-        var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var errorFiscal = await _facturas.RegistrarAsync(documento, proveedor, Perfil, usuarioId);
-        if (errorFiscal is not null)
-        {
-            return StatusCode(errorFiscal.Estado, new { error = errorFiscal.Mensaje });
-        }
-
-        return CreatedAtAction(nameof(ObtenerFactura), new { id = documento.Id }, await _validacion.ObtenerDetalleAsync(documento, Perfil));
-    }
+    public Task<IActionResult> CrearFactura([FromBody] DocumentoCxP documento) =>
+        RegistrarFacturaAsync(documento, Perfil, nameof(ObtenerFactura));
 
     [HttpGet("pagos")]
     public async Task<IActionResult> ListarPagos()
@@ -174,7 +142,7 @@ public class CxPController : ControllerBase
             return BadRequest(new { error = errorDesembolso });
         }
 
-        var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var usuarioId = this.UsuarioId();
 
         pago.Id = 0;
         pago.MontoTotal = aplicaciones.Sum(a => a.Monto);
