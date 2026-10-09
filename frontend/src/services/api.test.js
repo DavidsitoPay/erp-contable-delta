@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => {
 
 vi.mock("axios", () => ({ default: { create: mocks.create, get: mocks.get } }));
 
-import api, { checkHealth, conciliacionesApi, contrapartesApi, cuentasApi, cuentasBancariasApi, cxcApi, cxpApi, librosApi, login, movimientosTesoreriaApi, periodosApi } from "./api";
+import api, { checkHealth, conciliacionesApi, contrapartesApi, cuentasApi, cuentasBancariasApi, cxcApi, cxpApi, librosApi, login, movimientosTesoreriaApi, periodosApi, reportesApi } from "./api";
 
 const interceptor = mocks.instance.interceptors.request.use.mock.calls[0][0];
 const opcionesCreate = mocks.create.mock.calls[0][0];
@@ -91,6 +91,14 @@ describe("funciones de la API", () => {
     librosApi.mayor(3);
 
     expect(mocks.instance.get).toHaveBeenCalledWith("/libros/mayor", { params: { cuentaId: 3, periodoId: undefined } });
+  });
+
+  it("reportesApi consulta balance general y estado de resultados por periodo", () => {
+    reportesApi.balanceGeneral(4);
+    reportesApi.estadoResultados(4);
+
+    expect(mocks.instance.get).toHaveBeenCalledWith("/reportes/balance-general", { params: { periodoId: 4 } });
+    expect(mocks.instance.get).toHaveBeenCalledWith("/reportes/estado-resultados", { params: { periodoId: 4 } });
   });
 
   it.each([

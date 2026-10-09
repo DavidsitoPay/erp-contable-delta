@@ -54,6 +54,7 @@ su perfil:
   `cancelar`, marcar y desmarcar movimientos, `finalizar`). Registrar cobros y pagos
   (`POST api/cxc/pagos`, `POST api/cxp/pagos`) exige `Roles.RegistroPagos`
   (Administrador o Contador).
+- Reportes (M7, rol Administrador o Contador, `Roles.GestionCatalogo`): `ReportesController` expone `GET api/reportes/balance-general` y `GET api/reportes/estado-resultados` (parámetro `periodoId`), de solo lectura. Lee `fn_reporte_saldos` (`database/11_reportes.sql`) con `FromSql` (entidad sin llave `SaldoReporteCuenta`) y delega en `DeltaERP.Domain/Rules/EstadosFinancieros` (pura) la sección por tipo, los totales de nivel 1, el resultado del ejercicio y el cuadre. El frontend los muestra en las pestañas Balance general y Estado de resultados (`components/Reportes/`), visibles solo para esos perfiles.
 - `DeltaERP.Api/Models/`: modelos de detalle de factura y de sus líneas que devuelven
   los controladores `CxCController` y `CxPController`.
 
@@ -90,6 +91,7 @@ el administrador, modifique o elimine registros de auditoría ya escritos.
 - Tesorería (M6) → `CuentaBancaria`, `MovimientoTesoreria` (cada uno con su asiento), `ConciliacionBancaria`, `DetalleConciliacion`.
 - Seguridad y auditoría (M8) → `Usuario`, `Perfil`, `BitacoraAuditoria` (poblada por la API, no por trigger).
 - Cierre contable → `PeriodoContable` y `SaldoCuentaPeriodo` (saldos consolidados e inmutables por periodo).
+- Reportes (M7) → sin tablas propias: `fn_reporte_saldos` combina `SaldoCuentaPeriodo` de periodos cerrados con asientos en vivo.
 
 Ningún módulo del frontend accede directamente a la base de datos; todo pasa por la
 API.
@@ -100,13 +102,13 @@ API.
 
 - Unitarias (`Unit/`): reglas puras del dominio (`AsientoFacturaBuilder`,
   `AsientoTesoreriaBuilder`, `FacturaRules`, `PagoRules`, `PartidaDobleValidator`,
-  `TesoreriaRules`) y `ErroresPostgres`, sin base de datos.
+  `TesoreriaRules`, `EstadosFinancieros`) y `ErroresPostgres`, sin base de datos.
 - Integración (`Integration/`, trait `Category=Integration`): levantan la API con
   `WebApplicationFactory` contra un PostgreSQL 16 real, de modo que los triggers
   (RN-01, RN-03, RN-05) actúan igual que en producción. Cubren todos los controladores
   de la API: asientos, auth, centros de costo, contrapartes, cuentas bancarias,
-  cuentas contables, conciliaciones, CxC, CxP, libros, movimientos de tesorería y
-  periodos contables. Las pruebas de login verifican la emisión del
+  cuentas contables, conciliaciones, CxC, CxP, libros, movimientos de tesorería,
+  periodos contables y reportes. Las pruebas de login verifican la emisión del
   token (`AuthController`/`TokenService`) con un cliente anónimo y el esquema JWT
   real; el resto usa `TestAuthHandler`. Las operaciones cuya autorización vive en un
   procedimiento almacenado (cerrar y reabrir periodo) se validan contra el perfil

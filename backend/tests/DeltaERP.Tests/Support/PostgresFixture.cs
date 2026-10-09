@@ -18,6 +18,7 @@ public sealed class PostgresFixture : IAsyncLifetime
         "08_correcciones_balance_y_cierre.sql",
         "09_tesoreria.sql",
         "10_balance_jerarquico.sql",
+        "11_reportes.sql",
     };
 
     public NpgsqlDataSource DataSource { get; private set; } = null!;

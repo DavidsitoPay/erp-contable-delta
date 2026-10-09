@@ -16,6 +16,7 @@ public class DeltaErpDbContext : DbContext
     public DbSet<PeriodoContable> PeriodosContables => Set<PeriodoContable>();
 
     public DbSet<BalanceSaldoCuenta> BalanceSaldos => Set<BalanceSaldoCuenta>();
+    public DbSet<SaldoReporteCuenta> SaldosReporte => Set<SaldoReporteCuenta>();
 
     public DbSet<Contraparte> Contrapartes => Set<Contraparte>();
 
@@ -70,6 +71,8 @@ public class DeltaErpDbContext : DbContext
         modelBuilder.Entity<SaldoCuentaBancaria>().HasNoKey().ToView("vw_saldocuentabancaria");
         modelBuilder.Entity<ConciliacionResumen>().HasNoKey().ToView("vw_conciliacion_resumen")
             .Property(r => r.Id).HasColumnName("conciliacion_id");
+        // Funcion de tabla: solo se consulta con FromSql, nunca se lee como vista.
+        modelBuilder.Entity<SaldoReporteCuenta>().HasNoKey().ToView("fn_reporte_saldos");
 
         // Sin navegación inversa, la convención de EF no reconoce AsientoId como FK
         // y crea una columna sombra (AsientoContableId) inexistente en la base de datos.
