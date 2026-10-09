@@ -18,6 +18,12 @@ public sealed record EscenarioTesoreria(int Usuario, int Periodo, DateOnly Inici
 
 public sealed record EscenarioJerarquia(int Usuario, int Periodo, int Padre, int HijoA, int HijoB, int Ingreso);
 
+public sealed record PeriodoSembrado(int Id, DateOnly Inicio, DateOnly Fin);
+
+public sealed record CuentasReporte(int Usuario, int Activo, int Pasivo, int Capital, int Ingreso, int Gasto);
+
+public record CuentasMovimiento(int CuentaBancariaId, int CuentaContableBancoId, int ContrapartidaId);
+
 public sealed record OpcionesAsiento(string Estado = "Confirmado", int? CentroCostoId = null, string? Numero = null);
 
 // Bitácora, saldos, asientos y usuarios son inmutables: no hay limpieza posible, por
@@ -26,6 +32,7 @@ public sealed class TestData
 {
     private readonly NpgsqlDataSource _db;
     private static int _anioPeriodoUnico = 2099;
+    private static int _anioPeriodoHistorico = 1900;
     public static readonly DateOnly FechaSinPeriodo = new(1990, 6, 15);
 
     public TestData(NpgsqlDataSource db)
@@ -159,6 +166,27 @@ public sealed class TestData
             "INSERT INTO periodocontable (nombre, fecha_inicio, fecha_fin, estado) VALUES ($1, $2, $3, $4) RETURNING id",
             $"Periodo {Sufijo()}", inicio, fin, estado);
 
+    public async Task<IReadOnlyList<PeriodoSembrado>> CrearPeriodosHistoricosAsync(int cantidad)
+    {
+        var primerAnio = Interlocked.Add(ref _anioPeriodoHistorico, -cantidad);
+        var periodos = new List<PeriodoSembrado>();
+        for (var i = 0; i < cantidad; i++)
+        {
+            var inicio = new DateOnly(primerAnio + i, 1, 1);
+            var fin = new DateOnly(primerAnio + i, 12, 31);
+            periodos.Add(new PeriodoSembrado(await CrearPeriodoEnRangoAsync(inicio, fin), inicio, fin));
+        }
+        return periodos;
+    }
+
+    public async Task<CuentasReporte> SembrarCuentasReporteAsync() => new(
+        Usuario: await CrearUsuarioAsync(),
+        Activo: await CrearCuentaAsync("Activo", "Deudora"),
+        Pasivo: await CrearCuentaAsync("Pasivo", "Acreedora"),
+        Capital: await CrearCuentaAsync("Capital", "Acreedora"),
+        Ingreso: await CrearCuentaAsync("Ingreso", "Acreedora"),
+        Gasto: await CrearCuentaAsync("Gasto", "Deudora"));
+
     public async Task<int> SembrarAsientoAsync(
         int periodoId, int usuarioId, int cuentaDebito, int cuentaCredito, decimal monto, DateOnly fecha,
         OpcionesAsiento? opciones = null)
@@ -199,17 +227,17 @@ public sealed class TestData
     }
 
     public async Task<int> CrearMovimientoAsync(
-        int cuentaBancariaId, int cuentaContableBancoId, int contrapartidaId, string tipo, decimal monto, DateOnly fecha, int periodoId, int usuarioId)
+        CuentasMovimiento cuentas, string tipo, decimal monto, DateOnly fecha, int periodoId, int usuarioId)
     {
         var esIngreso = tipo == "Ingreso";
         var asientoId = await SembrarAsientoAsync(
             periodoId, usuarioId,
-            esIngreso ? cuentaContableBancoId : contrapartidaId,
-            esIngreso ? contrapartidaId : cuentaContableBancoId,
+            esIngreso ? cuentas.CuentaContableBancoId : cuentas.ContrapartidaId,
+            esIngreso ? cuentas.ContrapartidaId : cuentas.CuentaContableBancoId,
             monto, fecha);
         return await ScalarAsync<int>(
             "INSERT INTO movimientotesoreria (cuenta_bancaria_id, fecha, tipo, monto, asiento_id, descripcion, origen) VALUES ($1, $2, $3, $4, $5, 'Movimiento de prueba', 'Manual') RETURNING id",
-            cuentaBancariaId, fecha, tipo, monto, asientoId);
+            cuentas.CuentaBancariaId, fecha, tipo, monto, asientoId);
     }
 
     public Task<int> CrearConciliacionAsync(int cuentaBancariaId, int periodoId, DateOnly fecha, decimal saldoExtracto, string estado = "Pendiente") =>

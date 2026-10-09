@@ -60,6 +60,7 @@ public class PeriodosContablesControllerTests
             fechaFin = fin,
             id = 999999,
             estado = "Cerrado",
+            cierres = 7,
         };
         var client = _pg.CreateApiClient(await _pg.Data.CrearUsuarioAsync());
 
@@ -69,6 +70,8 @@ public class PeriodosContablesControllerTests
         var body = await response.LeerJsonAsync();
         Assert.Equal("Abierto", body.GetProperty("estado").GetString());
         Assert.NotEqual(999999, body.GetProperty("id").GetInt32());
+        Assert.Equal(0, await _pg.Data.ScalarAsync<int>("SELECT cierres FROM periodocontable WHERE id = $1", body.GetProperty("id").GetInt32()));
+        Assert.False(body.TryGetProperty("cierres", out _));
         Assert.Equal(ini.ToString("yyyy-MM-dd"), body.GetProperty("fechaInicio").GetString());
     }
 

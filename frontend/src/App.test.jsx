@@ -7,6 +7,8 @@ import App from "./App";
 vi.mock("./services/api", async (importOriginal) => ({ ...(await importOriginal()), checkHealth: vi.fn() }));
 vi.mock("./components/Asientos/RegistrarAsiento", () => ({ default: () => <p>Formulario de asiento</p> }));
 vi.mock("./components/Tesoreria/Tesoreria", () => ({ default: () => <p>Módulo de tesorería</p> }));
+vi.mock("./components/Reportes/BalanceGeneral", () => ({ default: () => <p>Reporte balance general</p> }));
+vi.mock("./components/Reportes/EstadoResultados", () => ({ default: () => <p>Reporte estado de resultados</p> }));
 
 function renderApp(perfil, ruta = "/") {
   if (perfil) localStorage.setItem("delta_usuario", JSON.stringify({ nombre: "Ana", perfil }));
@@ -28,7 +30,7 @@ describe("App", () => {
     renderApp("Contador");
 
     expect(await screen.findByText("Conectado a Delta ERP Contable API")).toBeInTheDocument();
-    expect(screen.getAllByRole("link")).toHaveLength(11);
+    expect(screen.getAllByRole("link")).toHaveLength(13);
     expect(screen.getByRole("link", { name: "Registrar asiento" })).toBeInTheDocument();
   });
 
@@ -37,6 +39,31 @@ describe("App", () => {
 
     expect(screen.getByRole("link", { name: "Tesorería" })).toBeInTheDocument();
     expect(screen.getByText("Módulo de tesorería")).toBeInTheDocument();
+    await screen.findByText("Conectado a Delta ERP Contable API");
+  });
+
+  it.each(["Contador", "Administrador del sistema"])("%s ve las pestañas de reportes y abre el balance general", async (perfil) => {
+    renderApp(perfil, "/reportes/balance-general");
+
+    expect(screen.getByRole("link", { name: "Balance general" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Estado de resultados" })).toBeInTheDocument();
+    expect(screen.getByText("Reporte balance general")).toBeInTheDocument();
+    await screen.findByText("Conectado a Delta ERP Contable API");
+  });
+
+  it("abre el estado de resultados desde su ruta", async () => {
+    renderApp("Contador", "/reportes/estado-resultados");
+
+    expect(screen.getByText("Reporte estado de resultados")).toBeInTheDocument();
+    await screen.findByText("Conectado a Delta ERP Contable API");
+  });
+
+  it.each(["Vendedor", "Técnico"])("%s no ve las pestañas de reportes y las rutas quedan bloqueadas", async (perfil) => {
+    renderApp(perfil, "/reportes/balance-general");
+
+    expect(screen.queryByRole("link", { name: "Balance general" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Estado de resultados" })).toBeNull();
+    expect(screen.getByText(`No autorizado: tu perfil (${perfil}) no puede acceder a Balance general.`)).toBeInTheDocument();
     await screen.findByText("Conectado a Delta ERP Contable API");
   });
 

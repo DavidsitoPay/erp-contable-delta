@@ -47,6 +47,17 @@ Ninguna entidad almacena un saldo como columna libremente editable:
   responde `409 Conflict`. Las fallas de autorización del procedimiento responden `403`.
 - `cierre_numero` proviene de `periodocontable.cierres`, que `sp_cerrar_periodo` incrementa en cada cierre, incluso si el periodo no tuvo movimientos. `vw_saldocuentaperiodo_vigente` une con ese contador, por lo que queda vacía para un periodo cuyo cierre vigente no tuvo movimientos.
 
+## Reportes y estados financieros
+
+- El balance general es al cierre de un periodo: acumula todos los periodos con `fecha_fin` menor o igual a la del periodo consultado. El estado de resultados cubre solo el periodo consultado.
+- Cada periodo incluido aporta según su estado: un periodo `Cerrado` aporta su cierre vigente (`SaldoCuentaPeriodo` vía `vw_saldocuentaperiodo_vigente`); uno `Abierto` o reabierto aporta en vivo los asientos `Confirmado` y `Anulado`. Los asientos `Borrador` nunca cuentan.
+- El balance general se presenta en las secciones Activo, Pasivo y Capital, con roll-up jerárquico (el saldo de una cuenta padre incluye a sus descendientes) y totales de sección que suman solo las cuentas de nivel 1. El saldo de cada cuenta lleva el signo de su naturaleza.
+- No existe asiento de cierre de ingresos y gastos, por eso el Capital incluye la línea «Resultado del ejercicio (no distribuido)» = Ingresos - Gastos acumulados hasta el periodo consultado. Total capital = Capital + resultado.
+- El balance cuadra cuando Activo = Pasivo + Total capital; la fila Diferencia muestra Activo - (Pasivo + Total capital) y «Cuadra» cuando es 0.
+- El estado de resultados lista solo cuentas de tipo Ingreso y Gasto del periodo consultado. Utilidad neta = Ingresos - Gastos; si es negativa se presenta como pérdida neta.
+- Cada reporte indica su fuente: `Cierre` si el periodo consultado está `Cerrado`, `Preliminar` en otro caso. El balance general avisa además cuando incluye periodos anteriores que no están cerrados (`incluyePeriodosAbiertos`).
+- Los reportes son de solo lectura y no registran bitácora. Consultarlos requiere perfil Administrador del sistema o Contador; Vendedor y Técnico reciben `403`. Un periodo inexistente o ausente responde `400`.
+
 ## Tesorería y conciliación bancaria
 
 - Cada cuenta bancaria está ligada a una única cuenta contable de tipo Activo (hoja y activa); una cuenta contable no puede asociarse a dos cuentas bancarias, y el par banco + número es único. La cuenta contable no se cambia después de creada.

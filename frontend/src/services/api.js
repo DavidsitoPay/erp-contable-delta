@@ -103,4 +103,9 @@ export const conciliacionesApi = {
   finalizar: (id) => api.post(`/conciliaciones/${idRuta(id)}/finalizar`),
 };
 
+export const reportesApi = {
+  balanceGeneral: (periodoId) => api.get("/reportes/balance-general", { params: { periodoId } }),
+  estadoResultados: (periodoId) => api.get("/reportes/estado-resultados", { params: { periodoId } }),
+};
+
 export default api;

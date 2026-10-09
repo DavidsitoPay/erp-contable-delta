@@ -15,6 +15,8 @@ import Contrapartes from "./components/Contrapartes/Contrapartes";
 import CuentasPorCobrar from "./components/CxC/CuentasPorCobrar";
 import CuentasPorPagar from "./components/CxP/CuentasPorPagar";
 import Tesoreria from "./components/Tesoreria/Tesoreria";
+import BalanceGeneral from "./components/Reportes/BalanceGeneral";
+import EstadoResultados from "./components/Reportes/EstadoResultados";
 import { puedeGestionarTesoreria } from "./utils/perfiles";
 
 function TabLink({ to, children }) {
@@ -23,6 +25,10 @@ function TabLink({ to, children }) {
       {children}
     </NavLink>
   );
+}
+
+function Restringida({ permitido, perfil, seccion, children }) {
+  return permitido ? children : <p>No autorizado: tu perfil ({perfil}) no puede acceder a {seccion}.</p>;
 }
 
 function App() {
@@ -91,6 +97,8 @@ function App() {
         <TabLink to="/cxc">Cuentas por cobrar</TabLink>
         <TabLink to="/cxp">Cuentas por pagar</TabLink>
         {esAdminOContador && <TabLink to="/tesoreria">Tesorería</TabLink>}
+        {esAdminOContador && <TabLink to="/reportes/balance-general">Balance general</TabLink>}
+        {esAdminOContador && <TabLink to="/reportes/estado-resultados">Estado de resultados</TabLink>}
       </nav>
 
       <main className="content">
@@ -123,6 +131,22 @@ function App() {
               ) : (
                 <p>No autorizado: tu perfil ({usuario.perfil}) no puede acceder a Tesorería.</p>
               )
+            }
+          />
+          <Route
+            path="/reportes/balance-general"
+            element={
+              <Restringida permitido={esAdminOContador} perfil={usuario.perfil} seccion="Balance general">
+                <BalanceGeneral />
+              </Restringida>
+            }
+          />
+          <Route
+            path="/reportes/estado-resultados"
+            element={
+              <Restringida permitido={esAdminOContador} perfil={usuario.perfil} seccion="Estado de resultados">
+                <EstadoResultados />
+              </Restringida>
             }
           />
         </Routes>

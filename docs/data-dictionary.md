@@ -168,7 +168,7 @@ Verifica en este orden: perfil Contador o Administrador del sistema (si no, exce
 ## 7. Consolidación de Saldos
 
 ### PeriodoContable.cierres
-`periodocontable.cierres` (INT, no nulo, por defecto 0) cuenta los cierres del periodo; `sp_cerrar_periodo` lo incrementa en cada cierre, incluso sin movimientos, y su valor es el `cierre_numero` vigente.
+`periodocontable.cierres` (INT, no nulo, por defecto 0) cuenta los cierres del periodo; `sp_cerrar_periodo` lo incrementa en cada cierre, incluso sin movimientos, y su valor es el `cierre_numero` vigente. Solo lo escribe el procedimiento: la API no lo recibe ni lo expone en el JSON del periodo.
 
 ### SaldoCuentaPeriodo
 Fotografía inalterable del saldo de cada cuenta contable al momento del cierre
@@ -192,6 +192,17 @@ de los movimientos); un saldo consolidado **e inalterable** por periodo es una
 práctica contable estándar — equivale al saldo de cierre que se asienta en libros. El
 saldo del periodo en curso se sigue calculando siempre en tiempo real
 (`vw_balance_saldos`), esta tabla solo aplica a periodos ya cerrados.
+
+### fn_reporte_saldos(p_periodo_id, p_acumulado)
+Función de tabla, solo lectura (`STABLE`, sin DML), que alimenta el balance general y el estado de resultados. Con `p_acumulado = false` considera solo el periodo indicado; con `true`, todos los periodos con `fecha_fin` menor o igual a la del indicado. Un periodo `Cerrado` con cierre aporta las filas de `vw_saldocuentaperiodo_vigente`; los demás aportan las líneas de asientos `Confirmado` y `Anulado` (nunca `Borrador`). Devuelve todas las cuentas, activas o no, aunque estén en 0, ordenadas por código; con un periodo inexistente devuelve 0 filas.
+
+| Columna | Descripción |
+|---|---|
+| cuenta_id, codigo, nombre, tipo, naturaleza, cuenta_padre_id | Datos de la cuenta |
+| nivel | Profundidad en la jerarquía (1 = raíz) |
+| es_hoja | `true` si la cuenta no tiene subcuentas |
+| total_debito, total_credito | Acumulados de la cuenta propia más todos sus descendientes |
+| saldo | Deudora: débito - crédito; en otro caso crédito - débito |
 
 ## Vistas (reemplazan las columnas de saldo eliminadas)
 
