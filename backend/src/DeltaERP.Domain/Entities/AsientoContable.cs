@@ -15,6 +15,7 @@ public class AsientoContable
     public string Estado { get; set; } = "Borrador"; // Borrador | Confirmado | Anulado
     public int UsuarioId { get; set; }
     public decimal? TipoCambioAplicado { get; set; }
+    public int? ReversaDeId { get; set; }
 
     public List<LineaAsiento> Lineas { get; set; } = new();
 }

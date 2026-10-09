@@ -301,7 +301,7 @@ DECLARE
 BEGIN
     SELECT id INTO STRICT v_asiento FROM asientocontable WHERE numero = 'AS-2610-11';
     SELECT id INTO STRICT v_admin FROM usuario WHERE email = 'admin@delta.com.gt';
-    CALL sp_reversar_asiento(v_asiento, v_admin);
+    CALL sp_reversar_asiento(v_asiento, v_admin, 'Reversa de demostración');
 END $$;
 
 -- 7. Facturas de cuentas por cobrar -------------------------------------------------

@@ -71,6 +71,11 @@ permanecen contabilizados.
 |---|---|---|---|---|
 | reversa_de_id | INT | Sí | FK -> AsientoContable(id) | En un asiento de reversa, el asiento original que revierte; NULL en los demás. Índice único parcial (`ux_asientocontable_reversa_de_id`, `WHERE reversa_de_id IS NOT NULL`): un asiento tiene a lo sumo una reversa |
 
+La entidad EF `AsientoContable` mapea `reversa_de_id` como `ReversaDeId`; la API lo fuerza a NULL al registrar un asiento.
+
+### sp_reversar_asiento(p_asiento_id INT, p_usuario_id INT, p_motivo TEXT)
+Definido en `database/12_reversa_asientos.sql` (RN-03). Verifica en este orden: perfil Administrador del sistema (si no, excepción por defecto `P0001`); motivo no vacío (`22023`); que el asiento exista (`P0002`); que esté `Confirmado`, que no sea una reversa, que su periodo esté `Abierto` y que no tenga vínculo con `documentocxc`, `documentocxp` ni `movimientotesoreria` (`55000`). Entonces inserta la reversa `Confirmado` en el mismo periodo (número `REV-` + original truncado a 30, fecha `GREATEST(fecha original, LEAST(CURRENT_DATE, fecha_fin del periodo))`, `reversa_de_id` = original) con las líneas invertidas, pasa el original a `Anulado` y registra la auditoría `reversar_asiento` con el motivo. La API traduce `P0001` a `403`, `P0002` a `404` y `55000` a `409`. La firma de dos argumentos no existe.
+
 ## 4. Cuentas por Cobrar (CxC)
 
 ### DocumentoCxC

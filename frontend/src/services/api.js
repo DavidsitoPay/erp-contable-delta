@@ -44,9 +44,9 @@ export const periodosApi = {
   reabrir: (id) => api.post(`/periodos/${idRuta(id)}/reabrir`),
 };
 
-// Solo existe POST; el backend aún no expone un GET para listar asientos.
 export const asientosApi = {
   crear: (asiento) => api.post("/asientos", asiento),
+  reversar: (id, motivo) => api.post(`/asientos/${idRuta(id)}/reversar`, { motivo }),
 };
 
 export const librosApi = {

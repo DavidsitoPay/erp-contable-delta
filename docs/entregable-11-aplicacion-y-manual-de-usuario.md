@@ -116,27 +116,274 @@ Delta ERP Contable (DEC) es una aplicación web de tres capas desacopladas.
 - **Capa de lógica y servicios.** API REST en C# sobre ASP.NET Core 8. Concentra la autenticación, la autorización por perfil y la mayor parte de las reglas de negocio.
 - **Capa de datos.** Base de datos PostgreSQL. Incluye integridad referencial, restricciones de dominio, procedimientos almacenados y disparadores que garantizan las reglas que no pueden delegarse en la aplicación.
 
-![Diagrama de arquitectura de Delta ERP Contable](diagrams/diagrama_arquitectura_erp_delta.png)
+```mermaid
+flowchart LR
+    U["Usuario<br/>(navegador)"]
+    subgraph VERCEL["Vercel"]
+        SPA["SPA React 18 + Vite<br/>delta-erp-contable.vercel.app"]
+    end
+    subgraph AZURE["Azure"]
+        API["Azure Container Apps<br/>ca-delta-erp-backend<br/>API ASP.NET Core 8"]
+    end
+    subgraph NEON["Neon"]
+        PROD[("PostgreSQL 16<br/>rama production")]
+    end
+    subgraph GH["GitHub"]
+        CI["GitHub Actions<br/>build, pruebas, diff-cover, jscpd"]
+        MIG["Migraciones y despliegue"]
+    end
+    GHCR["GitHub Container Registry"]
+    SONAR["SonarCloud"]
+    U -->|HTTPS| SPA
+    SPA -->|"HTTPS + JWT"| API
+    API -->|SQL| PROD
+    CI --> MIG
+    MIG -->|"migraciones SQL"| PROD
+    MIG -->|"imagen"| GHCR
+    GHCR -->|"OIDC, nueva imagen"| API
+    CI -->|"análisis"| SONAR
+```
 
 *Figura 1. Diagrama de arquitectura.*
 
-![Diagrama de componentes de Delta ERP Contable](diagrams/diagrama_componentes_erp_delta_compacto.png)
+```mermaid
+flowchart TB
+    subgraph FE["Frontend (React)"]
+        direction TB
+        PANT["Pantallas M1 a M8<br/>catálogo, asientos, libros, contrapartes,<br/>CxC, CxP, tesorería, reportes"]
+        CLI["Cliente de API<br/>services/api"]
+        PANT --> CLI
+    end
+    subgraph BE["API (ASP.NET Core 8)"]
+        direction TB
+        AUTH["Autenticación JWT y roles"]
+        CTRL["Controladores por módulo"]
+        DOM["Reglas de dominio<br/>partida doble, facturas, pagos, tesorería"]
+        SRV["Servicios<br/>auditoría, facturas, tesorería"]
+        ERR["Traducción de errores de PostgreSQL<br/>P0001 a 403, P0002 a 404, 55000 a 409"]
+        AUTH --> CTRL
+        CTRL --> DOM
+        CTRL --> SRV
+        CTRL --> ERR
+    end
+    subgraph BD["Base de datos (PostgreSQL 16)"]
+        direction TB
+        TAB["Tablas"]
+        TRG["Disparadores<br/>partida doble, periodo cerrado, inmutabilidad"]
+        PRC["Procedimientos<br/>cierre y reapertura de periodo, reversa,<br/>auditoría, conciliación<br/>(la reversa no se invoca desde la API)"]
+        VST["Vistas<br/>balance de saldos, saldos de CxC, CxP y bancos"]
+        FUN["Función de reporte<br/>fn_reporte_saldos"]
+    end
+    CLI -->|"HTTPS + JWT"| AUTH
+    CTRL -->|"Entity Framework Core"| TAB
+    CTRL -->|"CALL"| PRC
+    SRV -->|"CALL"| PRC
+    CTRL -->|"consultas"| VST
+    CTRL -->|"consultas"| FUN
+    TAB --- TRG
+```
 
 *Figura 2. Diagrama de componentes.*
 
 El diagrama de secuencia describe el flujo crítico de registro de un asiento contable.
 
-![Diagrama de secuencia del registro de un asiento](diagrams/diagrama_secuencia_erp_delta.png)
+```mermaid
+sequenceDiagram
+    actor U as Usuario
+    participant UI as Pantalla Registrar asiento
+    participant API as API (AsientosController)
+    participant BD as PostgreSQL
+    U->>UI: Captura fecha, periodo y líneas
+    UI->>API: POST /api/asientos con JWT
+    API->>API: Valida JWT y rol (Administrador o Contador)
+    API->>API: RN-01 partida doble, cuentas y centros de costo
+    API->>BD: Consulta el periodo
+    alt Validación fallida o periodo no abierto (RN-02)
+        API-->>UI: 400 con mensaje de error
+    else Datos válidos
+        API->>BD: Inicia transacción e inserta asiento y líneas
+        Note over BD: Disparadores RN-01 partida doble<br/>y RN-02 periodo cerrado
+        API->>BD: CALL sp_registrar_auditoria
+        BD-->>API: Confirmación
+        API-->>UI: 201 Created con el asiento
+    end
+    UI-->>U: Muestra el resultado
+```
 
 *Figura 3. Diagrama de secuencia del flujo crítico.*
 
 Los diagramas de clases describen el modelo de dominio en dos partes: el núcleo contable y los módulos de cuentas por cobrar, cuentas por pagar y tesorería.
 
-![Diagrama de clases del núcleo contable](diagrams/diagrama_clases_1_nucleo_contable.png)
+```mermaid
+classDiagram
+    class CuentaContable {
+        +int id
+        +string codigo
+        +string nombre
+        +string tipo
+        +string naturaleza
+        +int cuentaPadreId
+        +bool activa
+    }
+    class PeriodoContable {
+        +int id
+        +string nombre
+        +date fechaInicio
+        +date fechaFin
+        +string estado
+        +int cierres
+    }
+    class AsientoContable {
+        +int id
+        +string numero
+        +date fecha
+        +decimal monto
+        +string estado
+    }
+    class LineaAsiento {
+        +int id
+        +decimal debito
+        +decimal credito
+    }
+    class SaldoCuentaPeriodo {
+        +decimal totalDebito
+        +decimal totalCredito
+        +decimal saldoFinal
+    }
+    class CentroCosto {
+        +int id
+        +string codigo
+        +string nombre
+        +bool activo
+    }
+    class Usuario {
+        +int id
+        +string nombre
+        +string email
+        +bool activo
+    }
+    class Perfil {
+        +int id
+        +string nombre
+    }
+    class BitacoraAuditoria {
+        +int id
+        +date fecha
+        +string accion
+        +string tablaAfectada
+    }
+    CuentaContable "0..1" <-- "0..*" CuentaContable : cuentaPadre
+    PeriodoContable "1" --> "0..*" AsientoContable : contiene
+    AsientoContable "1" *-- "1..*" LineaAsiento : líneas
+    CuentaContable "1" --> "0..*" LineaAsiento : afectada en
+    CentroCosto "0..1" --> "0..*" LineaAsiento : clasifica
+    PeriodoContable "1" --> "0..*" SaldoCuentaPeriodo : cierre
+    CuentaContable "1" --> "0..*" SaldoCuentaPeriodo : saldo
+    Perfil "1" --> "0..*" Usuario : asignado a
+    Usuario "1" --> "0..*" AsientoContable : registra
+    Usuario "1" --> "0..*" BitacoraAuditoria : genera
+```
 
 *Figura 4. Diagrama de clases del núcleo contable.*
 
-![Diagrama de clases de CxC, CxP y tesorería](diagrams/diagrama_clases_2_cxc_cxp_tesoreria.png)
+```mermaid
+classDiagram
+    class Contraparte {
+        +int id
+        +string tipo
+        +string nombre
+        +string nit
+    }
+    class DocumentoCxC {
+        +int id
+        +string numero
+        +string tipoDocumento
+        +date fechaVencimiento
+        +decimal montoTotal
+        +string estado
+    }
+    class LineaDocumentoCxC {
+        +decimal cantidad
+        +decimal precioUnitario
+        +decimal porcentajeImpuesto
+    }
+    class ReciboPagoCliente {
+        +int id
+        +date fecha
+        +decimal montoTotal
+        +string metodoPago
+    }
+    class AplicacionPagoCliente {
+        +decimal montoAplicado
+    }
+    class DocumentoCxP {
+        +int id
+        +string numero
+        +string tipoDocumento
+        +date fechaVencimiento
+        +decimal montoTotal
+        +string estado
+    }
+    class LineaDocumentoCxP {
+        +decimal cantidad
+        +decimal precioUnitario
+        +decimal porcentajeImpuesto
+    }
+    class PagoProveedorCabecera {
+        +int id
+        +date fecha
+        +decimal montoTotal
+        +string metodoPago
+    }
+    class AplicacionPagoProveedor {
+        +decimal montoAplicado
+    }
+    class CuentaBancaria {
+        +int id
+        +string banco
+        +string numero
+        +string tipo
+        +decimal saldoApertura
+    }
+    class MovimientoTesoreria {
+        +int id
+        +date fecha
+        +string tipo
+        +decimal monto
+        +string origen
+    }
+    class ConciliacionBancaria {
+        +int id
+        +date fecha
+        +string estado
+        +decimal saldoExtracto
+    }
+    class DetalleConciliacion {
+        +int id
+    }
+    class AsientoContable
+    class CuentaContable
+    Contraparte "1" --> "0..*" DocumentoCxC : cliente
+    Contraparte "1" --> "0..*" DocumentoCxP : proveedor
+    DocumentoCxC "1" *-- "1..*" LineaDocumentoCxC
+    DocumentoCxP "1" *-- "1..*" LineaDocumentoCxP
+    Contraparte "1" --> "0..*" ReciboPagoCliente
+    Contraparte "1" --> "0..*" PagoProveedorCabecera
+    ReciboPagoCliente "1" *-- "1..*" AplicacionPagoCliente
+    PagoProveedorCabecera "1" *-- "1..*" AplicacionPagoProveedor
+    AplicacionPagoCliente "0..*" --> "1" DocumentoCxC : aplica a
+    AplicacionPagoProveedor "0..*" --> "1" DocumentoCxP : aplica a
+    ReciboPagoCliente "0..*" --> "0..1" CuentaBancaria
+    PagoProveedorCabecera "0..*" --> "0..1" CuentaBancaria
+    CuentaBancaria "1" --> "0..*" MovimientoTesoreria
+    CuentaBancaria "1" --> "0..*" ConciliacionBancaria
+    ConciliacionBancaria "1" *-- "0..*" DetalleConciliacion
+    DetalleConciliacion "0..*" --> "1" MovimientoTesoreria
+    CuentaBancaria "0..*" --> "1" CuentaContable : cuenta contable
+    DocumentoCxC "0..*" --> "0..1" AsientoContable : genera
+    DocumentoCxP "0..*" --> "0..1" AsientoContable : genera
+    MovimientoTesoreria "0..*" --> "1" AsientoContable : genera
+```
 
 *Figura 5. Diagrama de clases de cuentas por cobrar, cuentas por pagar y tesorería.*
 
@@ -147,7 +394,7 @@ La tabla relaciona cada módulo con su funcionalidad implementada y la pantalla 
 | Módulo | Funcionalidad | Pantalla (menú) | Estado |
 | --- | --- | --- | --- |
 | M1 Catálogo y parametrización | Cuentas contables jerárquicas, centros de costo, periodos contables con cierre y reapertura | Cuentas contables, Centros de costo, Periodos | Implementado |
-| M2 Registro de transacciones | Registro de asientos con validación de partida doble. Reversión de asientos mediante asiento inverso | Registrar asiento | Implementado |
+| M2 Registro de transacciones | Registro de asientos con validación de partida doble. La reversión mediante asiento inverso existe como procedimiento de la base de datos, sin endpoint ni pantalla | Registrar asiento | Implementado |
 | M3 Libros contables | Balance de saldos con acumulación jerárquica, libro diario, libro mayor con saldo acumulado | Balance de saldos, Libro diario, Libro mayor | Implementado |
 | M4 Cuentas por cobrar | Facturas a clientes, cobros con aplicación a facturas, saldo pendiente calculado | Clientes y proveedores, Cuentas por cobrar | Implementado |
 | M5 Cuentas por pagar | Facturas de proveedores, pagos con aplicación a facturas, saldo pendiente calculado | Clientes y proveedores, Cuentas por pagar | Implementado |
@@ -371,6 +618,7 @@ Los beneficios se relacionan con el problema del apartado 1.1. Se describen de f
 - El módulo M9 (importación) está en diseño y no forma parte del incremento.
 - El envío de notificaciones por correo SMTP está diseñado y no implementado.
 - El estado de un asiento nuevo debe ser Confirmado. No existe flujo de borrador.
+- La reversión de asientos no tiene endpoint ni pantalla. Se ejecuta en la base de datos.
 - Los controles de seguridad pendientes se detallan en la sección 2.6.
 
 ---
@@ -415,7 +663,7 @@ El sistema define cuatro perfiles: Administrador del sistema, Contador, Vendedor
 
 ### Límites de confianza
 
-El diagrama de arquitectura (Figura 1) permite identificar los siguientes límites de confianza. La Figura 6 los ubica sobre el mismo diagrama.
+El diagrama de arquitectura (Figura 1) permite identificar los siguientes límites de confianza. La Figura 6 representa esos límites sobre los componentes del sistema.
 
 | Límite | Lado no confiable | Lado confiable | Control en el límite |
 | --- | --- | --- | --- |
@@ -426,9 +674,33 @@ El diagrama de arquitectura (Figura 1) permite identificar los siguientes límit
 
 La API es el único componente que accede a la base de datos. El frontend no contiene reglas contables.
 
-![Diagrama de arquitectura con límites de confianza](diagrams/diagrama_arquitectura_erp_delta.png)
+```mermaid
+flowchart LR
+    subgraph NC["Zona no confiable"]
+        U["Usuario<br/>(navegador)"]
+    end
+    subgraph ZF["Frontend en Vercel"]
+        SPA["SPA React"]
+    end
+    subgraph ZA["API en Azure Container Apps"]
+        API["API ASP.NET Core 8<br/>valida token, CORS y rol"]
+    end
+    subgraph ZD["Datos en Neon"]
+        PROD[("PostgreSQL 16<br/>rama production<br/>restricciones, disparadores, procedimientos")]
+    end
+    subgraph ZR["Repositorio y CI"]
+        DEV["Código en desarrollo<br/>Pull Request"]
+        CI["GitHub Actions<br/>pruebas y SonarCloud"]
+    end
+    U ==>|"L1: HTTPS"| SPA
+    SPA ==>|"L2: HTTPS, CORS, JWT"| API
+    API ==>|"L3: cadena de conexión como secreto"| PROD
+    DEV --> CI
+    CI ==>|"L4: OIDC, migraciones y despliegue"| API
+    CI ==>|"L4: migraciones"| PROD
+```
 
-*Figura 6. Diagrama de arquitectura utilizado para identificar los límites de confianza L1 a L4.*
+*Figura 6. Límites de confianza L1 a L4 entre los componentes del sistema.*
 
 ### Flujos críticos
 
@@ -451,7 +723,7 @@ La API es el único componente que accede a la base de datos. El frontend no con
 | --- | --- | --- |
 | Asiento descuadrado | Disparador diferido de partida doble (RN-01) | Un asiento que incumple la partida doble responde 400 y no crea registros |
 | Modificación en periodo cerrado | Disparador que bloquea líneas de asiento en periodo cerrado (RN-02) | Una factura de cuentas por cobrar y un movimiento de tesorería en periodo cerrado responden 400 |
-| Eliminación de asientos | Disparador que impide la eliminación física (RN-03). La corrección se realiza mediante el procedimiento de reversión | Con un asiento reversado, el original y la reversa se contabilizan y netean cero en los libros |
+| Eliminación de asientos | Disparador que impide la eliminación física (RN-03). La corrección se realiza mediante el procedimiento de reversión de la base de datos, que la aplicación todavía no expone | Prueba de integración que ejecuta el procedimiento de reversión directamente en la base: el original y la reversa se contabilizan y netean cero en los libros |
 | Pago superior al saldo | Disparadores de límite de pago en cuentas por cobrar y por pagar (RN-05) | Un pago que excede el saldo se rechaza sin alterar el saldo |
 | Alteración de la bitácora | Disparador de inmutabilidad que bloquea UPDATE y DELETE | Un UPDATE o DELETE directo sobre la bitácora es rechazado |
 | Alteración de saldos de cierre | Disparador de inmutabilidad de los saldos por periodo | Cerrar, reabrir y cerrar de nuevo versiona los saldos y conserva la versión anterior |
@@ -578,7 +850,7 @@ La bitácora de auditoría registra usuario, fecha, acción, tabla afectada y de
 | `registrar_pago_cxc` y `registrar_pago_cxp` | Registro de pagos de cuentas por cobrar y por pagar |
 | `crear_cuenta_bancaria`, `registrar_movimiento_tesoreria` y `registrar_transferencia_tesoreria` | Operaciones de tesorería |
 | `editar_conciliacion` y `cancelar_conciliacion` | Gestión de conciliaciones |
-| `cerrar_periodo`, `reabrir_periodo`, `reversar_asiento` y finalización de conciliación | Procedimientos almacenados de la base de datos |
+| `cerrar_periodo`, `reabrir_periodo`, `reversar_asiento` y finalización de conciliación | Procedimientos almacenados de la base de datos. La reversión se registra cuando se ejecuta el procedimiento en la base de datos |
 
 [Captura 26: consola de Neon, editor SQL sobre la rama `production` (consulta de solo lectura) ejecutando `SELECT id, usuario_id, fecha, accion, tabla_afectada, detalle FROM bitacoraauditoria ORDER BY id DESC LIMIT 20;` y mostrando los registros recientes. Perfil: propietario del proyecto en Neon. Acción previa: registrar antes un asiento con el perfil Contador desde la aplicación y ejecutar la consulta. Demuestra: la trazabilidad de las operaciones por usuario. Enlace: https://console.neon.tech]
 
@@ -594,7 +866,7 @@ Las siguientes prácticas se dirigen a los usuarios de Delta.
 2. No compartir las credenciales. Cada persona debe contar con su propio usuario y perfil.
 3. Cerrar la sesión con "Cerrar sesión" al terminar, en especial en equipos compartidos.
 4. Solicitar al Administrador del sistema la desactivación de las cuentas del personal que deja de laborar. El sistema desactiva, no elimina, para conservar la trazabilidad.
-5. Corregir un asiento mediante reversión y no mediante solicitud de eliminación, pues la eliminación física no está permitida (RN-03).
+5. No solicitar la eliminación de un asiento confirmado con error, pues la eliminación física no está permitida (RN-03). La corrección se solicita al Administrador del sistema, quien aplica la reversión en la base de datos.
 
 ### Pruebas de los controles
 
@@ -619,6 +891,7 @@ La evaluación del incremento identifica diferencias entre los requerimientos de
 | --- | --- | --- | --- |
 | Bloqueo por intentos fallidos | Los requerimientos de seguridad establecen el bloqueo temporal de la cuenta tras intentos fallidos. El controlador de autenticación no cuenta intentos | Ataques de fuerza bruta contra el inicio de sesión | Contador de intentos con bloqueo temporal y registro en bitácora |
 | Política de contraseñas | No existe validación de longitud, complejidad ni caducidad. No hay flujo de alta ni cambio de contraseña en la aplicación | Contraseñas débiles | Política en el alta de usuarios y pantalla de cambio de contraseña |
+| Corrección de asientos sin interfaz | La reversión existe solo como procedimiento de la base de datos. La aplicación no la expone | Operaciones manuales en la base de datos para corregir asientos | Endpoint y pantalla de reversión restringidos a Contador y Administrador |
 | Almacenamiento del token | El token se guarda en el almacenamiento local del navegador | Robo del token ante un ataque de inyección de scripts | Cookie `HttpOnly` con atributos `Secure` y `SameSite`, y política de seguridad de contenido |
 | Vencimiento de sesión en el cliente | No existe un interceptor que cierre la sesión al recibir 401 | Interfaz con sesión vencida hasta recargar | Interceptor de respuesta que limpie la sesión |
 | Registro de accesos | El inicio de sesión no se registra en la bitácora. No existe pantalla de consulta de la bitácora | Auditoría incompleta de accesos | Registrar inicios de sesión exitosos y fallidos. Pantalla de solo lectura para el perfil de auditoría |
@@ -662,7 +935,7 @@ La evaluación del incremento identifica diferencias entre los requerimientos de
 | --- | --- | --- |
 | RN-01 | Todo asiento cumple partida doble (débitos iguales a créditos) | Disparador diferido de la base de datos y API |
 | RN-02 | No se registra, modifica ni elimina líneas de asiento de un periodo cerrado | Disparador de la base de datos y API |
-| RN-03 | Un asiento se corrige con un asiento de reversión. No se elimina físicamente | Disparador de la base de datos y procedimiento de reversión |
+| RN-03 | Un asiento se corrige con un asiento de reversión. No se elimina físicamente | Disparador de la base de datos y procedimiento de reversión (sin interfaz en la aplicación) |
 | RN-04 | Toda factura se asocia a un cliente o proveedor existente | Llave foránea y API |
 | RN-05 | La aplicación de un pago no excede el saldo pendiente de la factura | Disparadores de cuentas por cobrar y por pagar |
 | RN-06 | Las transacciones se registran en la moneda funcional (GTQ) | API |

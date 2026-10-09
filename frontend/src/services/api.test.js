@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => {
 
 vi.mock("axios", () => ({ default: { create: mocks.create, get: mocks.get } }));
 
-import api, { checkHealth, conciliacionesApi, contrapartesApi, cuentasApi, cuentasBancariasApi, cxcApi, cxpApi, librosApi, login, movimientosTesoreriaApi, periodosApi, reportesApi } from "./api";
+import api, { asientosApi, checkHealth, conciliacionesApi, contrapartesApi, cuentasApi, cuentasBancariasApi, cxcApi, cxpApi, librosApi, login, movimientosTesoreriaApi, periodosApi, reportesApi } from "./api";
 
 const interceptor = mocks.instance.interceptors.request.use.mock.calls[0][0];
 const opcionesCreate = mocks.create.mock.calls[0][0];
@@ -120,6 +120,11 @@ describe("funciones de la API", () => {
 
     expect(mocks.instance.post).toHaveBeenNthCalledWith(1, "/periodos/1/cerrar");
     expect(mocks.instance.post).toHaveBeenNthCalledWith(2, "/periodos/1/reabrir");
+  });
+
+  it("asientosApi.reversar envia el motivo a la ruta del asiento", () => {
+    asientosApi.reversar("7", "Error de captura");
+    expect(mocks.instance.post).toHaveBeenCalledWith("/asientos/7/reversar", { motivo: "Error de captura" });
   });
 
   it("convierte string ids numéricos a números en la URL", () => {

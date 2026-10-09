@@ -199,8 +199,8 @@ public class LibrosControllerTests
         var e = await _pg.Data.SembrarEscenarioAsync();
         var numero = $"A-{TestData.Sufijo()}";
         var original = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 100m, new DateOnly(2025, 3, 1), new OpcionesAsiento(Numero: numero));
-        var reversa = await _pg.Data.ReversarAsientoAsync(original, e.UsuarioId);
-        var client = _pg.CreateApiClient(e.UsuarioId);
+        var reversa = await _pg.Data.ReversarAsientoAsync(original);
+        var client =_pg.CreateApiClient(e.UsuarioId);
 
         var balance = await (await client.GetAsync("/api/libros/balance-saldos")).LeerJsonAsync();
         foreach (var cuentaId in new[] { e.CuentaCxC, e.CuentaIngreso })
@@ -244,18 +244,72 @@ public class LibrosControllerTests
     }
 
     [Fact]
+    public async Task Diario_ExponeEstadoReversaYReversibleSegunVinculoPeriodoYEstado()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var fecha = new DateOnly(2025, 3, 1);
+        var numero = $"A-{TestData.Sufijo()}";
+        var original = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 100m, fecha, new OpcionesAsiento(Numero: numero));
+        var reversa = await _pg.Data.ReversarAsientoAsync(original);
+        var libre = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 20m, fecha);
+        var conFactura = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 30m, fecha);
+        await _pg.Data.VincularFacturaCxCAsync(e.ClienteId, conFactura, fecha);
+        var conFacturaCxP = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 40m, fecha);
+        await _pg.Data.VincularFacturaCxPAsync(e.ProveedorId, conFacturaCxP, fecha);
+        var conTesoreria = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 50m, fecha);
+        await _pg.Data.VincularMovimientoTesoreriaAsync(conTesoreria, fecha);
+        var client = _pg.CreateApiClient(e.UsuarioId);
+
+        var diario = await (await client.GetAsync($"/api/libros/diario?periodoId={e.PeriodoId}")).LeerJsonAsync();
+
+        var filaOriginal = FilaDiario(diario, original);
+        Assert.Equal("Anulado", filaOriginal.GetProperty("estado").GetString());
+        Assert.Equal(reversa, filaOriginal.GetProperty("reversadoPorId").GetInt32());
+        Assert.Equal($"REV-{numero}", filaOriginal.GetProperty("reversadoPorNumero").GetString());
+        Assert.Equal(JsonValueKind.Null, filaOriginal.GetProperty("reversaDeId").ValueKind);
+        Assert.False(filaOriginal.GetProperty("reversible").GetBoolean());
+
+        var filaReversa = FilaDiario(diario, reversa);
+        Assert.Equal("Confirmado", filaReversa.GetProperty("estado").GetString());
+        Assert.Equal(original, filaReversa.GetProperty("reversaDeId").GetInt32());
+        Assert.Equal(numero, filaReversa.GetProperty("reversaDeNumero").GetString());
+        Assert.Equal(JsonValueKind.Null, filaReversa.GetProperty("reversadoPorId").ValueKind);
+        Assert.False(filaReversa.GetProperty("reversible").GetBoolean());
+
+        Assert.True(FilaDiario(diario, libre).GetProperty("reversible").GetBoolean());
+        foreach (var vinculado in new[] { conFactura, conFacturaCxP, conTesoreria })
+        {
+            Assert.False(FilaDiario(diario, vinculado).GetProperty("reversible").GetBoolean());
+        }
+    }
+
+    [Fact]
+    public async Task Diario_ConPeriodoCerrado_MarcaTodosLosAsientosComoNoReversibles()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var asiento = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 20m, new DateOnly(2025, 3, 1));
+        await _pg.Data.CerrarPeriodoDirectoAsync(e.PeriodoId);
+        var client = _pg.CreateApiClient(e.UsuarioId);
+
+        var diario = await (await client.GetAsync($"/api/libros/diario?periodoId={e.PeriodoId}")).LeerJsonAsync();
+
+        Assert.False(FilaDiario(diario, asiento).GetProperty("reversible").GetBoolean());
+    }
+
+    [Fact]
     public async Task ReversarAsiento_ConAsientoYaReversadoOReversaOBorrador_FallaConEstadoNoValido()
     {
         var e = await _pg.Data.SembrarEscenarioAsync();
         var numero = $"A-{TestData.Sufijo()}";
         var original = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 100m, new DateOnly(2025, 3, 1), new OpcionesAsiento(Numero: numero));
-        var reversa = await _pg.Data.ReversarAsientoAsync(original, e.UsuarioId);
-        var borrador = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 5m, new DateOnly(2025, 3, 2), new OpcionesAsiento(Estado: "Borrador"));
+        var reversa = await _pg.Data.ReversarAsientoAsync(original);
+        var borrador =await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 5m, new DateOnly(2025, 3, 2), new OpcionesAsiento(Estado: "Borrador"));
 
+        var administrador = await _pg.Data.CrearUsuarioAsync(Roles.Administrador);
         foreach (var asientoId in new[] { original, reversa, borrador })
         {
             var ex = await Assert.ThrowsAsync<PostgresException>(() =>
-                _pg.Data.EjecutarAsync("CALL sp_reversar_asiento($1, $2)", asientoId, e.UsuarioId));
+                _pg.Data.EjecutarAsync("CALL sp_reversar_asiento($1, $2, $3)", asientoId, administrador, "Motivo de prueba"));
             Assert.Equal("55000", ex.SqlState);
         }
 
@@ -270,7 +324,7 @@ public class LibrosControllerTests
         var numero = $"REV-{TestData.Sufijo()}";
         var original = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 100m, new DateOnly(2025, 3, 1), new OpcionesAsiento(Numero: numero));
 
-        var reversa = await _pg.Data.ReversarAsientoAsync(original, e.UsuarioId);
+        var reversa = await _pg.Data.ReversarAsientoAsync(original);
 
         var estadoOriginal = await _pg.Data.ScalarAsync<string>("SELECT estado FROM asientocontable WHERE id = $1", original);
         Assert.Equal("Anulado", estadoOriginal);
@@ -285,12 +339,15 @@ public class LibrosControllerTests
         var numero = Guid.NewGuid().ToString("N")[..30];
         var original = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 100m, new DateOnly(2025, 3, 1), new OpcionesAsiento(Numero: numero));
 
-        var reversa = await _pg.Data.ReversarAsientoAsync(original, e.UsuarioId);
+        var reversa = await _pg.Data.ReversarAsientoAsync(original);
 
         var numeroReversa = await _pg.Data.ScalarAsync<string>("SELECT numero FROM asientocontable WHERE id = $1", reversa);
         Assert.Equal(30, numeroReversa.Length);
         Assert.Equal($"REV-{numero[..26]}", numeroReversa);
     }
+
+    private static JsonElement FilaDiario(JsonElement diario, int asientoId) =>
+        diario.EnumerateArray().Single(x => x.GetProperty("id").GetInt32() == asientoId);
 
     private static JsonElement FilaBalance(JsonElement balance, int cuentaId) =>
         balance.EnumerateArray().Single(x => x.GetProperty("cuentaId").GetInt32() == cuentaId);

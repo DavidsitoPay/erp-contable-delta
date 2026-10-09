@@ -1,6 +1,6 @@
 # Plan de pruebas — Test Cases (Azure Boards)
 
-Los Test Cases son work items de tipo **Test Case** en Azure Boards (organización `drecinosg2`, proyecto `erp-contable-delta`), con pasos Action / Expected Result y prioridad 1–4 (1 = más alto). Cada uno es **hijo** de la Historia de Usuario (PBI) que verifica, no se usa el link type "Tests". Hay 19, uno por historia (En-F1-Hn) de `docs/backlog-features-historias.md`.
+Los Test Cases son work items de tipo **Test Case** en Azure Boards (organización `drecinosg2`, proyecto `erp-contable-delta`), con pasos Action / Expected Result y prioridad 1–4 (1 = más alto). Cada uno es **hijo** de la Historia de Usuario (PBI) que verifica, no se usa el link type "Tests". Hay 20, uno por historia (En-F1-Hn) de `docs/backlog-features-historias.md`.
 
 La organización está en el nivel gratuito de Azure DevOps, que no incluye el hub "Test Plans" (planes/suites formales); por eso el plan se gestiona con work items Test Case enlazados a sus historias.
 
@@ -29,10 +29,12 @@ Los casos implementados están automatizados con xUnit (backend) y Vitest (front
 | TC-17 - Validación de archivo CSV (RN-11) | 184 | E9-F1-H1 | Verifica que un archivo CSV con errores se rechace por completo antes de insertar cualquier dato. | 1) Importar CSV con una fila inválida → error reportado con fila/columna, nada se inserta. 2) Importar CSV válido → todas las filas se insertan. | 2 | Design | Pendiente: funcionalidad no implementada |
 | TC-18 - Inserción transaccional (todo o nada) | 185 | E9-F1-H2 | Verifica que la importación de datos sea atómica (todo o nada) y quede registrada en auditoría. | 1) Importar archivo donde falla una fila intermedia → ninguna fila queda insertada (rollback completo). 2) Importación exitosa → queda registrada en `BitacoraAuditoria`. | 2 | Design | Pendiente: funcionalidad no implementada |
 | TC-19 - Balance y libro mayor jerárquicos | 270 | E3-F1 (PBI 269) | Verifica que las cuentas de mayor acumulen el saldo de sus subcuentas y que su libro mayor consolide los movimientos de ellas. | 1) `GET` balance de saldos con una cuenta padre y dos subcuentas con movimientos → el padre acumula débitos/créditos de sus subcuentas, con `nivel` y `esHoja` correctos. 2) `GET` libro mayor de la cuenta padre → lista los movimientos de ambas subcuentas con `cuentaCodigo` y saldo acumulado. | 2 | Closed | `LibrosControllerTests.BalanceSaldos_ConSubcuentas_AcumulaEnElPadreYExponeLaJerarquia`, `Mayor_ConCuentaPadre_IncluyeLosMovimientosDeSusSubcuentas`, `CuentasContablesControllerTests` (409 por padre con saldo), `BalanceJerarquicoEsquemaTests`; frontend `BalanceSaldos.test.jsx`, `LibroMayor.test.jsx` |
+| TC-20 - Reversión de asientos | 272 | E2-F1-H3 | Verifica que solo el Administrador reverse un asiento confirmado, con motivo, y que el original y la reversa neteen a cero. | 1) `POST /api/asientos/{id}/reversar` con perfil Administrador y motivo → `200`, original Anulado, reversa Confirmada con líneas invertidas y bitácora con el motivo. 2) Mismo endpoint con perfil Contador → `403`. 3) Sin motivo → `400`. 4) Asiento ya reversado, reversa, periodo cerrado o vinculado a CxC/CxP/tesorería → `409`. | 1 | Design | `AsientosControllerTests.Reversar_ComoAdministradorConMotivo_Responde200AnulaOriginalYCreaReversaConfirmada` (pendiente de cierre en CI) |
 
 ## Resumen de cobertura
 
 - **17 automatizados** (TC-01 a TC-16, TC-19): estado Closed, AutomationStatus=Automated, ejecutados en CI.
+- **1 automatizado pendiente de cierre** (TC-20): estado Design hasta que CI confirme la ejecución.
 - **2 pendientes** (TC-17, TC-18): estado Design; dependen de la importación CSV, aún no implementada.
 
 ## Datos demo en producción
