@@ -81,11 +81,11 @@ public class ContrapartesControllerTests
     {
         var client = _pg.CreateApiClient(await _pg.Data.CrearUsuarioAsync());
 
-        var response = await client.PostAsJsonAsync("/api/contrapartes", Payload("Cliente", "Cliente nuevo", "1234567-8", "Zona 1"));
+        var response = await client.PostAsJsonAsync("/api/contrapartes", Payload("Cliente", "Cliente nuevo", "1234567-9", "Zona 1"));
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var body = await response.LeerJsonAsync();
         Assert.True(body.GetProperty("id").GetInt32() > 0);
-        Assert.Equal("1234567-8", body.GetProperty("nit").GetString());
+        Assert.Equal("1234567-9", body.GetProperty("nit").GetString());
     }
 
     [Fact]
@@ -108,12 +108,12 @@ public class ContrapartesControllerTests
         var id = await _pg.Data.CrearContraparteAsync("Cliente");
         var client = _pg.CreateApiClient(await _pg.Data.CrearUsuarioAsync());
 
-        var response = await client.PutAsJsonAsync($"/api/contrapartes/{id}", Payload("Proveedor", "Nombre nuevo", "9999", "Dir nueva"));
+        var response = await client.PutAsJsonAsync($"/api/contrapartes/{id}", Payload("Proveedor", "Nombre nuevo", "1234567-9", "Dir nueva"));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.LeerJsonAsync();
         Assert.Equal("Cliente", body.GetProperty("tipo").GetString());
         Assert.Equal("Nombre nuevo", body.GetProperty("nombre").GetString());
-        Assert.Equal("9999", body.GetProperty("nit").GetString());
+        Assert.Equal("1234567-9", body.GetProperty("nit").GetString());
         Assert.Equal("Dir nueva", body.GetProperty("direccion").GetString());
 
         var responseNombreVacio = await client.PutAsJsonAsync($"/api/contrapartes/{id}", Payload("Cliente", ""));

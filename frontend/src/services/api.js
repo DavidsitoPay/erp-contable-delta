@@ -108,4 +108,24 @@ export const reportesApi = {
   estadoResultados: (periodoId) => api.get("/reportes/estado-resultados", { params: { periodoId } }),
 };
 
+export const configuracionFiscalApi = {
+  obtener: () => api.get("/configuracion-fiscal"),
+  actualizar: (configuracion) => api.put("/configuracion-fiscal", configuracion),
+};
+
+export const impuestosApi = {
+  listar: (filtros = {}) => api.get("/impuestos", { params: filtros }),
+  obtener: (id) => api.get(`/impuestos/${idRuta(id)}`),
+  crear: (impuesto) => api.post("/impuestos", impuesto),
+  actualizar: (id, cambios) => api.put(`/impuestos/${idRuta(id)}`, cambios),
+  desactivar: (id) => api.delete(`/impuestos/${idRuta(id)}`),
+};
+
+const consultaLibroFiscal = (tipo) => (anio, mes) => api.get(`/libros/fiscal/${tipo}`, { params: { anio, mes } });
+
+export const librosFiscalesApi = {
+  ventas: consultaLibroFiscal("ventas"),
+  compras: consultaLibroFiscal("compras"),
+};
+
 export default api;

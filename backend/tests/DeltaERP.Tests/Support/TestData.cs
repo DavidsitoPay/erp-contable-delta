@@ -12,7 +12,13 @@ public sealed record Escenario(
     int CuentaCxP,
     int CuentaIngreso,
     int CuentaGasto,
-    int CentroCostoId);
+    int CentroCostoId,
+    int CuentaIvaDebito,
+    int CuentaIvaCredito,
+    int ImpuestoIvaId,
+    int ImpuestoExentoId,
+    int ImpuestoSinCreditoId,
+    int ImpuestoPequenoId);
 
 public sealed record EscenarioTesoreria(int Usuario, int Periodo, DateOnly Inicio, int CuentaBancaria, int CuentaContableBanco, int Contrapartida);
 
@@ -26,6 +32,15 @@ public record CuentasMovimiento(int CuentaBancariaId, int CuentaContableBancoId,
 
 public sealed record OpcionesAsiento(string Estado = "Confirmado", int? CentroCostoId = null, string? Numero = null);
 
+public sealed record OpcionesImpuesto(
+    string Tipo = "IVA_GENERAL",
+    decimal Tasa = 12m,
+    string AplicaA = "AMBOS",
+    bool GeneraCredito = true,
+    DateOnly? Desde = null,
+    DateOnly? Hasta = null,
+    bool Activo = true);
+
 // Bitácora, saldos, asientos y usuarios son inmutables: no hay limpieza posible, por
 // eso cada prueba siembra filas propias con sufijos únicos y nunca cuenta filas globales.
 public sealed class TestData
@@ -34,6 +49,9 @@ public sealed class TestData
     private static int _anioPeriodoUnico = 2099;
     private static int _anioPeriodoHistorico = 1900;
     public static readonly DateOnly FechaSinPeriodo = new(1990, 6, 15);
+    public const string NitValido = "1234567-9";
+    public const string CodigoCuentaIvaDebito = "T-IVA-DEBITO";
+    public const string CodigoCuentaIvaCredito = "T-IVA-CREDITO";
 
     public TestData(NpgsqlDataSource db)
     {
@@ -68,7 +86,48 @@ public sealed class TestData
     }
 
     public Task<int> CrearContraparteAsync(string tipo) =>
-        ScalarAsync<int>("INSERT INTO contraparte (tipo, nombre) VALUES ($1, $2) RETURNING id", tipo, $"{tipo} {Sufijo()}");
+        CrearContraparteFiscalAsync(tipo, "GENERAL", tipo == "Proveedor" ? NitValido : null);
+
+    public Task<int> CrearContraparteFiscalAsync(string tipo, string regimenIva, string? nit) =>
+        ScalarAsync<int>(
+            "INSERT INTO contraparte (tipo, nombre, nit, regimen_iva) VALUES ($1, $2, $3::varchar, $4) RETURNING id",
+            tipo, $"{tipo} {Sufijo()}", (object?)nit ?? DBNull.Value, regimenIva);
+
+    public async Task SembrarConfiguracionFiscalAsync()
+    {
+        await EjecutarAsync(
+            "INSERT INTO cuentacontable (codigo, nombre, tipo, naturaleza) VALUES ($1, 'IVA débito fiscal (pruebas)', 'Pasivo', 'Acreedora'), ($2, 'IVA crédito fiscal (pruebas)', 'Activo', 'Deudora')",
+            CodigoCuentaIvaDebito, CodigoCuentaIvaCredito);
+        await RestaurarConfiguracionFiscalAsync();
+    }
+
+    public Task RestaurarConfiguracionFiscalAsync() =>
+        EjecutarAsync(
+            "UPDATE configuracionfiscal SET nit_empresa = $1, nombre_legal = 'Delta de Pruebas, S.A.', regimen_isr = 'UTILIDADES', agente_retencion_iva = FALSE, tipo_agente_iva = NULL, " +
+            "cuenta_iva_debito_id = (SELECT id FROM cuentacontable WHERE codigo = $2), cuenta_iva_credito_id = (SELECT id FROM cuentacontable WHERE codigo = $3) WHERE id = 1",
+            NitValido, CodigoCuentaIvaDebito, CodigoCuentaIvaCredito);
+
+    public Task ConfigurarCuentasFiscalesAsync(int? debitoId, int? creditoId) =>
+        EjecutarAsync(
+            "UPDATE configuracionfiscal SET cuenta_iva_debito_id = $1::int, cuenta_iva_credito_id = $2::int WHERE id = 1",
+            (object?)debitoId ?? DBNull.Value, (object?)creditoId ?? DBNull.Value);
+
+    public Task<int> CuentaPorCodigoAsync(string codigo) =>
+        ScalarAsync<int>("SELECT id FROM cuentacontable WHERE codigo = $1", codigo);
+
+    public Task<int> ImpuestoPorCodigoAsync(string codigo) =>
+        ScalarAsync<int>("SELECT id FROM impuesto WHERE codigo = $1", codigo);
+
+    public Task<int> CrearImpuestoAsync(OpcionesImpuesto? opciones = null)
+    {
+        opciones ??= new OpcionesImpuesto();
+        var sufijo = Sufijo();
+        return ScalarAsync<int>(
+            "INSERT INTO impuesto (codigo, nombre, tipo, tasa, aplica_a, genera_credito, articulo_legal, vigente_desde, vigente_hasta, activo) " +
+            "VALUES ($1, $2, $3, $4, $5, $6, 'Impuesto de prueba', $7, $8::date, $9) RETURNING id",
+            $"T{sufijo}", $"Impuesto {sufijo}", opciones.Tipo, opciones.Tasa, opciones.AplicaA, opciones.GeneraCredito,
+            opciones.Desde ?? new DateOnly(2020, 1, 1), (object?)opciones.Hasta ?? DBNull.Value, opciones.Activo);
+    }
 
     public Task<int> CrearCuentaAsync(string tipo, string naturaleza) =>
         ScalarAsync<int>(
@@ -147,7 +206,13 @@ public sealed class TestData
         CuentaCxP: await CrearCuentaAsync("Pasivo", "Acreedora"),
         CuentaIngreso: await CrearCuentaAsync("Ingreso", "Acreedora"),
         CuentaGasto: await CrearCuentaAsync("Gasto", "Deudora"),
-        CentroCostoId: await CrearCentroCostoAsync());
+        CentroCostoId: await CrearCentroCostoAsync(),
+        CuentaIvaDebito: await CuentaPorCodigoAsync(CodigoCuentaIvaDebito),
+        CuentaIvaCredito: await CuentaPorCodigoAsync(CodigoCuentaIvaCredito),
+        ImpuestoIvaId: await ImpuestoPorCodigoAsync("IVA_GENERAL"),
+        ImpuestoExentoId: await ImpuestoPorCodigoAsync("EXENTO_EXPORTACION"),
+        ImpuestoSinCreditoId: await ImpuestoPorCodigoAsync("IVA_GENERAL_SIN_CREDITO"),
+        ImpuestoPequenoId: await ImpuestoPorCodigoAsync("PEQUENO_CONTRIBUYENTE"));
 
     public async Task<(int Id, string Email, string Password)> CrearUsuarioConCredencialesAsync(string perfil, string password, bool activo = true)
     {
@@ -211,6 +276,19 @@ public sealed class TestData
         await command.ExecuteNonQueryAsync();
     }
 
+    public async Task<List<(int Cuenta, decimal Debito, decimal Credito)>> LineasDeAsientoAsync(int asientoId)
+    {
+        await using var command = _db.CreateCommand("SELECT cuenta_id, debito, credito FROM lineaasiento WHERE asiento_id = $1 ORDER BY id");
+        command.Parameters.Add(new NpgsqlParameter { Value = asientoId });
+        await using var lector = await command.ExecuteReaderAsync();
+        var lineas = new List<(int, decimal, decimal)>();
+        while (await lector.ReadAsync())
+        {
+            lineas.Add((lector.GetInt32(0), lector.GetDecimal(1), lector.GetDecimal(2)));
+        }
+        return lineas;
+    }
+
     public async Task<int> ReversarAsientoAsync(int asientoId, string motivo = "Reversa de prueba")
     {
         var administrador = await CrearUsuarioAsync("Administrador del sistema");
@@ -220,12 +298,12 @@ public sealed class TestData
 
     public Task<int> VincularFacturaCxCAsync(int clienteId, int asientoId, DateOnly fecha) =>
         ScalarAsync<int>(
-            "INSERT INTO documentocxc (numero, tipo_documento, cliente_id, fecha, fecha_vencimiento, monto_total, estado, asiento_id) VALUES ($1, 'Factura', $2, $3, $3, 100, 'Vigente', $4) RETURNING id",
+            "INSERT INTO documentocxc (numero, tipo_documento, cliente_id, fecha, fecha_vencimiento, monto_total, monto_base, calculo_legado, estado, asiento_id) VALUES ($1, 'Factura', $2, $3, $3, 100, 100, TRUE, 'Vigente', $4) RETURNING id",
             $"F-{Sufijo()}", clienteId, fecha, asientoId);
 
     public Task<int> VincularFacturaCxPAsync(int proveedorId, int asientoId, DateOnly fecha) =>
         ScalarAsync<int>(
-            "INSERT INTO documentocxp (numero, tipo_documento, proveedor_id, fecha, fecha_vencimiento, monto_total, estado, asiento_id) VALUES ($1, 'Factura', $2, $3, $3, 100, 'Vigente', $4) RETURNING id",
+            "INSERT INTO documentocxp (numero, tipo_documento, proveedor_id, fecha, fecha_vencimiento, monto_total, monto_base, calculo_legado, estado, asiento_id) VALUES ($1, 'Factura', $2, $3, $3, 100, 100, TRUE, 'Vigente', $4) RETURNING id",
             $"F-{Sufijo()}", proveedorId, fecha, asientoId);
 
     public async Task<int> SembrarAsientoDeTesoreriaAsync()

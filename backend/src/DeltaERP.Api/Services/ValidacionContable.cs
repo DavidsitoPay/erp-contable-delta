@@ -1,3 +1,4 @@
+using DeltaERP.Api.Models;
 using DeltaERP.Domain.Entities;
 using DeltaERP.Domain.Rules;
 using DeltaERP.Infrastructure.Data;
@@ -20,6 +21,52 @@ public class ValidacionContable
         return await _db.CuentasContables.Where(c => idsCuenta.Contains(c.Id)).ToDictionaryAsync(c => c.Id);
     }
 
+    public async Task<Dictionary<int, Impuesto>> ObtenerImpuestosAsync(IEnumerable<ILineaFactura> lineas)
+    {
+        var idsImpuesto = lineas.Select(l => l.ImpuestoId).Distinct().ToList();
+        return await _db.Impuestos.Where(i => idsImpuesto.Contains(i.Id)).ToDictionaryAsync(i => i.Id);
+    }
+
+    public async Task<IDocumentoFactura?> ObtenerDocumentoAsync(bool esVenta, int id)
+    {
+        if (esVenta)
+        {
+            return await _db.DocumentosCxC.FindAsync(id);
+        }
+        return await _db.DocumentosCxP.FindAsync(id);
+    }
+
+    public async Task<decimal> ObtenerSaldoAsync(PerfilFactura perfil, int id) =>
+        perfil.EsVenta
+            ? await _db.SaldosDocumentoCxC.Where(s => s.DocumentoId == id).Select(s => s.SaldoPendiente).FirstOrDefaultAsync()
+            : await _db.SaldosDocumentoCxP.Where(s => s.DocumentoId == id).Select(s => s.SaldoPendiente).FirstOrDefaultAsync();
+
+    public async Task<FacturaDetalle> ObtenerDetalleAsync(IDocumentoFactura documento, PerfilFactura perfil)
+    {
+        var saldo = await ObtenerSaldoAsync(perfil, documento.Id);
+        var referencias = await ObtenerReferenciasAsync(documento, saldo, perfil);
+        return FacturaDetalle.Desde(documento, referencias, perfil.ClaveTercero, documento.TerceroId);
+    }
+
+    private async Task<ReferenciasDetalle> ObtenerReferenciasAsync(IDocumentoFactura documento, decimal saldoPendiente, PerfilFactura perfil)
+    {
+        var origen = documento.DocumentoOrigenId is { } origenId ? await ObtenerDocumentoAsync(perfil.EsVenta, origenId) : null;
+        return new ReferenciasDetalle(saldoPendiente, await ObtenerCuentasAsync(documento.Lineas), await ObtenerImpuestosAsync(documento.Lineas), origen);
+    }
+
+    private async Task<string?> ValidarPeriodoDelDocumentoAsync(IDocumentoFactura documento)
+    {
+        var error = await ValidarPeriodoAbiertoAsync(documento.PeriodoId);
+        if (error is not null)
+        {
+            return error;
+        }
+        var periodo = await _db.PeriodosContables.FindAsync(documento.PeriodoId);
+        return documento.Fecha < periodo!.FechaInicio || documento.Fecha > periodo.FechaFin
+            ? "La fecha del documento no pertenece al periodo contable seleccionado."
+            : null;
+    }
+
     // Devuelve el tercero validado para el detalle de auditoría, o el primer error.
     public async Task<(Contraparte? Tercero, string? Error)> ValidarFacturaAsync(IDocumentoFactura documento, int terceroId, PerfilFactura perfil)
     {
@@ -35,7 +82,7 @@ public class ValidacionContable
             return (null, errorTercero);
         }
 
-        error = await ValidarPeriodoAbiertoAsync(documento.PeriodoId)
+        error = await ValidarPeriodoDelDocumentoAsync(documento)
             ?? await ValidarCuentasAsync(documento)
             ?? await ValidarCuentaControlAsync(documento.CuentaControlId, perfil)
             ?? await ValidarCentrosCostoAsync(documento);

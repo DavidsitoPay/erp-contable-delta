@@ -54,6 +54,7 @@ FROM (VALUES
     ('1.1.02', 'Bancos',                             '1.1'),
     ('1.1.03', 'Clientes (cuentas por cobrar)',      '1.1'),
     ('1.1.04', 'Inventario de mercaderías',          '1.1'),
+    ('1.1.05', 'IVA crédito fiscal',                 '1.1'),
     ('1.2.01', 'Mobiliario y equipo',                '1.2'),
     ('2.1.01', 'Proveedores (cuentas por pagar)',    '2.1'),
     ('2.1.02', 'IVA por pagar',                      '2.1'),
@@ -95,6 +96,12 @@ INSERT INTO contraparte (tipo, nombre, nit, direccion) VALUES
     ('Proveedor', 'Comercial Agrícola Maya, S.A.',                '6693821-0', '2a. Calle 4-15, Zona 3, Cobán, Alta Verapaz'),
     ('Proveedor', 'Seguros y Fianzas Chapín, S.A.',               '3017746-K', '7a. Avenida 11-19, Zona 9, Ciudad de Guatemala');
 
+UPDATE configuracionfiscal
+SET cuenta_iva_debito_id  = (SELECT id FROM cuentacontable WHERE codigo = '2.1.02'),
+    cuenta_iva_credito_id = (SELECT id FROM cuentacontable WHERE codigo = '1.1.05'),
+    actualizado_en        = now()
+WHERE id = 1;
+
 -- 4. Funciones auxiliares temporales (se descartan al final) ----------------------
 
 CREATE FUNCTION pg_temp.demo_asiento(p_numero TEXT, p_fecha DATE, p_email TEXT, p_estado TEXT, p_lineas JSONB)
@@ -128,25 +135,44 @@ BEGIN
     RETURN v_id;
 END $$;
 
--- p_lineas: [descripcion, cantidad, precio_unitario, porcentaje_impuesto, centro, cuenta]
+-- p_lineas: [descripcion, cantidad, precio_unitario_sin_iva, tasa_iva, centro, cuenta]
 CREATE FUNCTION pg_temp.demo_factura(p_sigla TEXT, p_numero TEXT, p_tercero TEXT, p_fecha DATE, p_venc DATE,
                                      p_email TEXT, p_control TEXT, p_lineas JSONB)
 RETURNS INT LANGUAGE plpgsql AS $$
 DECLARE
-    v_es_cxc    BOOLEAN := (p_sigla = 'CxC');
-    v_tipo      TEXT := CASE WHEN p_sigla = 'CxC' THEN 'Cliente' ELSE 'Proveedor' END;
-    v_usuario   INT;
-    v_periodo   INT;
-    v_tercero   INT;
-    v_monto     NUMERIC;
-    v_asiento   INT;
-    v_documento INT;
+    v_es_cxc     BOOLEAN := (p_sigla = 'CxC');
+    v_tipo       TEXT := CASE WHEN p_sigla = 'CxC' THEN 'Cliente' ELSE 'Proveedor' END;
+    v_usuario    INT;
+    v_periodo    INT;
+    v_tercero    INT;
+    v_impuesto   INT;
+    v_cuenta_iva INT;
+    v_calculo    JSONB;
+    v_monto      NUMERIC;
+    v_iva        NUMERIC;
+    v_asiento    INT;
+    v_documento  INT;
+    v_uuid       UUID := md5(random()::TEXT || clock_timestamp()::TEXT)::UUID;
+    v_numero_dte TEXT := regexp_replace(p_numero, '\D', '', 'g');
+    v_cert       TIMESTAMPTZ := (p_fecha + TIME '10:00') AT TIME ZONE 'America/Guatemala';
 BEGIN
     SELECT id INTO STRICT v_usuario FROM usuario WHERE email = p_email;
     SELECT id INTO STRICT v_periodo FROM periodocontable WHERE p_fecha BETWEEN fecha_inicio AND fecha_fin;
     SELECT id INTO STRICT v_tercero FROM contraparte WHERE tipo = v_tipo AND nombre = p_tercero;
-    SELECT SUM(ROUND((e->>1)::NUMERIC * (e->>2)::NUMERIC * (1 + (e->>3)::NUMERIC / 100), 2))
-    INTO v_monto FROM jsonb_array_elements(p_lineas) e;
+    SELECT id INTO STRICT v_impuesto FROM impuesto WHERE codigo = 'IVA_GENERAL';
+    SELECT CASE WHEN v_es_cxc THEN cuenta_iva_debito_id ELSE cuenta_iva_credito_id END
+    INTO STRICT v_cuenta_iva FROM configuracionfiscal;
+
+    SELECT jsonb_agg(jsonb_build_array(e.l->>0, (e.l->>1)::NUMERIC, p.precio, (e.l->>3)::NUMERIC,
+                                       e.l->>4, e.l->>5, t.total, i.iva) ORDER BY e.n)
+    INTO v_calculo
+    FROM jsonb_array_elements(p_lineas) WITH ORDINALITY AS e(l, n)
+    CROSS JOIN LATERAL (SELECT ROUND((e.l->>2)::NUMERIC * (1 + (e.l->>3)::NUMERIC / 100), 2) AS precio) p
+    CROSS JOIN LATERAL (SELECT ROUND((e.l->>1)::NUMERIC * p.precio, 2) AS total) t
+    CROSS JOIN LATERAL (SELECT ROUND(t.total * (e.l->>3)::NUMERIC / (100 + (e.l->>3)::NUMERIC), 2) AS iva) i;
+
+    SELECT SUM((c->>6)::NUMERIC), SUM((c->>7)::NUMERIC) INTO v_monto, v_iva
+    FROM jsonb_array_elements(v_calculo) c;
 
     INSERT INTO asientocontable (numero, fecha, periodo_id, monto, estado, usuario_id)
     VALUES (UPPER(p_sigla) || '-' || p_numero, p_fecha, v_periodo, v_monto, 'Confirmado', v_usuario)
@@ -159,32 +185,47 @@ BEGIN
 
     INSERT INTO lineaasiento (asiento_id, cuenta_id, centro_costo_id, debito, credito)
     SELECT v_asiento,
-           (SELECT id FROM cuentacontable WHERE codigo = e->>5),
-           (SELECT id FROM centrocosto WHERE codigo = e->>4),
-           CASE WHEN v_es_cxc THEN 0 ELSE ROUND((e->>1)::NUMERIC * (e->>2)::NUMERIC * (1 + (e->>3)::NUMERIC / 100), 2) END,
-           CASE WHEN v_es_cxc THEN ROUND((e->>1)::NUMERIC * (e->>2)::NUMERIC * (1 + (e->>3)::NUMERIC / 100), 2) ELSE 0 END
-    FROM jsonb_array_elements(p_lineas) e;
+           (SELECT id FROM cuentacontable WHERE codigo = c->>5),
+           (SELECT id FROM centrocosto WHERE codigo = c->>4),
+           CASE WHEN v_es_cxc THEN 0 ELSE (c->>6)::NUMERIC - (c->>7)::NUMERIC END,
+           CASE WHEN v_es_cxc THEN (c->>6)::NUMERIC - (c->>7)::NUMERIC ELSE 0 END
+    FROM jsonb_array_elements(v_calculo) c;
+
+    INSERT INTO lineaasiento (asiento_id, cuenta_id, centro_costo_id, debito, credito)
+    VALUES (v_asiento, v_cuenta_iva, NULL,
+            CASE WHEN v_es_cxc THEN 0 ELSE v_iva END,
+            CASE WHEN v_es_cxc THEN v_iva ELSE 0 END);
 
     IF v_es_cxc THEN
-        INSERT INTO documentocxc (numero, tipo_documento, cliente_id, fecha, fecha_vencimiento, monto_total, estado, asiento_id)
-        VALUES (p_numero, 'Factura', v_tercero, p_fecha, p_venc, v_monto, 'Vigente', v_asiento)
+        INSERT INTO documentocxc (numero, tipo_documento, cliente_id, fecha, fecha_vencimiento, monto_total, monto_base, monto_iva,
+                                  tipo_cambio_aplicado, estado, asiento_id, dte_uuid, dte_serie, dte_numero, dte_fecha_certificacion)
+        VALUES (p_numero, 'Factura', v_tercero, p_fecha, p_venc, v_monto, v_monto - v_iva, v_iva,
+                1, 'Vigente', v_asiento, v_uuid, 'DEMO', v_numero_dte, v_cert)
         RETURNING id INTO v_documento;
 
-        INSERT INTO lineadocumentocxc (documento_id, descripcion, cantidad, precio_unitario, porcentaje_impuesto, centro_costo_id, cuenta_contable_id)
-        SELECT v_documento, e->>0, (e->>1)::NUMERIC, (e->>2)::NUMERIC, (e->>3)::NUMERIC,
-               (SELECT id FROM centrocosto WHERE codigo = e->>4),
-               (SELECT id FROM cuentacontable WHERE codigo = e->>5)
-        FROM jsonb_array_elements(p_lineas) e;
+        INSERT INTO lineadocumentocxc (documento_id, descripcion, cantidad, precio_unitario, tasa_aplicada, impuesto_id,
+                                       monto_linea, monto_base, monto_iva, tipo_bien_servicio, centro_costo_id, cuenta_contable_id)
+        SELECT v_documento, c->>0, (c->>1)::NUMERIC, (c->>2)::NUMERIC, (c->>3)::NUMERIC, v_impuesto,
+               (c->>6)::NUMERIC, (c->>6)::NUMERIC - (c->>7)::NUMERIC, (c->>7)::NUMERIC,
+               CASE WHEN c->>5 IN ('4.1.01', '1.1.04', '1.2.01', '5.1.04') THEN 'BIEN' ELSE 'SERVICIO' END,
+               (SELECT id FROM centrocosto WHERE codigo = c->>4),
+               (SELECT id FROM cuentacontable WHERE codigo = c->>5)
+        FROM jsonb_array_elements(v_calculo) c;
     ELSE
-        INSERT INTO documentocxp (numero, tipo_documento, proveedor_id, fecha, fecha_vencimiento, monto_total, estado, asiento_id)
-        VALUES (p_numero, 'Factura', v_tercero, p_fecha, p_venc, v_monto, 'Vigente', v_asiento)
+        INSERT INTO documentocxp (numero, tipo_documento, proveedor_id, fecha, fecha_vencimiento, monto_total, monto_base, monto_iva,
+                                  tipo_cambio_aplicado, estado, asiento_id, dte_uuid, dte_serie, dte_numero, dte_fecha_certificacion)
+        VALUES (p_numero, 'Factura', v_tercero, p_fecha, p_venc, v_monto, v_monto - v_iva, v_iva,
+                1, 'Vigente', v_asiento, v_uuid, 'DEMO', v_numero_dte, v_cert)
         RETURNING id INTO v_documento;
 
-        INSERT INTO lineadocumentocxp (documento_id, descripcion, cantidad, precio_unitario, porcentaje_impuesto, centro_costo_id, cuenta_contable_id)
-        SELECT v_documento, e->>0, (e->>1)::NUMERIC, (e->>2)::NUMERIC, (e->>3)::NUMERIC,
-               (SELECT id FROM centrocosto WHERE codigo = e->>4),
-               (SELECT id FROM cuentacontable WHERE codigo = e->>5)
-        FROM jsonb_array_elements(p_lineas) e;
+        INSERT INTO lineadocumentocxp (documento_id, descripcion, cantidad, precio_unitario, tasa_aplicada, impuesto_id,
+                                       monto_linea, monto_base, monto_iva, tipo_bien_servicio, centro_costo_id, cuenta_contable_id)
+        SELECT v_documento, c->>0, (c->>1)::NUMERIC, (c->>2)::NUMERIC, (c->>3)::NUMERIC, v_impuesto,
+               (c->>6)::NUMERIC, (c->>6)::NUMERIC - (c->>7)::NUMERIC, (c->>7)::NUMERIC,
+               CASE WHEN c->>5 IN ('4.1.01', '1.1.04', '1.2.01', '5.1.04') THEN 'BIEN' ELSE 'SERVICIO' END,
+               (SELECT id FROM centrocosto WHERE codigo = c->>4),
+               (SELECT id FROM cuentacontable WHERE codigo = c->>5)
+        FROM jsonb_array_elements(v_calculo) c;
     END IF;
 
     CALL sp_registrar_auditoria(v_usuario, 'registrar_factura_' || LOWER(p_sigla), 'documento' || LOWER(p_sigla),

@@ -8,21 +8,15 @@ public enum LadoControl
     Credito,
 }
 
-// Único lugar donde CxC (debita la cuenta de control, acredita las líneas) y CxP
-// (acredita la cuenta de control, debita las líneas) se diferencian.
 public static class AsientoFacturaBuilder
 {
-    // Redondeo por línea antes de sumar: el total coincide centavo a centavo con
-    // la suma de las líneas, evitando falsos "no cuadra" en trg_validar_partida_doble.
-    public static decimal MontoLinea(ILineaFactura linea) =>
-        Math.Round(linea.Cantidad * linea.PrecioUnitario * (1 + linea.PorcentajeImpuesto / 100m), 2, MidpointRounding.AwayFromZero);
-
-    // RN-01: cuadra por construcción (el lado de control suma lo que el otro lado).
-    public static AsientoContable Construir(string prefijo, IDocumentoFactura documento, LadoControl ladoControl, int usuarioId)
+    // RN-01: cuadra por construcción (Base + IVA = MontoLinea en cada línea).
+    public static AsientoContable Construir(
+        string prefijo, IDocumentoFactura documento, ResumenFiscal resumen, LadoControl ladoControl, int usuarioId, int? cuentaIvaId)
     {
-        var montosLinea = documento.Lineas.Select(MontoLinea).ToList();
-        var montoTotal = montosLinea.Sum();
-        var controlEsDebito = ladoControl == LadoControl.Debito;
+        var esNotaCredito = documento.TipoDocumento == TiposDocumento.NotaCredito;
+        var controlEsDebito = (ladoControl == LadoControl.Debito) != esNotaCredito;
+        var ivaSeparado = (ResultadoLinea r) => ladoControl == LadoControl.Debito || r.IvaAcreditable;
 
         var asiento = new AsientoContable
         {
@@ -32,24 +26,30 @@ public static class AsientoFacturaBuilder
             Estado = "Confirmado",
             UsuarioId = usuarioId,
             TipoCambioAplicado = documento.TipoCambioAplicado,
-            Monto = montoTotal,
+            Monto = resumen.Total,
         };
-        asiento.Lineas.Add(new LineaAsiento
+        asiento.Lineas.Add(NuevaLinea(documento.CuentaControlId, null, resumen.Total, controlEsDebito));
+        for (var i = 0; i < resumen.Lineas.Count; i++)
         {
-            CuentaId = documento.CuentaControlId,
-            Debito = controlEsDebito ? montoTotal : 0,
-            Credito = controlEsDebito ? 0 : montoTotal,
-        });
-        for (var i = 0; i < montosLinea.Count; i++)
+            var calculo = resumen.Lineas[i];
+            var monto = ivaSeparado(calculo) ? calculo.Base : calculo.Base + calculo.Iva;
+            asiento.Lineas.Add(NuevaLinea(documento.Lineas[i].CuentaContableId, documento.Lineas[i].CentroCostoId, monto, !controlEsDebito));
+        }
+
+        var iva = resumen.Lineas.Where(ivaSeparado).Sum(r => r.Iva);
+        if (iva > 0)
         {
-            asiento.Lineas.Add(new LineaAsiento
-            {
-                CuentaId = documento.Lineas[i].CuentaContableId,
-                CentroCostoId = documento.Lineas[i].CentroCostoId,
-                Debito = controlEsDebito ? 0 : montosLinea[i],
-                Credito = controlEsDebito ? montosLinea[i] : 0,
-            });
+            var cuentaIva = cuentaIvaId ?? throw new InvalidOperationException("Falta la cuenta de IVA para asentar la factura.");
+            asiento.Lineas.Add(NuevaLinea(cuentaIva, null, iva, !controlEsDebito));
         }
         return asiento;
     }
+
+    private static LineaAsiento NuevaLinea(int cuentaId, int? centroCostoId, decimal monto, bool esDebito) => new()
+    {
+        CuentaId = cuentaId,
+        CentroCostoId = centroCostoId,
+        Debito = esDebito ? monto : 0,
+        Credito = esDebito ? 0 : monto,
+    };
 }

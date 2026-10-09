@@ -11,10 +11,11 @@ public static class ErroresPostgres
         ["P0001"] = StatusCodes.Status403Forbidden,
         ["P0002"] = StatusCodes.Status404NotFound,
         ["55000"] = StatusCodes.Status409Conflict,
+        ["23514"] = StatusCodes.Status400BadRequest,
     };
 
     // Los procedimientos almacenados señalan perfil no autorizado (P0001), inexistente (P0002)
-    // y estado inválido (55000) con RAISE EXCEPTION; cualquier otro error se propaga.
+    // estado inválido (55000) y regla de check no cumplida (23514) con RAISE EXCEPTION; cualquier otro error se propaga.
     public static async Task<ObjectResult?> TraducirProcedimientoAsync(Func<Task> invocar)
     {
         try

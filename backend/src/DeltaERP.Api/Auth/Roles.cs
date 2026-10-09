@@ -16,4 +16,5 @@ public static class Roles
 
     public const string GestionTesoreria = $"{Administrador},{Contador}";
     public const string RegistroPagos = $"{Administrador},{Contador}";
+    public const string ReportesFiscales = $"{Administrador},{Contador}";
 }

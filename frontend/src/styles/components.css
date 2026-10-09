@@ -649,3 +649,32 @@ input[type="radio"]:focus-visible {
   flex-direction: column;
   gap: var(--space-md);
 }
+
+/* ---------- Fiscal: formularios, acciones y datos del DTE ---------- */
+
+.catalog-form .form-field {
+  margin-bottom: 0;
+}
+
+.acciones-fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.dte-datos {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  margin: 0 0 1rem;
+  padding: 0 0.875rem 0.5rem;
+}
+
+.dte-datos legend {
+  font-weight: 600;
+  padding: 0 0.5rem;
+}
+
+.nota-fiscal {
+  display: block;
+  color: var(--color-text-strong-muted);
+}

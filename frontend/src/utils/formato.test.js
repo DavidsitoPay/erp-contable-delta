@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatoMoneda, hoyIso, mensajeError, monto } from "./formato";
+import { formatoFechaHora, formatoMoneda, hoyIso, mensajeError, monto } from "./formato";
 
 describe("formato", () => {
   it("formatoMoneda usa siempre dos decimales", () => {
@@ -19,5 +19,9 @@ describe("formato", () => {
   it("mensajeError prefiere el error del servidor y cae al texto por defecto", () => {
     expect(mensajeError({ response: { data: { error: "Fallo" } } }, "Defecto")).toBe("Fallo");
     expect(mensajeError(new Error("x"), "Defecto")).toBe("Defecto");
+  });
+
+  it("formatoFechaHora muestra el año de una marca ISO", () => {
+    expect(formatoFechaHora("2026-10-09T15:00:00Z")).toMatch(/2026/);
   });
 });

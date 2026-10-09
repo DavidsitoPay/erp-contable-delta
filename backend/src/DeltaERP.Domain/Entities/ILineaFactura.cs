@@ -6,7 +6,12 @@ public interface ILineaFactura
     string? Descripcion { get; }
     decimal Cantidad { get; }
     decimal PrecioUnitario { get; }
-    decimal PorcentajeImpuesto { get; }
+    int ImpuestoId { get; }
+    string TipoBienServicio { get; }
+    decimal TasaAplicada { get; set; }
+    decimal MontoLinea { get; set; }
+    decimal MontoBase { get; set; }
+    decimal MontoIva { get; set; }
     int? CentroCostoId { get; }
     int CuentaContableId { get; }
 }

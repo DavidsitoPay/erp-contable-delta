@@ -50,6 +50,21 @@ Frontend disponible en `http://localhost:3000`, apuntando por defecto a
 Neon. La branch `development` de Neon es aparte — solo para desarrollo local (ver
 arriba), no la usa nada desplegado ni el pipeline.
 
+## Migraciones y pruebas
+
+`database/run_migrations.sh` aplica los scripts numerados (01–13) en orden, cada uno con
+`psql -v ON_ERROR_STOP=1 --single-transaction`. Un script ya aplicado no se edita: las
+correcciones van en un archivo nuevo.
+
+Pruebas del backend (xUnit, requieren un PostgreSQL vacío en la variable `TEST_PG_CONN`;
+en CI corren contra un servicio PostgreSQL de GitHub Actions):
+
+```bash
+dotnet test backend/tests/DeltaERP.Tests/DeltaERP.Tests.csproj
+```
+
+Pruebas del frontend: `cd frontend && npm test` (Vitest).
+
 ## Usuarios de prueba (seed)
 
 `database/06_seed_dev.sql` puebla un usuario por perfil. El nombre del archivo es
@@ -67,6 +82,7 @@ delta-erp-contable/
 ├── docs/                   # Arquitectura, reglas de negocio, diccionario de datos, diagramas
 ├── backend/                # API REST en ASP.NET Core (Api / Domain / Infrastructure)
 ├── frontend/                # SPA en React
-├── database/                # Scripts SQL (tablas, funciones, triggers, procedimientos, vistas)
-└── devops/                  # Dockerfile.backend (Azure Container Apps), azure-pipelines.yml
+├── database/                # Scripts SQL numerados 01–13 (tablas, funciones, triggers, procedimientos, vistas, tesorería, reportes, fiscal) y datos demo
+├── devops/                  # Dockerfile.backend (Azure Container Apps)
+└── .github/workflows/       # backend-build-check, sonarcloud-analysis, backend-deploy, frontend-alias
 ```

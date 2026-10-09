@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using DeltaERP.Api.Auth;
-using DeltaERP.Api.Models;
 using DeltaERP.Api.Services;
 using DeltaERP.Domain.Entities;
 using DeltaERP.Domain.Rules;
@@ -18,7 +17,9 @@ namespace DeltaERP.Api.Controllers;
 [Authorize]
 public class CxCController : ControllerBase
 {
-    private static readonly PerfilFactura Perfil = new("CxC", "Cliente", DocumentoCxC.TiposDocumentoValidos, "Activo", "Deudora", "Cuentas por cobrar", LadoControl.Debito);
+    private static readonly PerfilFactura Perfil = new(
+        "CxC", "Cliente", DocumentoCxC.TiposDocumentoValidos, "Activo", "Deudora", "Cuentas por cobrar", LadoControl.Debito,
+        Impuesto.AmbitoVentas, "IVA débito fiscal", true);
 
     private readonly DeltaErpDbContext _db;
     private readonly ValidacionContable _validacion;
@@ -52,8 +53,13 @@ public class CxCController : ControllerBase
                 d.Fecha,
                 d.FechaVencimiento,
                 d.MontoTotal,
+                d.MontoBase,
+                d.MontoIva,
                 d.Estado,
                 d.AsientoId,
+                d.DteSerie,
+                d.DteNumero,
+                d.CalculoLegado,
                 s.SaldoPendiente,
                 ClienteNombre = c.Nombre,
             }).ToListAsync();
@@ -70,10 +76,7 @@ public class CxCController : ControllerBase
             return NotFound();
         }
 
-        var saldo = await _db.SaldosDocumentoCxC.FirstOrDefaultAsync(s => s.DocumentoId == id);
-        var cuentas = await _validacion.ObtenerCuentasAsync(documento.Lineas);
-
-        return Ok(FacturaDetalle.Desde(documento, saldo?.SaldoPendiente ?? 0, cuentas, "clienteId", documento.ClienteId));
+        return Ok(await _validacion.ObtenerDetalleAsync(documento, Perfil));
     }
 
     [HttpPost("facturas")]
@@ -87,10 +90,19 @@ public class CxCController : ControllerBase
             return BadRequest(new { error });
         }
 
-        var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        await _facturas.RegistrarAsync(documento, cliente!, Perfil, usuarioId);
+        if (cliente is null)
+        {
+            return BadRequest(new { error });
+        }
 
-        return CreatedAtAction(nameof(ObtenerFactura), new { id = documento.Id }, documento);
+        var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var errorFiscal = await _facturas.RegistrarAsync(documento, cliente, Perfil, usuarioId);
+        if (errorFiscal is not null)
+        {
+            return StatusCode(errorFiscal.Estado, new { error = errorFiscal.Mensaje });
+        }
+
+        return CreatedAtAction(nameof(ObtenerFactura), new { id = documento.Id }, await _validacion.ObtenerDetalleAsync(documento, Perfil));
     }
 
     [HttpGet("pagos")]
@@ -137,7 +149,7 @@ public class CxCController : ControllerBase
         }
 
         var (cliente, errorCliente) = await _validacion.ValidarTerceroAsync(recibo.ClienteId, "Cliente");
-        if (errorCliente is not null)
+        if (cliente is null)
         {
             return BadRequest(new { error = errorCliente });
         }
@@ -147,7 +159,7 @@ public class CxCController : ControllerBase
             from d in _db.DocumentosCxC
             join s in _db.SaldosDocumentoCxC on d.Id equals s.DocumentoId
             where idsDocumento.Contains(d.Id)
-            select new DocumentoPagable(d.Id, d.Numero, d.ClienteId, d.Estado, s.SaldoPendiente, d.AsientoId)
+            select new DocumentoPagable(d.Id, d.Numero, d.ClienteId, d.Estado, s.SaldoPendiente, d.AsientoId, d.TipoDocumento == TiposDocumento.NotaCredito)
             ).ToListAsync();
 
         var errorAplicaciones = PagoRules.ValidarAplicaciones("cliente", recibo.ClienteId, aplicaciones, documentos);
@@ -157,7 +169,7 @@ public class CxCController : ControllerBase
         }
 
         var (bancario, errorBanco) = await _tesoreria.PrepararPagoAsync(Perfil, recibo.CuentaBancariaId, recibo.Fecha, documentos, aplicaciones);
-        if (errorBanco is not null)
+        if (bancario is null)
         {
             return BadRequest(new { error = errorBanco });
         }
@@ -176,7 +188,7 @@ public class CxCController : ControllerBase
             _db.RecibosPagoCliente.Add(recibo);
             await _db.SaveChangesAsync();
             await _tesoreria.RegistrarMovimientoDePagoAsync(
-                bancario!, Perfil, recibo.Fecha, $"Cobro {recibo.Id} - {cliente!.Nombre}", recibo.ReferenciaBancaria, recibo.Id, usuarioId);
+                bancario, Perfil, recibo.Fecha, $"Cobro {recibo.Id} - {cliente.Nombre}", recibo.ReferenciaBancaria, recibo.Id, usuarioId);
 
             return $"Recibo {recibo.Id} (cliente {cliente.Nombre}) registrado, monto {recibo.MontoTotal}";
         });

@@ -12,6 +12,10 @@ const CONFIG_CXP = {
   filtroCuentaControl: (c) => c.tipo === "Pasivo" && c.naturaleza === "Acreedora",
   etiquetaCuentaControl: "Cuenta de control (CxP)",
   etiquetaCuentaLinea: "Cuenta (gasto/activo)",
+  aplicaImpuestoA: "COMPRAS",
+  etiquetaIva: "IVA crédito",
+  dteObligatorio: false,
+  tipoBienDefecto: "BIEN",
 };
 
 function CuentasPorPagar() {
