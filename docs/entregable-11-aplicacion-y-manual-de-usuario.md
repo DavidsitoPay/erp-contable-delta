@@ -102,7 +102,7 @@ El alcance funcional comprende nueve módulos (M1 a M9). El incremento entregado
 
 El modelo de negocio es SaaS de uso interno. Las evidencias de planificación se encuentran en Azure Boards: nueve Epics, nueve Features, dieciocho historias de usuario y diecinueve Test Cases.
 
-[Captura 1: Azure Boards, vista Backlog del proyecto `erp-contable-delta` con los nueve Epics (M1 a M9) expandidos hasta nivel Feature. Perfil: miembro del proyecto con acceso a la organización `drecinosg2`. Acción previa: abrir Boards > Backlogs, seleccionar el nivel "Epics" y expandir los hijos. Demuestra: que el proceso seleccionado se descompuso en módulos, funcionalidades e historias de usuario trazables. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_backlogs]
+[Captura 1: Azure Boards, resultado de una consulta de tipo árbol con los nueve Epics (E1 a E9) y sus Features, con las columnas ID, Work Item Type, Title y State, donde se vean tanto los elementos en estado Done como los que siguen en New. Perfil: miembro del proyecto con acceso a la organización `drecinosg2`. Acción previa: abrir Boards > Queries > New query; elegir el tipo "Tree of work items"; en los filtros del elemento principal poner Work Item Type = Epic; en los filtros de los elementos vinculados poner Work Item Type = Feature; ejecutar la consulta y expandir todo. La vista Backlog no sirve para esta captura porque oculta los elementos terminados. Demuestra: que el proceso seleccionado se descompuso en módulos y funcionalidades trazables, y el avance de cada uno. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_queries]
 
 ---
 
