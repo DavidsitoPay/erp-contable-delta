@@ -72,13 +72,13 @@ Los enlaces públicos que respaldan la evidencia son los siguientes.
 
 ### Proceso actual
 
-Delta es una empresa guatemalteca fundada en 1991. Se dedica al análisis, diseño y desarrollo de sistemas de información. Según el documento *Información de la Empresa Delta*, cuenta con más de 45 colaboradores, ha atendido a más de 200 clientes y presta servicio a más de 2,000 usuarios.
+Delta es una empresa guatemalteca fundada en 1991. Se dedica al análisis, diseño y desarrollo de sistemas de información. Cuenta con más de 45 colaboradores, ha atendido a más de 200 clientes y presta servicio a más de 2,000 usuarios.
 
-El proceso seleccionado es el **control contable interno** de Delta. Este proceso comprende el registro de transacciones financieras, el control de cuentas por cobrar y por pagar, la conciliación bancaria y la emisión de reportes financieros. Actualmente se ejecuta con hojas de cálculo administradas de forma independiente, correo electrónico y, en algunos casos, documentación en papel. Los requerimientos de este control no están documentados. Residen en la práctica diaria del personal administrativo (*Información de la Empresa Delta*, sección FODA, debilidades).
+El proceso seleccionado es el **control contable interno** de Delta. Este proceso comprende el registro de transacciones financieras, el control de cuentas por cobrar y por pagar, la conciliación bancaria y la emisión de reportes financieros. Actualmente se ejecuta con hojas de cálculo administradas de forma independiente, correo electrónico y, en algunos casos, documentación en papel. Los requerimientos de este control no están documentados. Residen en la práctica diaria del personal administrativo.
 
 ### Problema y necesidad
 
-La sección *Problemática a resolver* del documento *Información de la Empresa Delta* identifica cinco problemas. La tabla los relaciona con la capacidad que el sistema incorpora para atenderlos.
+Delta enfrenta cinco problemas en su control contable interno. La tabla los relaciona con la capacidad que el sistema incorpora para atenderlos.
 
 | Problema identificado | Efecto en la operación | Capacidad del DEC que lo atiende |
 | --- | --- | --- |
@@ -88,17 +88,17 @@ La sección *Problemática a resolver* del documento *Información de la Empresa
 | Dificultad para la toma de decisiones | Reportes financieros tardíos | Libros contables, balance de saldos, balance general y estado de resultados calculados en línea |
 | Insostenibilidad ante el crecimiento | El esfuerzo manual crece con el volumen de transacciones. La confiabilidad disminuye | Registro transaccional automatizado y control de saldos de cartera por vista |
 
-La necesidad se resume en una contradicción operativa que el mismo documento señala: Delta digitaliza los procesos de sus clientes, pero opera su propio control contable sin digitalizar.
+La necesidad se resume en una contradicción operativa evidente: Delta digitaliza los procesos de sus clientes, pero opera su propio control contable sin digitalizar.
 
 ### Justificación de la automatización
 
 La automatización se justifica por tres razones sustentadas en la documentación del proyecto.
 
-1. **Alineación estratégica.** El primer objetivo estratégico de Delta es digitalizar la operación contable interna mediante un ERP propio bajo el modelo SaaS (*Información de la Empresa Delta*, sección Objetivos estratégicos).
+1. **Alineación estratégica.** El primer objetivo estratégico de Delta es digitalizar la operación contable interna mediante un ERP propio bajo el modelo SaaS.
 2. **Reducción de riesgo contable.** Las reglas de partida doble, periodos cerrados y límites de pago pueden verificarse de forma automática. En el proceso manual dependen de la revisión visual de cada persona.
-3. **Capacidad técnica existente.** Delta domina .NET, ASP.NET Core y PostgreSQL. Esta capacidad reduce el costo de desarrollo, según el análisis FODA del mismo documento.
+3. **Capacidad técnica existente.** Delta domina .NET, ASP.NET Core y PostgreSQL. Esta capacidad reduce el costo de desarrollo.
 
-El alcance funcional se definió en nueve módulos (M1 a M9) en el documento *Determinación de requerimientos 1*, tabla 2. El incremento entregado cubre los módulos M1 a M8. El módulo M9 (importación de catálogo y saldos) permanece en estado de diseño.
+El alcance funcional comprende nueve módulos (M1 a M9). El incremento entregado cubre los módulos M1 a M8. El módulo M9 (importación de catálogo y saldos) permanece en estado de diseño.
 
 El modelo de negocio es SaaS de uso interno. Las evidencias de planificación se encuentran en Azure Boards: nueve Epics, nueve Features, dieciocho historias de usuario y diecinueve Test Cases.
 
@@ -345,7 +345,7 @@ Los casos de prueba son elementos de tipo Test Case en Azure Boards (organizaci�
 
 ### Beneficios obtenidos
 
-Los beneficios se relacionan con el problema del apartado 1.1. Se describen de forma cualitativa porque el proyecto no dispone de mediciones de la operación manual previa. El documento *Determinación de requerimientos 1* define como indicadores el tiempo de generación de estados financieros, el tiempo promedio de cobro y el porcentaje de registros duplicados. Su medición con datos reales corresponde a una fase posterior a la puesta en operación.
+Los beneficios se relacionan con el problema del apartado 1.1. Se describen de forma cualitativa porque el proyecto no dispone de mediciones de la operación manual previa. Los indicadores definidos para el proyecto son el tiempo de generación de estados financieros, el tiempo promedio de cobro y el porcentaje de registros duplicados. Su medición con datos reales corresponde a una fase posterior a la puesta en operación.
 
 | Problema | Beneficio obtenido | Evidencia |
 | --- | --- | --- |
@@ -363,7 +363,7 @@ Los beneficios se relacionan con el problema del apartado 1.1. Se describen de f
 
 1. **Digitalización de la operación interna.** Delta aplica a su propio control contable la misma transformación digital que ofrece a sus clientes. Esto responde a la contradicción operativa descrita en el apartado 1.1.
 2. **Modelo SaaS.** El sistema opera en la nube y se actualiza de forma centralizada, sin instalaciones locales. La arquitectura permite evolucionar hacia un producto multiempresa, tal como establece el modelo de negocio.
-3. **Caso de referencia.** La solución constituye un caso demostrable ante clientes actuales y potenciales, objetivo estratégico del documento *Información de la Empresa Delta*.
+3. **Caso de referencia.** La solución constituye un caso demostrable ante clientes actuales y potenciales, objetivo estratégico de Delta.
 4. **Práctica DevOps.** La entrega continua con migraciones automáticas, pruebas sobre base de datos real y análisis estático reduce el riesgo de cada incremento.
 
 ### Limitaciones
@@ -392,7 +392,7 @@ La sección responde al curso Seguridad y Auditoría de Sistemas. Cada tema sigu
 
 ### Requerimientos de seguridad y su cumplimiento
 
-El documento *Determinación de requerimientos 2* especifica requerimientos funcionales de seguridad (RF-48 a RF-55, módulo M8) y requerimientos no funcionales de seguridad, disponibilidad e integridad transaccional. La tabla resume cómo se atienden.
+El proyecto especifica requerimientos funcionales de seguridad (RF-48 a RF-55, módulo M8) y requerimientos no funcionales de seguridad, disponibilidad e integridad transaccional. La tabla resume cómo se atienden.
 
 | Atributo | Requerimiento | Control implementado | Evidencia |
 | --- | --- | --- | --- |
@@ -415,7 +415,7 @@ El sistema define cuatro perfiles: Administrador del sistema, Contador, Vendedor
 
 ### Límites de confianza
 
-El diagrama de arquitectura (Figura 1) y el diagrama de red y seguridad de *Análisis de sistemas mediante metodología UML 2* identifican los siguientes límites de confianza.
+El diagrama de arquitectura (Figura 1) permite identificar los siguientes límites de confianza. La Figura 6 los ubica sobre el mismo diagrama.
 
 | Límite | Lado no confiable | Lado confiable | Control en el límite |
 | --- | --- | --- | --- |
@@ -490,7 +490,7 @@ Las pruebas de integración se ejecutan contra PostgreSQL 16 real. Los disparado
 
 | Riesgo | Control | Evidencia |
 | --- | --- | --- |
-| Cambios no revisados en producción | Regla de protección de `main`: Pull Request obligatorio, incluidos administradores. Sin force-push ni borrado de la rama | Captura 20 y entregable previo de DevOps |
+| Cambios no revisados en producción | Regla de protección de `main`: Pull Request obligatorio, incluidos administradores. Sin force-push ni borrado de la rama | Captura 20 |
 | Despliegue de código no probado | Las pruebas corren en `dev` y en cada Pull Request | Ejecuciones de CI (Captura 11) |
 | Permisos excesivos del CI | Cada flujo declara `permissions` de alcance mínimo (`contents: read` como base). `id-token: write` y `packages: write` solo en el trabajo de despliegue | Definición de los flujos de GitHub Actions |
 
@@ -638,7 +638,7 @@ La evaluación del incremento identifica diferencias entre los requerimientos de
 3. La autenticación con JWT, la autorización por perfil verificada en el servidor y la bitácora transaccional constituyen la base de seguridad de la aplicación. Su funcionamiento está respaldado por pruebas automatizadas de integración contra PostgreSQL real.
 4. El flujo de entrega continua aplica migraciones, pruebas y análisis estático antes del despliegue. Los secretos se mantienen fuera del repositorio y la autenticación hacia Azure usa identidad federada.
 5. La evaluación de seguridad identifica riesgos residuales concretos (sección 2.6). Las principales son el bloqueo por intentos fallidos, la política de contraseñas y el almacenamiento del token. Su mitigación se plantea como trabajo de un incremento posterior.
-6. Los beneficios en tiempo de generación de reportes y en tiempo de cobro requieren una medición con datos reales de operación para cuantificarse. Los indicadores y su línea base están definidos en *Determinación de requerimientos 1*.
+6. Los beneficios en tiempo de generación de reportes y en tiempo de cobro requieren una medición con datos reales de operación para cuantificarse. Los indicadores definidos para el proyecto son el tiempo de generación de estados financieros, el tiempo promedio de cobro y el porcentaje de registros duplicados.
 
 ## Anexos
 
@@ -656,11 +656,7 @@ La evaluación del incremento identifica diferencias entre los requerimientos de
 | Azure Boards | https://dev.azure.com/drecinosg2/erp-contable-delta |
 | Neon (consola) | https://console.neon.tech |
 
-### Anexo B. Documentos de análisis previos
-
-Información de la Empresa Delta. Determinación de requerimientos 1 y 2. Análisis de sistemas mediante metodología UML 1 y 2. Los documentos corresponden al proyecto de transformación digital de Delta (Grupo 6, Seminario de Tecnologías de Información).
-
-### Anexo C. Glosario de reglas de negocio
+### Anexo B. Glosario de reglas de negocio
 
 | Código | Regla | Dónde se aplica |
 | --- | --- | --- |
@@ -676,10 +672,10 @@ Información de la Empresa Delta. Determinación de requerimientos 1 y 2. Análi
 | RN-10 | La conciliación bancaria solo la finalizan Contador y Administrador, con diferencia cero | Procedimiento de finalización, vista de resumen de conciliación y API |
 | RN-11 | La carga inicial valida la consistencia antes de integrarse (módulo M9, en diseño) | No implementada |
 
-### Anexo D. Resumen de los casos de prueba automatizados
+### Anexo C. Resumen de los casos de prueba automatizados
 
 Los 17 casos automatizados (TC-01 a TC-16 y TC-19) y los 2 casos en estado Design (TC-17 y TC-18) se detallan en la tabla del apartado 1.5.
 
-### Anexo E. Datos de demostración
+### Anexo D. Datos de demostración
 
 Los datos de demostración del ambiente de producción se cargaron manualmente mediante scripts de carga de datos contables y de tesorería. Cada script incluye una guardia contra la doble ejecución. Un script de corrección reclasificó los saldos propios de cuentas padre hacia subcuentas hoja. Los correos de las cuentas de demostración siguen el formato `demo.<perfil>N@delta.com.gt`. Las contraseñas no se incluyen en este documento.
