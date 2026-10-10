@@ -49,7 +49,7 @@ public class ImpuestosControllerTests
     private async Task<HttpClient> ClienteAsync(string rol = Roles.Contador) =>
         _pg.CreateApiClient(await _pg.Data.CrearUsuarioAsync(), rol);
 
-    private async Task<HashSet<string?>> CodigosAsync(HttpClient client, string consulta)
+    private static async Task<HashSet<string?>> CodigosAsync(HttpClient client, string consulta)
     {
         var body = await client.GetFromJsonAsync<JsonElement>($"{Ruta}{consulta}");
         return body.EnumerateArray().Select(i => i.GetProperty("codigo").GetString()).ToHashSet();

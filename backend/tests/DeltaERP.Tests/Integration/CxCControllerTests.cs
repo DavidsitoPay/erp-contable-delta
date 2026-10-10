@@ -190,7 +190,7 @@ public class CxCControllerTests
 
         var pagos = response.EnumerateArray().ToList();
         Assert.NotEmpty(pagos);
-        var pago = pagos.First();
+        var pago = pagos[0];
         Assert.True(pago.GetProperty("clienteNombre").GetString()!.Length > 0);
         Assert.Equal(50m, pago.GetProperty("montoTotal").GetDecimal());
     }
@@ -465,7 +465,7 @@ public class CxCControllerTests
         Assert.Equal(100m, await ObtenerSaldoAsync(client, documentoId));
     }
 
-    private static object PayloadFactura(Escenario e, string numero, int clienteId, int cuentaLineaId, int? centroCostoId) =>
+    private static Dictionary<string, object?> PayloadFactura(Escenario e, string numero, int clienteId, int cuentaLineaId, int? centroCostoId) =>
         FacturaPayloads.Cxc(e, numero, new[] { FacturaPayloads.LineaExenta(e, cuentaLineaId, centroCostoId) }, clienteId);
 
     private static object PayloadPago(int clienteId, int documentoId, decimal monto, int? cuentaBancariaId, string fecha = "2025-03-20") => new

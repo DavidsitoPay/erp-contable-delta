@@ -1,7 +1,5 @@
 using DeltaERP.Domain.Entities;
 using DeltaERP.Domain.Rules;
-using DeltaERP.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
 
 namespace DeltaERP.Api.Services;
 
@@ -9,13 +7,11 @@ public sealed record ResultadoFiscal(ResumenFiscal Resumen, int? CuentaIvaId);
 
 public class FacturaFiscalService
 {
-    private readonly DeltaErpDbContext _db;
     private readonly ValidacionContable _validacion;
     private readonly ConfiguracionFiscalService _configuracion;
 
-    public FacturaFiscalService(DeltaErpDbContext db, ValidacionContable validacion, ConfiguracionFiscalService configuracion)
+    public FacturaFiscalService(ValidacionContable validacion, ConfiguracionFiscalService configuracion)
     {
-        _db = db;
         _validacion = validacion;
         _configuracion = configuracion;
     }

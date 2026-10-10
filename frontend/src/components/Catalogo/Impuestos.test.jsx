@@ -179,7 +179,7 @@ describe("Impuestos", () => {
     await waitFor(() =>
       expect(impuestosApi.crear).toHaveBeenCalledWith(expect.objectContaining({ codigo: "IVA_GENERAL", tasa: 10, vigenteDesde: "2027-01-01", vigenteHasta: null }))
     );
-    await waitFor(() => expect(screen.getByText("Agregar impuesto", { selector: "h3" })).toBeInTheDocument());
+    expect(await screen.findByText("Agregar impuesto", { selector: "h3" })).toBeInTheDocument();
   });
 
   it("editar un impuesto en uso bloquea los campos sensibles, avisa y conserva sus valores en el cuerpo", async () => {
