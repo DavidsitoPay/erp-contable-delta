@@ -48,7 +48,8 @@ public class FacturaService
             });
             return null;
         }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: "55000" } conflicto)
+        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException
+            && ErroresPostgres.ObtenerPostgres(ex) is { SqlState: "55000" } conflicto)
         {
             return ErrorValidacion.Conflicto(conflicto.MessageText);
         }

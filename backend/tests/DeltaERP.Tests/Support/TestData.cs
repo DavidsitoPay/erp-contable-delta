@@ -125,7 +125,7 @@ public sealed class TestData
         return ScalarAsync<int>(
             "INSERT INTO impuesto (codigo, nombre, tipo, tasa, aplica_a, genera_credito, articulo_legal, vigente_desde, vigente_hasta, activo) " +
             "VALUES ($1, $2, $3, $4, $5, $6, 'Impuesto de prueba', $7, $8::date, $9) RETURNING id",
-            $"T{sufijo}", $"Impuesto {sufijo}", opciones.Tipo, opciones.Tasa, opciones.AplicaA, opciones.GeneraCredito,
+            $"T{sufijo.ToUpperInvariant()}", $"Impuesto {sufijo}", opciones.Tipo, opciones.Tasa, opciones.AplicaA, opciones.GeneraCredito,
             opciones.Desde ?? new DateOnly(2020, 1, 1), (object?)opciones.Hasta ?? DBNull.Value, opciones.Activo);
     }
 

@@ -100,15 +100,16 @@ public class ContrapartesFiscalTests
 
         var sinNit = await client.PutAsJsonAsync($"{Ruta}/{id}", Cuerpo("Cliente", null));
         var completo = await client.PutAsJsonAsync($"{Ruta}/{id}", Cuerpo("Cliente", "6-K", "EXENTO"));
+        var guardado = (
+            (await completo.LeerJsonAsync()).GetProperty("tipo").GetString(),
+            await _pg.Data.ScalarAsync<string>("SELECT nit FROM contraparte WHERE id = $1", id),
+            await _pg.Data.ScalarAsync<string>("SELECT regimen_iva FROM contraparte WHERE id = $1", id));
         var reemplazo = await client.PutAsJsonAsync($"{Ruta}/{id}", new { tipo = "Proveedor", nombre = "Sin campos fiscales", nit = "1234567-9" });
 
         Assert.Equal(HttpStatusCode.BadRequest, sinNit.StatusCode);
         Assert.Equal("El NIT del proveedor es obligatorio.", await sinNit.LeerErrorAsync());
         Assert.Equal(HttpStatusCode.OK, completo.StatusCode);
-        Assert.Equal(("Proveedor", "6-K", "EXENTO"), (
-            (await completo.LeerJsonAsync()).GetProperty("tipo").GetString(),
-            (await _pg.Data.ScalarAsync<string>("SELECT nit FROM contraparte WHERE id = $1", id)),
-            (await _pg.Data.ScalarAsync<string>("SELECT regimen_iva FROM contraparte WHERE id = $1", id))));
+        Assert.Equal(("Proveedor", "6-K", "EXENTO"), guardado);
         Assert.Equal(HttpStatusCode.OK, reemplazo.StatusCode);
         Assert.Equal("GENERAL", (await reemplazo.LeerJsonAsync()).GetProperty("regimenIva").GetString());
     }

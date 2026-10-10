@@ -32,9 +32,16 @@ public static class ErroresPostgres
     public static bool EsViolacionUnica(DbUpdateException ex, string constraint) =>
         ex.InnerException is PostgresException { SqlState: "23505" } pg && pg.ConstraintName == constraint;
 
-    public static ObjectResult? TraducirActualizacionAsync(DbUpdateException ex)
+    // Npgsql trata 55000 como transitorio y NpgsqlExecutionStrategy lo envuelve en InvalidOperationException.
+    public static PostgresException? ObtenerPostgres(Exception ex)
     {
-        if (ex.InnerException is PostgresException pg && EstadoHttpPorSqlState.TryGetValue(pg.SqlState, out var status))
+        var actualizacion = ex as DbUpdateException ?? (ex as InvalidOperationException)?.InnerException as DbUpdateException;
+        return actualizacion?.InnerException as PostgresException;
+    }
+
+    public static ObjectResult? TraducirActualizacionAsync(Exception ex)
+    {
+        if (ObtenerPostgres(ex) is { } pg && EstadoHttpPorSqlState.TryGetValue(pg.SqlState, out var status))
         {
             return new ObjectResult(new { error = pg.MessageText }) { StatusCode = status };
         }

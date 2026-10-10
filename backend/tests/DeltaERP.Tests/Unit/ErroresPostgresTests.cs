@@ -67,4 +67,21 @@ public class ErroresPostgresTests
     {
         Assert.Null(ErroresPostgres.TraducirActualizacionAsync(new DbUpdateException("x", Pg("23505"))));
     }
+
+    [Fact]
+    public void TraducirActualizacion_Con55000EnvueltoEnInvalidOperation_DevuelveConflicto()
+    {
+        var resultado = ErroresPostgres.TraducirActualizacionAsync(
+            new InvalidOperationException("x", new DbUpdateException("x", Pg("55000"))));
+
+        Assert.NotNull(resultado);
+        Assert.Equal(409, resultado.StatusCode);
+    }
+
+    [Fact]
+    public void TraducirActualizacion_Con23505EnvueltoEnInvalidOperation_DevuelveNull()
+    {
+        Assert.Null(ErroresPostgres.TraducirActualizacionAsync(
+            new InvalidOperationException("x", new DbUpdateException("x", Pg("23505")))));
+    }
 }

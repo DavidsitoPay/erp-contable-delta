@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using DeltaERP.Api.Auth;
 using DeltaERP.Api.Models;
 using DeltaERP.Api.Services;
@@ -76,7 +75,7 @@ public class ImpuestosController : ControllerBase
 
         var impuesto = new Impuesto();
         Aplicar(impuesto, datos);
-        var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var usuarioId = this.UsuarioId();
         var conflicto = await GuardarAsync(usuarioId, "crear_impuesto", async () =>
         {
             _db.Impuestos.Add(impuesto);
@@ -115,7 +114,7 @@ public class ImpuestosController : ControllerBase
         }
 
         Aplicar(impuesto, datos);
-        var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var usuarioId = this.UsuarioId();
         var conflicto = await GuardarAsync(usuarioId, "actualizar_impuesto", async () =>
         {
             await _db.SaveChangesAsync();
@@ -135,7 +134,7 @@ public class ImpuestosController : ControllerBase
         }
 
         impuesto.Activo = false;
-        var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var usuarioId = this.UsuarioId();
         await GuardarAsync(usuarioId, "desactivar_impuesto", async () =>
         {
             await _db.SaveChangesAsync();
@@ -166,7 +165,7 @@ public class ImpuestosController : ControllerBase
             await _auditoria.EjecutarAsync(usuarioId, accion, "impuesto", operacion);
             return null;
         }
-        catch (DbUpdateException ex) when (ErroresPostgres.TraducirActualizacionAsync(ex) is { } conflicto)
+        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException && ErroresPostgres.TraducirActualizacionAsync(ex) is { } conflicto)
         {
             return conflicto;
         }
