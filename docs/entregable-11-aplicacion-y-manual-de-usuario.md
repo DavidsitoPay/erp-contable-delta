@@ -829,7 +829,7 @@ flowchart LR
     end
     U ==>|"L1: HTTPS"| SPA
     SPA ==>|"L2: HTTPS, CORS, JWT"| API
-    API ==>|"L3: cadena de conexión como secreto"| PROD
+    API ==>|"L3: secreto de conexión y rol de mínimo privilegio"| PROD
     DEV --> CI
     CI ==>|"L4: OIDC, migraciones y despliegue"| API
     CI ==>|"L4: migraciones"| PROD
