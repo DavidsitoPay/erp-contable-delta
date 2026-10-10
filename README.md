@@ -23,6 +23,8 @@ dotnet user-secrets set "ConnectionStrings:Default" "<connection string de Neon,
 dotnet run
 ```
 
+La API debe conectarse con el rol `delta_api` (mínimo privilegio; `database/14_rol_api.sql` lo crea sin `LOGIN`: asígnalo con `ALTER ROLE delta_api LOGIN PASSWORD '...'` en tu rama). Las migraciones usan el propietario.
+
 `dotnet user-secrets` guarda la connection string fuera del repo (no toca
 `appsettings.json`, que solo trae el valor de ejemplo local). Backend disponible en
 `http://localhost:5000` (Swagger en `/swagger`).
@@ -52,7 +54,7 @@ arriba), no la usa nada desplegado ni el pipeline.
 
 ## Migraciones y pruebas
 
-`database/run_migrations.sh` aplica los scripts numerados (01–13) en orden, cada uno con
+`database/run_migrations.sh` aplica los scripts numerados (01–14) en orden, cada uno con
 `psql -v ON_ERROR_STOP=1 --single-transaction`. Un script ya aplicado no se edita: las
 correcciones van en un archivo nuevo.
 
