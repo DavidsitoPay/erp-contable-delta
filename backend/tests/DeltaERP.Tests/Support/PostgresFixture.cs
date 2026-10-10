@@ -20,6 +20,7 @@ public sealed class PostgresFixture : IAsyncLifetime
         "10_balance_jerarquico.sql",
         "11_reportes.sql",
         "12_reversa_asientos.sql",
+        "13_fiscal_iva.sql",
     };
 
     public NpgsqlDataSource DataSource { get; private set; } = null!;
@@ -57,6 +58,7 @@ public sealed class PostgresFixture : IAsyncLifetime
         }
 
         Data = new TestData(DataSource);
+        await Data.SembrarConfiguracionFiscalAsync();
         Factory = new ApiFactory(connectionString);
     }
 

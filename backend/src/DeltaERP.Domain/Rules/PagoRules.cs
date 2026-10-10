@@ -1,6 +1,6 @@
 namespace DeltaERP.Domain.Rules;
 
-public sealed record DocumentoPagable(int Id, string Numero, int TerceroId, string Estado, decimal SaldoPendiente, int? AsientoId = null);
+public sealed record DocumentoPagable(int Id, string Numero, int TerceroId, string Estado, decimal SaldoPendiente, int? AsientoId = null, bool EsNotaCredito = false);
 
 public static class PagoRules
 {
@@ -44,6 +44,11 @@ public static class PagoRules
         if (noVigentes.Count > 0)
         {
             return $"Las siguientes facturas no están vigentes: {string.Join(", ", noVigentes)}.";
+        }
+
+        if (documentos.Any(d => d.EsNotaCredito))
+        {
+            return "Una nota de crédito no admite pagos ni cobros; solo reduce el saldo contable.";
         }
 
         // RN-05: varias aplicaciones a la misma factura se suman antes de comparar

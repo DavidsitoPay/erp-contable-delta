@@ -1,12 +1,13 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { centrosCostoApi, contrapartesApi, cuentasApi, periodosApi, cxpApi } from "../../services/api";
+import { centrosCostoApi, contrapartesApi, cuentasApi, impuestosApi, periodosApi, cxpApi } from "../../services/api";
 import CuentasPorPagar from "./CuentasPorPagar";
 
 vi.mock("../../services/api", () => ({
   centrosCostoApi: { listar: vi.fn() },
   contrapartesApi: { listar: vi.fn() },
   cuentasApi: { listar: vi.fn() },
+  impuestosApi: { listar: vi.fn() },
   periodosApi: { listar: vi.fn() },
   cxpApi: { listarFacturas: vi.fn(), listarPagos: vi.fn() },
 }));
@@ -29,6 +30,7 @@ describe("CuentasPorPagar", () => {
     cuentasApi.listar.mockResolvedValue({ data: cuentas });
     centrosCostoApi.listar.mockResolvedValue({ data: [] });
     periodosApi.listar.mockResolvedValue({ data: periodos });
+    impuestosApi.listar.mockResolvedValue({ data: [] });
     cxpApi.listarFacturas.mockResolvedValue({ data: [] });
     cxpApi.listarPagos.mockResolvedValue({ data: [] });
   });
@@ -47,5 +49,13 @@ describe("CuentasPorPagar", () => {
   it("carga contrapartes como proveedores via contrapartesApi", async () => {
     render(<CuentasPorPagar />);
     await waitFor(() => expect(contrapartesApi.listar).toHaveBeenCalledWith("Proveedor"));
+  });
+
+  it("consulta los impuestos de compras y deja el DTE del proveedor como opcional", async () => {
+    render(<CuentasPorPagar />);
+
+    expect(await screen.findByText("Datos del DTE del proveedor (obligatorios para tomar crédito fiscal)")).toBeInTheDocument();
+    await waitFor(() => expect(impuestosApi.listar).toHaveBeenCalledWith(expect.objectContaining({ aplicaA: "COMPRAS" })));
+    expect(screen.getByLabelText("Serie")).not.toBeRequired();
   });
 });

@@ -9,6 +9,9 @@ vi.mock("./components/Asientos/RegistrarAsiento", () => ({ default: () => <p>For
 vi.mock("./components/Tesoreria/Tesoreria", () => ({ default: () => <p>Módulo de tesorería</p> }));
 vi.mock("./components/Reportes/BalanceGeneral", () => ({ default: () => <p>Reporte balance general</p> }));
 vi.mock("./components/Reportes/EstadoResultados", () => ({ default: () => <p>Reporte estado de resultados</p> }));
+vi.mock("./components/Catalogo/ConfiguracionFiscal", () => ({ default: () => <p>Pantalla configuración fiscal</p> }));
+vi.mock("./components/Catalogo/Impuestos", () => ({ default: () => <p>Catálogo de impuestos</p> }));
+vi.mock("./components/Libros/LibroFiscal", () => ({ default: () => <p>Libro fiscal</p> }));
 
 function renderApp(perfil, ruta = "/") {
   if (perfil) localStorage.setItem("delta_usuario", JSON.stringify({ nombre: "Ana", perfil }));
@@ -30,7 +33,7 @@ describe("App", () => {
     renderApp("Contador");
 
     expect(await screen.findByText("Conectado a Delta ERP Contable API")).toBeInTheDocument();
-    expect(screen.getAllByRole("link")).toHaveLength(13);
+    expect(screen.getAllByRole("link")).toHaveLength(15);
     expect(screen.getByRole("link", { name: "Registrar asiento" })).toBeInTheDocument();
   });
 
@@ -80,6 +83,63 @@ describe("App", () => {
 
     expect(screen.queryByRole("link", { name: "Registrar asiento" })).toBeNull();
     expect(screen.getByText(/No autorizado: tu perfil \(Vendedor\)/)).toBeInTheDocument();
+    await screen.findByText("Conectado a Delta ERP Contable API");
+  });
+
+  it("un administrador ve las tres pantallas fiscales y abre la configuración fiscal", async () => {
+    renderApp("Administrador del sistema", "/catalogo/configuracion-fiscal");
+
+    expect(screen.getAllByRole("link")).toHaveLength(16);
+    ["Configuración fiscal", "Impuestos", "Compras y ventas"].forEach((nombre) =>
+      expect(screen.getByRole("link", { name: nombre })).toBeInTheDocument()
+    );
+    expect(screen.getByText("Pantalla configuración fiscal")).toBeInTheDocument();
+    await screen.findByText("Conectado a Delta ERP Contable API");
+  });
+
+  it.each([
+    ["/catalogo/impuestos", "Catálogo de impuestos"],
+    ["/libros/fiscal", "Libro fiscal"],
+  ])("un contador abre %s", async (ruta, contenido) => {
+    renderApp("Contador", ruta);
+
+    expect(screen.getByRole("link", { name: "Impuestos" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Compras y ventas" })).toBeInTheDocument();
+    expect(screen.getByText(contenido)).toBeInTheDocument();
+    await screen.findByText("Conectado a Delta ERP Contable API");
+  });
+
+  it("un contador no ve la configuración fiscal y la ruta queda bloqueada", async () => {
+    renderApp("Contador", "/catalogo/configuracion-fiscal");
+
+    expect(screen.queryByRole("link", { name: "Configuración fiscal" })).toBeNull();
+    expect(screen.getByText("No autorizado: tu perfil (Contador) no puede acceder a Configuración fiscal.")).toBeInTheDocument();
+    await screen.findByText("Conectado a Delta ERP Contable API");
+  });
+
+  it.each(["Vendedor", "Técnico"])("%s no ve Cuentas por pagar y la ruta queda bloqueada", async (perfil) => {
+    renderApp(perfil, "/cxp");
+
+    expect(screen.queryByRole("link", { name: "Cuentas por pagar" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Cuentas por cobrar" })).toBeInTheDocument();
+    expect(screen.getByText(`No autorizado: tu perfil (${perfil}) no puede acceder a Cuentas por pagar.`)).toBeInTheDocument();
+    await screen.findByText("Conectado a Delta ERP Contable API");
+  });
+
+  it.each([
+    ["Vendedor", "/catalogo/configuracion-fiscal", "Configuración fiscal"],
+    ["Vendedor", "/catalogo/impuestos", "Impuestos"],
+    ["Vendedor", "/libros/fiscal", "Compras y ventas"],
+    ["Técnico", "/catalogo/configuracion-fiscal", "Configuración fiscal"],
+    ["Técnico", "/catalogo/impuestos", "Impuestos"],
+    ["Técnico", "/libros/fiscal", "Compras y ventas"],
+  ])("%s no ve las pestañas fiscales y %s queda bloqueada", async (perfil, ruta, seccion) => {
+    renderApp(perfil, ruta);
+
+    ["Configuración fiscal", "Impuestos", "Compras y ventas"].forEach((nombre) =>
+      expect(screen.queryByRole("link", { name: nombre })).toBeNull()
+    );
+    expect(screen.getByText(`No autorizado: tu perfil (${perfil}) no puede acceder a ${seccion}.`)).toBeInTheDocument();
     await screen.findByText("Conectado a Delta ERP Contable API");
   });
 

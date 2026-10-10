@@ -34,10 +34,26 @@ su perfil:
   movimientos, transferencias, cuentas bancarias, apertura y saldo de extracto, y agrupa
   las aplicaciones de un pago por cuenta de control. `IDocumentoFactura` e `ILineaFactura` abstraen los documentos
   y líneas de CxC y CxP.
+- Reglas fiscales (`Domain/Rules/`, puras): `MotorFiscal` calcula cada línea y el resumen
+  del documento (total con IVA incluido, base, IVA, IVA acreditable) con redondeo por
+  línea, acepta un tipo de cambio (1 en la moneda funcional) y clasifica cada línea para
+  el libro fiscal. `ImpuestoRules` valida altas de impuestos, vigencia, ámbito y
+  consistencia con el régimen de la contraparte. `ConfiguracionFiscalRules` valida régimen,
+  agente de retención y cuentas de IVA. `NitRules` normaliza y valida el NIT (módulo 11).
+  `DteRules` valida el UUID, serie, número y fecha de certificación. `AsientoFacturaBuilder`
+  recibe el resumen fiscal: separa el IVA en su propia línea (débito fiscal en ventas,
+  crédito fiscal en compras), lleva a costo el IVA no acreditable e invierte los lados en
+  una nota de crédito.
 - `DeltaERP.Api/Services/`: `ValidacionContable` verifica contra la base la
   contraparte (RN-04), el periodo abierto (RN-02), las cuentas (existentes, activas,
   no de mayor), la cuenta de control y los centros de costo. `FacturaService` arma y
-  persiste asiento y factura. `AuditoriaService` ejecuta la operación y la llamada a
+  persiste asiento y factura. `FacturaFiscalService` valida impuestos (existencia, estado,
+  vigencia, ámbito y régimen de la contraparte), calcula con `MotorFiscal` y comprueba las
+  cuentas de IVA configuradas; `ConfiguracionFiscalService` lee la fila única de
+  configuración fiscal y `LibroFiscalService` arma el libro de compras y ventas. Las
+  violaciones de unicidad del DTE y el exceso de una nota de crédito sobre el saldo de su
+  origen los resuelve la base de datos y `FacturaService` los traduce a `409`.
+  `AuditoriaService` ejecuta la operación y la llamada a
   `sp_registrar_auditoria` (RN-08) en una misma transacción. `PerfilFactura` reúne lo
   que distingue a CxC de CxP (sigla, tipo de tercero, tipos de documento, cuenta de
   control, lado de control). `TesoreriaService` (M6) es el único lugar que une cuenta
@@ -56,6 +72,17 @@ su perfil:
   (Administrador o Contador).
 - Reversa de asientos (RN-03, rol Administrador, `Roles.Administrador`): `POST api/asientos/{id}/reversar` recibe `{ motivo }` (obligatorio, máx. 250 caracteres; `400` si falta o excede). Responde `403` si el perfil no es Administrador (en el token o en la base de datos), `404` si el asiento no existe y `409` si no está `Confirmado`, ya es una reversa, su periodo no está `Abierto` o está vinculado a un documento CxC, CxP o movimiento de tesorería (`ReversaAsiento` centraliza estos chequeos). Ejecuta `CALL sp_reversar_asiento(id, usuario, motivo)` en una transacción, que revalida todo con bloqueo de fila y escribe la bitácora. Responde `200` con `originalId`, `originalNumero`, `reversaId` y `reversaNumero`. `GET api/libros/diario` agrega a cada asiento `estado`, `reversaDeId`, `reversaDeNumero`, `reversadoPorId`, `reversadoPorNumero` y `reversible`; el libro diario del frontend muestra el botón Reversar (solo Administrador, con diálogo de motivo) y los indicadores de estado.
 - Reportes (M7, rol Administrador o Contador, `Roles.GestionCatalogo`): `ReportesController` expone `GET api/reportes/balance-general` y `GET api/reportes/estado-resultados` (parámetro `periodoId`), de solo lectura. Lee `fn_reporte_saldos` (`database/11_reportes.sql`) con `FromSql` (entidad sin llave `SaldoReporteCuenta`) y delega en `DeltaERP.Domain/Rules/EstadosFinancieros` (pura) la sección por tipo, los totales de nivel 1, el resultado del ejercicio y el cuadre. El frontend los muestra en las pestañas Balance general y Estado de resultados (`components/Reportes/`), visibles solo para esos perfiles.
+- Fiscal (M10): `api/configuracion-fiscal` (`GET` con `Roles.GestionCatalogo`; `PUT` solo
+  Administrador, con auditoría `actualizar_configuracion_fiscal`); `api/impuestos` (`GET`
+  y `GET {id}` para cualquier usuario autenticado, porque el Vendedor factura; `POST`,
+  `PUT {id}` y `DELETE {id}`, que desactiva, con `Roles.GestionCatalogo`);
+  `api/libros/fiscal/ventas` y `api/libros/fiscal/compras` (`anio`, `mes`;
+  `Roles.ReportesFiscales`, Administrador o Contador). `api/contrapartes` acepta y devuelve
+  régimen de IVA, régimen de ISR, residencia y agente de retención. Las facturas
+  (`api/cxc/facturas`, `api/cxp/facturas`) reciben por línea `impuestoId` y
+  `tipoBienServicio`, el precio con IVA incluido, los datos del DTE y, en notas de crédito,
+  `documentoOrigenId`; el `POST` responde `201` con el mismo detalle que el `GET`, con montos
+  de base e IVA, datos del DTE y de la factura de origen.
 - `DeltaERP.Api/Models/`: modelos de detalle de factura y de sus líneas que devuelven
   los controladores `CxCController` y `CxPController`.
 
@@ -93,6 +120,7 @@ el administrador, modifique o elimine registros de auditoría ya escritos.
 - Seguridad y auditoría (M8) → `Usuario`, `Perfil`, `BitacoraAuditoria` (poblada por la API, no por trigger).
 - Cierre contable → `PeriodoContable` y `SaldoCuentaPeriodo` (saldos consolidados e inmutables por periodo).
 - Reportes (M7) → sin tablas propias: `fn_reporte_saldos` combina `SaldoCuentaPeriodo` de periodos cerrados con asientos en vivo.
+- Fiscal (M10) → `Impuesto`, `ConfiguracionFiscal` (fila única), `Moneda` (moneda funcional) y los campos fiscales y de DTE de `Contraparte`, `DocumentoCxC`/`DocumentoCxP` y sus líneas.
 
 Ningún módulo del frontend accede directamente a la base de datos; todo pasa por la
 API.
@@ -103,13 +131,15 @@ API.
 
 - Unitarias (`Unit/`): reglas puras del dominio (`AsientoFacturaBuilder`,
   `AsientoTesoreriaBuilder`, `FacturaRules`, `PagoRules`, `PartidaDobleValidator`,
-  `TesoreriaRules`, `EstadosFinancieros`) y `ErroresPostgres`, sin base de datos.
+  `TesoreriaRules`, `EstadosFinancieros`, `MotorFiscal`, `ImpuestoRules`,
+  `ConfiguracionFiscalRules`, `NitRules`, `DteRules`) y `ErroresPostgres`, sin base de datos.
 - Integración (`Integration/`, trait `Category=Integration`): levantan la API con
   `WebApplicationFactory` contra un PostgreSQL 16 real, de modo que los triggers
   (RN-01, RN-03, RN-05) actúan igual que en producción. Cubren todos los controladores
   de la API: asientos, auth, centros de costo, contrapartes, cuentas bancarias,
-  cuentas contables, conciliaciones, CxC, CxP, libros, movimientos de tesorería,
-  periodos contables y reportes. Las pruebas de login verifican la emisión del
+  cuentas contables, conciliaciones, configuración fiscal, CxC, CxP, impuestos, libros,
+  libro fiscal, movimientos de tesorería, periodos contables y reportes, y el esquema
+  fiscal (`FiscalEsquemaTests`). Las pruebas de login verifican la emisión del
   token (`AuthController`/`TokenService`) con un cliente anónimo y el esquema JWT
   real; el resto usa `TestAuthHandler`. Las operaciones cuya autorización vive en un
   procedimiento almacenado (cerrar y reabrir periodo) se validan contra el perfil
@@ -119,8 +149,9 @@ Soporte de las pruebas de integración (`Support/`):
 
 - `PostgresFixture` lee la cadena de conexión de la variable `TEST_PG_CONN`; si falta,
   las pruebas fallan (no se omiten). El nombre de la base debe contener `test`. Al
-  iniciar recrea el esquema `public` y aplica `database/01` a `05` y `07` a `09`; no aplica
-  `06` (datos semilla).
+  iniciar recrea el esquema `public` y aplica `database/01` a `05` y `07` a `13`; no aplica
+  `06` (datos semilla). Después deja configuradas las cuentas de IVA. `FacturaPayloads`
+  construye las facturas de prueba (impuesto, líneas y DTE).
 - Aislamiento: bitácora, saldos, asientos y usuarios son inmutables, así que no hay
   limpieza entre pruebas. Cada prueba siembra sus propias filas con sufijos únicos
   (`TestData`) y nunca cuenta filas globales. Las pruebas comparten una sola base
@@ -167,7 +198,8 @@ independientes (`.github/workflows/`):
 
 - `backend-deploy.yml`: en cada push a `main` (ignora los cambios que solo tocan
   `backend/tests/`), aplica las migraciones pendientes
-  contra la rama `production` de Neon y, solo si eso funciona, construye y publica
+  contra la rama `production` de Neon (`run_migrations.sh` ejecuta cada script con
+  `psql --single-transaction`: si falla, se revierte completo y no se registra como aplicado) y, solo si eso funciona, construye y publica
   la imagen del backend y actualiza Azure Container Apps.
 - `frontend-alias.yml`: tras cada deploy de producción en Vercel, reapunta el
   dominio corto del proyecto al nuevo despliegue.

@@ -1,11 +1,20 @@
-const PERFILES_TESORERIA = new Set(["Administrador del sistema", "Contador"]);
+const ADMINISTRADOR = "Administrador del sistema";
+const PERFILES_TESORERIA = new Set([ADMINISTRADOR, "Contador"]);
 
 export function puedeGestionarTesoreria(perfil) {
   return PERFILES_TESORERIA.has(perfil);
 }
 
+export function puedeGestionarFiscal(perfil) {
+  return PERFILES_TESORERIA.has(perfil);
+}
+
+export function puedeAdministrarConfiguracionFiscal(perfil) {
+  return perfil === ADMINISTRADOR;
+}
+
 export function puedeReversarAsientos(perfil) {
-  return perfil === "Administrador del sistema";
+  return perfil === ADMINISTRADOR;
 }
 
 export function perfilActual() {

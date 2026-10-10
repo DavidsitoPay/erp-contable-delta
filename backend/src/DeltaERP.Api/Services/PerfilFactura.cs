@@ -2,8 +2,6 @@ using DeltaERP.Domain.Rules;
 
 namespace DeltaERP.Api.Services;
 
-// Reúne lo que distingue una factura de CxC de una de CxP. Sigla es "CxC" o "CxP";
-// de ella se derivan el prefijo del asiento, la acción y la tabla de auditoría.
 public sealed record PerfilFactura(
     string Sigla,
     string TipoTercero,
@@ -11,4 +9,12 @@ public sealed record PerfilFactura(
     string TipoCuentaControl,
     string NaturalezaCuentaControl,
     string EjemploCuentaControl,
-    LadoControl LadoControl);
+    LadoControl LadoControl,
+    string AplicaImpuestoA,
+    string EtiquetaCuentaIva,
+    bool DteObligatorio)
+{
+    public bool EsVenta => LadoControl == LadoControl.Debito;
+
+    public string ClaveTercero => EsVenta ? "clienteId" : "proveedorId";
+}

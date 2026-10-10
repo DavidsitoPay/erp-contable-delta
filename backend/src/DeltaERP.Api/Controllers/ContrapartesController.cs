@@ -1,5 +1,6 @@
 using DeltaERP.Api.Auth;
 using DeltaERP.Domain.Entities;
+using DeltaERP.Domain.Rules;
 using DeltaERP.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace DeltaERP.Api.Controllers;
 
 // Contraparte no tiene columna "activa": no hay endpoint de desactivar, solo
-// se editan Nombre/Nit/Direccion, nunca el Tipo.
+// se editan datos de contacto y fiscales, nunca el Tipo.
 [ApiController]
 [Route("api/contrapartes")]
 [Authorize]
@@ -51,8 +52,14 @@ public class ContrapartesController : ControllerBase
         {
             return BadRequest(new { error = "El nombre es obligatorio." });
         }
+        var errorFiscal = ContraparteRules.ValidarFiscal(contraparte, contraparte.Tipo);
+        if (errorFiscal is not null)
+        {
+            return BadRequest(new { error = errorFiscal });
+        }
 
         contraparte.Id = 0;
+        contraparte.Nit = NitRules.Normalizar(contraparte.Nit);
         _db.Contrapartes.Add(contraparte);
         await _db.SaveChangesAsync();
         return CreatedAtAction(nameof(Obtener), new { id = contraparte.Id }, contraparte);
@@ -71,11 +78,20 @@ public class ContrapartesController : ControllerBase
         {
             return BadRequest(new { error = "El nombre es obligatorio." });
         }
+        var errorFiscal = ContraparteRules.ValidarFiscal(cambios, contraparte.Tipo);
+        if (errorFiscal is not null)
+        {
+            return BadRequest(new { error = errorFiscal });
+        }
 
         // Tipo no se actualiza: cambiarlo rompería referencias ya creadas en CxC/CxP.
         contraparte.Nombre = cambios.Nombre;
-        contraparte.Nit = cambios.Nit;
+        contraparte.Nit = NitRules.Normalizar(cambios.Nit);
         contraparte.Direccion = cambios.Direccion;
+        contraparte.RegimenIva = cambios.RegimenIva;
+        contraparte.RegimenIsr = cambios.RegimenIsr;
+        contraparte.EsResidente = cambios.EsResidente;
+        contraparte.EsAgenteRetencionIva = cambios.EsAgenteRetencionIva;
         await _db.SaveChangesAsync();
         return Ok(contraparte);
     }

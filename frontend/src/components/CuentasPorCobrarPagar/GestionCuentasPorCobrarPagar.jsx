@@ -4,16 +4,11 @@ import { cuentasHoja } from "../../utils/cuentas";
 import { formatoMoneda, hoyIso, monto } from "../../utils/formato";
 import { perfilActual, puedeGestionarTesoreria } from "../../utils/perfiles";
 import SelectCuentaBancaria from "../Tesoreria/SelectCuentaBancaria";
-import { useLineas } from "../useLineas";
-
-const TIPOS_DOCUMENTO = ["Factura", "NotaCredito", "NotaDebito"];
-
-function lineaVacia() {
-  return { id: crypto.randomUUID(), descripcion: "", cantidad: "1", precioUnitario: "", porcentajeImpuesto: "0", centroCostoId: "", cuentaContableId: "" };
-}
+import FormularioFactura from "./FormularioFactura";
+import TablaFacturas from "./TablaFacturas";
 
 // config aísla las diferencias de terminología/cuenta de control entre CxC y
-// CxP, de ahí las claves dinámicas como formFactura[campoContraparteId].
+// CxP, de ahí las claves dinámicas como pagoContraparteId.
 function GestionCuentasPorCobrarPagar({ config }) {
   const {
     tipoContraparte,
@@ -22,8 +17,6 @@ function GestionCuentasPorCobrarPagar({ config }) {
     campoContraparteNombre,
     api,
     filtroCuentaControl,
-    etiquetaCuentaControl,
-    etiquetaCuentaLinea,
   } = config;
 
   const [subTab, setSubTab] = useState("facturas");
@@ -36,15 +29,6 @@ function GestionCuentasPorCobrarPagar({ config }) {
   const [pagos, setPagos] = useState([]);
   const [cuentasBancarias, setCuentasBancarias] = useState([]);
   const [puedeRegistrarPagos] = useState(() => puedeGestionarTesoreria(perfilActual()));
-
-  function formFacturaVacio() {
-    return { numero: "", tipoDocumento: "Factura", [campoContraparteId]: "", fecha: hoyIso(), fechaVencimiento: hoyIso(), periodoId: "", cuentaControlId: "" };
-  }
-
-  const [errorFactura, setErrorFactura] = useState("");
-  const [enviandoFactura, setEnviandoFactura] = useState(false);
-  const [formFactura, setFormFactura] = useState(formFacturaVacio);
-  const { lineas, actualizarLinea, agregarLinea, quitarLinea, reiniciarLineas } = useLineas(lineaVacia, 1);
 
   const [errorPago, setErrorPago] = useState("");
   const [enviandoPago, setEnviandoPago] = useState(false);
@@ -81,49 +65,6 @@ function GestionCuentasPorCobrarPagar({ config }) {
   const hojas = cuentasHoja(cuentas);
   const cuentasControl = hojas.filter(filtroCuentaControl);
   const periodosAbiertos = periodos.filter((p) => p.estado === "Abierto");
-
-  const totalFactura = lineas.reduce((acc, l) => acc + monto(l.cantidad) * monto(l.precioUnitario) * (1 + monto(l.porcentajeImpuesto) / 100), 0);
-
-  const puedeEnviarFactura =
-    !enviandoFactura &&
-    formFactura.numero.trim() !== "" &&
-    formFactura[campoContraparteId] !== "" &&
-    formFactura.periodoId !== "" &&
-    formFactura.cuentaControlId !== "" &&
-    lineas.every((l) => l.cuentaContableId !== "" && monto(l.cantidad) > 0);
-
-  async function handleSubmitFactura(e) {
-    e.preventDefault();
-    setErrorFactura("");
-    setEnviandoFactura(true);
-    try {
-      const payload = {
-        numero: formFactura.numero.trim(),
-        tipoDocumento: formFactura.tipoDocumento,
-        [campoContraparteId]: Number(formFactura[campoContraparteId]),
-        fecha: formFactura.fecha,
-        fechaVencimiento: formFactura.fechaVencimiento,
-        periodoId: Number(formFactura.periodoId),
-        cuentaControlId: Number(formFactura.cuentaControlId),
-        lineas: lineas.map((l) => ({
-          descripcion: l.descripcion || null,
-          cantidad: monto(l.cantidad),
-          precioUnitario: monto(l.precioUnitario),
-          porcentajeImpuesto: monto(l.porcentajeImpuesto),
-          centroCostoId: l.centroCostoId ? Number(l.centroCostoId) : null,
-          cuentaContableId: Number(l.cuentaContableId),
-        })),
-      };
-      await api.crearFactura(payload);
-      setFormFactura({ ...formFacturaVacio(), periodoId: formFactura.periodoId, cuentaControlId: formFactura.cuentaControlId });
-      reiniciarLineas();
-      await cargarFacturas();
-    } catch (err) {
-      setErrorFactura(err.response?.data?.error || "No se pudo registrar la factura.");
-    } finally {
-      setEnviandoFactura(false);
-    }
-  }
 
   const facturasDeLaContraparte = facturas.filter(
     (f) => String(f[campoContraparteId]) === String(pagoContraparteId) && f.estado === "Vigente" && f.saldoPendiente > 0
@@ -179,114 +120,19 @@ function GestionCuentasPorCobrarPagar({ config }) {
 
       {subTab === "facturas" && (
         <>
-          <form onSubmit={handleSubmitFactura}>
-            <div className="catalog-form">
-              <input className="input" placeholder="Número" aria-label="Número de factura" value={formFactura.numero} onChange={(e) => setFormFactura({ ...formFactura, numero: e.target.value })} required />
-              <select className="select" aria-label="Tipo de documento" value={formFactura.tipoDocumento} onChange={(e) => setFormFactura({ ...formFactura, tipoDocumento: e.target.value })}>
-                {TIPOS_DOCUMENTO.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <select className="select" aria-label={etiquetaContraparte} value={formFactura[campoContraparteId]} onChange={(e) => setFormFactura({ ...formFactura, [campoContraparteId]: e.target.value })} required>
-                <option value="">Selecciona {etiquetaContraparte.toLowerCase()}</option>
-                {contrapartes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-              </select>
-              <input type="date" className="input" aria-label="Fecha" value={formFactura.fecha} onChange={(e) => setFormFactura({ ...formFactura, fecha: e.target.value })} required />
-              <input type="date" className="input" aria-label="Fecha de vencimiento" value={formFactura.fechaVencimiento} onChange={(e) => setFormFactura({ ...formFactura, fechaVencimiento: e.target.value })} required />
-              <select className="select" aria-label="Periodo" value={formFactura.periodoId} onChange={(e) => setFormFactura({ ...formFactura, periodoId: e.target.value })} required>
-                <option value="">Selecciona periodo</option>
-                {periodosAbiertos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-              </select>
-              <select className="select" aria-label={etiquetaCuentaControl} value={formFactura.cuentaControlId} onChange={(e) => setFormFactura({ ...formFactura, cuentaControlId: e.target.value })} required>
-                <option value="">{etiquetaCuentaControl}</option>
-                {cuentasControl.map((c) => <option key={c.id} value={c.id}>{c.codigo} - {c.nombre}</option>)}
-              </select>
-            </div>
-
-            <div className="table-wrap">
-              <div className="table-scroll">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Descripción</th>
-                      <th>Cantidad</th>
-                      <th>Precio unitario</th>
-                      <th>% Impuesto</th>
-                      <th>{etiquetaCuentaLinea}</th>
-                      <th>Centro de costo</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lineas.map((l, index) => (
-                      <tr key={l.id}>
-                        <td><input className="input" aria-label="Descripción de línea" value={l.descripcion} onChange={(e) => actualizarLinea(index, "descripcion", e.target.value)} /></td>
-                        <td className="numeric"><input type="number" className="input input-money" aria-label="Cantidad" min="0" step="0.01" value={l.cantidad} onChange={(e) => actualizarLinea(index, "cantidad", e.target.value)} /></td>
-                        <td className="numeric"><input type="number" className="input input-money" aria-label="Precio unitario" min="0" step="0.01" value={l.precioUnitario} onChange={(e) => actualizarLinea(index, "precioUnitario", e.target.value)} /></td>
-                        <td className="numeric"><input type="number" className="input input-money" aria-label="Porcentaje de impuesto" min="0" step="0.01" value={l.porcentajeImpuesto} onChange={(e) => actualizarLinea(index, "porcentajeImpuesto", e.target.value)} /></td>
-                        <td>
-                          <select className="select" aria-label="Cuenta de la línea" value={l.cuentaContableId} onChange={(e) => actualizarLinea(index, "cuentaContableId", e.target.value)}>
-                            <option value="">Selecciona cuenta</option>
-                            {hojas.map((c) => <option key={c.id} value={c.id}>{c.codigo} - {c.nombre}</option>)}
-                          </select>
-                        </td>
-                        <td>
-                          <select className="select" aria-label="Centro de costo de la línea" value={l.centroCostoId} onChange={(e) => actualizarLinea(index, "centroCostoId", e.target.value)}>
-                            <option value="">(ninguno)</option>
-                            {centros.map((c) => <option key={c.id} value={c.id}>{c.codigo} - {c.nombre}</option>)}
-                          </select>
-                        </td>
-                        <td>
-                          <button type="button" className="btn btn-danger-outline btn-sm" onClick={() => quitarLinea(index)} disabled={lineas.length <= 1}>Quitar</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="lineas-toolbar">
-              <button type="button" className="btn btn-outline btn-sm" onClick={agregarLinea}>+ Agregar línea</button>
-            </div>
-
-            <p>Total de la factura: {formatoMoneda.format(totalFactura)}</p>
-
-            {errorFactura && <p className="error-chip">{errorFactura}</p>}
-
-            <button type="submit" disabled={!puedeEnviarFactura} className="btn btn-primary">
-              {enviandoFactura ? "Registrando..." : "Registrar factura"}
-            </button>
-          </form>
+          <FormularioFactura
+            config={config}
+            contrapartes={contrapartes}
+            hojas={hojas}
+            cuentasControl={cuentasControl}
+            centros={centros}
+            periodosAbiertos={periodosAbiertos}
+            facturas={facturas}
+            onRegistrada={cargarFacturas}
+          />
 
           <h3>Facturas registradas</h3>
-          <div className="table-wrap">
-            <div className="table-scroll">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Número</th><th>{etiquetaContraparte}</th><th>Fecha</th><th>Vencimiento</th>
-                    <th className="numeric">Monto total</th><th className="numeric">Saldo pendiente</th><th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {facturas.length === 0 ? (
-                    <tr><td colSpan="7">No hay facturas registradas todavía.</td></tr>
-                  ) : (
-                    facturas.map((f) => (
-                      <tr key={f.id}>
-                        <td>{f.numero}</td>
-                        <td>{f[campoContraparteNombre]}</td>
-                        <td>{f.fecha}</td>
-                        <td>{f.fechaVencimiento}</td>
-                        <td className="numeric">{formatoMoneda.format(f.montoTotal)}</td>
-                        <td className="numeric">{formatoMoneda.format(f.saldoPendiente)}</td>
-                        <td>{f.estado}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <TablaFacturas facturas={facturas} etiquetaContraparte={etiquetaContraparte} campoContraparteNombre={campoContraparteNombre} />
         </>
       )}
 

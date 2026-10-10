@@ -12,3 +12,7 @@ export function hoyIso() {
 export function mensajeError(err, porDefecto) {
   return err.response?.data?.error || porDefecto;
 }
+
+export function formatoFechaHora(valor) {
+  return new Date(valor).toLocaleString("es-GT");
+}

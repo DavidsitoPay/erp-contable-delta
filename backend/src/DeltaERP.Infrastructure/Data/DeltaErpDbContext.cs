@@ -19,6 +19,9 @@ public class DeltaErpDbContext : DbContext
     public DbSet<SaldoReporteCuenta> SaldosReporte => Set<SaldoReporteCuenta>();
 
     public DbSet<Contraparte> Contrapartes => Set<Contraparte>();
+    public DbSet<Moneda> Monedas => Set<Moneda>();
+    public DbSet<ConfiguracionFiscal> ConfiguracionesFiscales => Set<ConfiguracionFiscal>();
+    public DbSet<Impuesto> Impuestos => Set<Impuesto>();
 
     public DbSet<DocumentoCxC> DocumentosCxC => Set<DocumentoCxC>();
     public DbSet<LineaDocumentoCxC> LineasDocumentoCxC => Set<LineaDocumentoCxC>();
@@ -50,6 +53,9 @@ public class DeltaErpDbContext : DbContext
         modelBuilder.Entity<CentroCosto>().ToTable("centrocosto");
         modelBuilder.Entity<PeriodoContable>().ToTable("periodocontable");
         modelBuilder.Entity<Contraparte>().ToTable("contraparte");
+        modelBuilder.Entity<Moneda>().ToTable("moneda");
+        modelBuilder.Entity<ConfiguracionFiscal>().ToTable("configuracionfiscal").Property(c => c.Id).ValueGeneratedNever();
+        modelBuilder.Entity<Impuesto>().ToTable("impuesto");
         modelBuilder.Entity<DocumentoCxC>().ToTable("documentocxc");
         modelBuilder.Entity<LineaDocumentoCxC>().ToTable("lineadocumentocxc");
         modelBuilder.Entity<ReciboPagoCliente>().ToTable("recibopagocliente");

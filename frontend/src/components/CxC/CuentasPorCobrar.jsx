@@ -12,6 +12,10 @@ const CONFIG_CXC = {
   filtroCuentaControl: (c) => c.tipo === "Activo" && c.naturaleza === "Deudora",
   etiquetaCuentaControl: "Cuenta de control (CxC)",
   etiquetaCuentaLinea: "Cuenta (ingreso)",
+  aplicaImpuestoA: "VENTAS",
+  etiquetaIva: "IVA débito",
+  dteObligatorio: true,
+  tipoBienDefecto: "SERVICIO",
 };
 
 function CuentasPorCobrar() {

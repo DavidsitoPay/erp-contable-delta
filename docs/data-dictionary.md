@@ -35,9 +35,69 @@ Se puebla exclusivamente vía `sp_registrar_auditoria`, invocado por la API. Inm
 
 ## 2. Catálogo y Configuración General
 
-### Moneda / HistorialTipoCambio / PeriodoContable / Contraparte
+### HistorialTipoCambio / PeriodoContable
 Sin cambios respecto a la versión anterior — ver estructura completa en el documento
 oficial (05/09, sección 2).
+
+### Moneda
+| Campo | Tipo | Nulo | Llave | Descripción |
+|---|---|---|---|---|
+| id | SERIAL | No | PK | Identificador único |
+| codigo | VARCHAR | No | UQ (`uq_moneda_codigo`) | Código de la moneda |
+| nombre | VARCHAR | No | | Nombre |
+| es_funcional | BOOLEAN | No | | Moneda funcional; índice único parcial `ux_moneda_funcional` (solo una). Sembrada: GTQ |
+| activa | BOOLEAN | No | | Por defecto TRUE |
+
+### Contraparte
+Además de sus campos previos, tiene datos fiscales:
+
+| Campo | Tipo | Nulo | Descripción |
+|---|---|---|---|
+| regimen_iva | VARCHAR(25) | No | GENERAL (defecto) / PEQUENO_CONTRIBUYENTE / EXENTO |
+| regimen_isr | VARCHAR(20) | No | UTILIDADES (defecto) / SIMPLIFICADO |
+| es_residente | BOOLEAN | No | TRUE por defecto |
+| es_agente_retencion_iva | BOOLEAN | No | FALSE por defecto |
+
+El NIT se guarda normalizado (`cuerpo-DV`, o `CF` en clientes) y se valida en la API (RN-13).
+
+### Impuesto
+Catálogo de impuestos con vigencia (RN-07). Una versión nueva es una fila nueva con el mismo `codigo`.
+
+| Campo | Tipo | Nulo | Llave | Descripción |
+|---|---|---|---|---|
+| id | SERIAL | No | PK | Identificador único |
+| codigo | VARCHAR(30) | No | UQ con `vigente_desde` | Código estable entre versiones |
+| nombre | VARCHAR(100) | No | | Nombre |
+| tipo | VARCHAR(25) | No | | IVA_GENERAL / EXENTO / NO_AFECTO / PEQUENO_CONTRIBUYENTE / LEGADO (LEGADO solo lo crea la migración) |
+| tasa | DECIMAL(7,4) | No | | 0 para exento y no afecto; mayor que 0 y hasta 100 para IVA general y pequeño contribuyente |
+| aplica_a | VARCHAR(10) | No | | VENTAS / COMPRAS / AMBOS (pequeño contribuyente solo COMPRAS) |
+| genera_credito | BOOLEAN | No | | Solo puede ser TRUE en IVA_GENERAL |
+| articulo_legal | VARCHAR(200) | No | | Referencia legal |
+| nota | VARCHAR(300) | Sí | | Observación; los sembrados indican «[VERIFICAR con asesor] vigencia referencial» |
+| vigente_desde | DATE | No | | Inicio de vigencia |
+| vigente_hasta | DATE | Sí | | Fin de vigencia (>= inicio) |
+| activo | BOOLEAN | No | | Baja lógica |
+
+Sembrados: `IVA_GENERAL`, `IVA_GENERAL_SIN_CREDITO` (compras), `EXENTO_EXPORTACION`, `NO_AFECTO` y `PEQUENO_CONTRIBUYENTE` (compras), más un impuesto `LEGADO_<tasa>` inactivo por cada tasa distinta de 0 y 12 hallada en líneas previas. Triggers: `trg_impuesto_sin_traslape` (sin vigencias traslapadas del mismo código), `trg_impuesto_inmutable_si_usado` (con líneas asociadas no se cambian código, tipo, tasa, ámbito, crédito ni inicio, ni se cierra antes de la fecha del último documento) y `trg_prevenir_eliminacion_impuesto`. Los errores de negocio de estos triggers usan el código `55000` (409 en la API).
+
+### ConfiguracionFiscal
+Fila única (`CHECK (id = 1)`); `trg_configuracionfiscal_no_eliminable` impide borrarla.
+
+| Campo | Tipo | Nulo | Llave | Descripción |
+|---|---|---|---|---|
+| id | INT | No | PK | Siempre 1 |
+| nit_empresa | VARCHAR(30) | Sí | | NIT de la empresa |
+| nombre_legal | VARCHAR(200) | Sí | | Nombre legal |
+| moneda_funcional_id | INT | No | FK -> Moneda(id) | GTQ; solo lectura en la API |
+| regimen_isr | VARCHAR(20) | No | | UTILIDADES (defecto) / SIMPLIFICADO |
+| agente_retencion_iva | BOOLEAN | No | | `CHECK (agente_retencion_iva = (tipo_agente_iva IS NOT NULL))` |
+| tipo_agente_iva | VARCHAR(30) | Sí | | EXPORTADOR_HABITUAL / SECTOR_PUBLICO / TARJETA_CREDITO / COMBUSTIBLE / CONTRIBUYENTE_ESPECIAL |
+| cuenta_iva_debito_id | INT | Sí | FK -> CuentaContable(id) | IVA débito fiscal (Pasivo, Acreedora) |
+| cuenta_iva_credito_id | INT | Sí | FK -> CuentaContable(id) | IVA crédito fiscal (Activo, Deudora); distinta de la de débito |
+| actualizado_en | TIMESTAMPTZ | No | | Última actualización |
+| actualizado_por | INT | Sí | FK -> Usuario(id) | Quién actualizó |
+
+Las cuentas de IVA quedan nulas tras la migración; las configura el Administrador. Régimen de ISR y agente de retención se guardan, pero las retenciones no están implementadas.
 
 ### CuentaContable
 | Campo | Tipo | Nulo | Llave | Descripción |
@@ -87,24 +147,50 @@ Definido en `database/12_reversa_asientos.sql` (RN-03). Verifica en este orden: 
 | cliente_id | INT | No | FK -> Contraparte(id) | Cliente |
 | fecha | DATE | No | | Fecha de emisión |
 | **fecha_vencimiento** | DATE | No | | **Nuevo** — fecha en que vence el cobro, según condiciones de crédito |
-| monto_total | DECIMAL(14,2) | No | | Monto total |
-| tipo_cambio_aplicado | DECIMAL(12,6) | Sí | | Si aplica moneda extranjera |
+| monto_total | DECIMAL(14,2) | No | | Total en GTQ con IVA incluido; `CHECK (monto_total = monto_base + monto_iva)` |
+| monto_base | DECIMAL(14,2) | No | | Suma de la base de las líneas |
+| monto_iva | DECIMAL(14,2) | No | | Suma del IVA de las líneas |
+| calculo_legado | BOOLEAN | No | | TRUE en documentos previos a la configuración fiscal (RN-16); FALSE en los nuevos |
+| dte_uuid | UUID | Sí | | UUID de autorización del DTE; índice único parcial |
+| dte_serie | VARCHAR(20) | Sí | | Serie del DTE |
+| dte_numero | VARCHAR(20) | Sí | | Número del DTE; serie y número únicos |
+| dte_fecha_certificacion | TIMESTAMPTZ | Sí | | Fecha de certificación; en CxC los cuatro datos DTE son obligatorios salvo en documentos legados |
+| documento_origen_id | INT | Sí | FK -> DocumentoCxC(id) | Factura de origen; solo notas de crédito (obligatorio salvo en legados) |
+| tipo_cambio_aplicado | DECIMAL(12,6) | Sí | | El servidor escribe 1 (moneda funcional) |
 | estado | VARCHAR(20) | No | | **Vigente / Anulado** (antes: Pendiente/Pagado/Anulado) |
 | asiento_id | INT | Sí | FK -> AsientoContable(id) | Asiento generado |
 
 **Sin columna `saldo_pendiente`.** Se calcula en `vw_saldodocumentocxc`
-(`monto_total − SUM(monto_aplicado)`).
+(`monto_total − SUM(monto_aplicado) − SUM(monto_total de las notas de crédito vigentes cuyo documento_origen_id es el documento)`; una nota de crédito tiene saldo 0).
+Triggers: `trg_nota_credito_valida_cxc` (RN-14) y `fn_limite_pago_cxc` (RN-05, descuenta las notas de crédito y rechaza pagos sobre una nota de crédito).
 
-### LineaDocumentoCxC, ReciboPagoCliente, AplicacionPagoCliente
+### LineaDocumentoCxC
+Campos fiscales (la columna `porcentaje_impuesto` se renombró a `tasa_aplicada`):
+
+| Campo | Tipo | Nulo | Llave | Descripción |
+|---|---|---|---|---|
+| impuesto_id | INT | No | FK -> Impuesto(id) | Impuesto aplicado |
+| tasa_aplicada | DECIMAL(7,4) | No | | Fotografía de la tasa al registrar |
+| monto_linea | DECIMAL(14,2) | No | | Total de la línea con IVA incluido; `CHECK (monto_linea = monto_base + monto_iva)` |
+| monto_base | DECIMAL(14,2) | No | | Base sin IVA |
+| monto_iva | DECIMAL(14,2) | No | | IVA de la línea |
+| tipo_bien_servicio | VARCHAR(10) | No | | BIEN / SERVICIO |
+
+`trg_linea_impuesto_valido_cxc` rechaza (código `23514`) una línea de documento no legado cuyo impuesto esté inactivo, sea LEGADO, no esté vigente en la fecha del documento, no aplique a VENTAS o tenga una tasa distinta de la del catálogo.
+
+### ReciboPagoCliente, AplicacionPagoCliente
 Sin cambios estructurales.
 
 ## 5. Cuentas por Pagar (CxP)
 
 ### DocumentoCxP
 Análogo a DocumentoCxC: gana `fecha_vencimiento`, `estado` se simplifica a
-Vigente/Anulado, y **sin columna `saldo_pendiente`** (ver `vw_saldodocumentocxp`).
+Vigente/Anulado, y **sin columna `saldo_pendiente`** (ver `vw_saldodocumentocxp`). Tiene los mismos campos fiscales, de DTE y de origen. Diferencias: los datos DTE son opcionales, pero se admiten completos (UUID, serie y número) o ninguno (`ck_documentocxp_dte_completo`); la serie y número son únicos por proveedor (`ux_documentocxp_proveedor_dte_serie_numero`); y los triggers son `trg_nota_credito_valida_cxp`, `trg_linea_impuesto_valido_cxp` (ámbito COMPRAS) y `fn_limite_pago_cxp`.
 
-### LineaDocumentoCxP, PagoProveedorCabecera, AplicacionPagoProveedor
+### LineaDocumentoCxP
+Mismos campos fiscales que `LineaDocumentoCxC`.
+
+### PagoProveedorCabecera, AplicacionPagoProveedor
 Sin cambios estructurales.
 
 ## 6. Tesorería
@@ -217,5 +303,5 @@ Función de tabla, solo lectura (`STABLE`, sin DML), que alimenta el balance gen
 | `vw_saldocuentaperiodo_vigente` | — | Filas de `SaldoCuentaPeriodo` del cierre vigente de cada periodo (`cierre_numero = PeriodoContable.cierres`); vacía si ese cierre no tuvo movimientos |
 | `vw_saldocuentabancaria` | `CuentaBancaria.saldo` | Saldo en tiempo real por cuenta bancaria: suma firmada de sus movimientos (Ingreso +, Egreso -); el saldo de apertura entra por su movimiento de apertura, no se suma aparte |
 | `vw_conciliacion_resumen` | — | Saldo inicial, total marcado, saldo conciliado y diferencia de cada conciliación bancaria (fuente de la matemática de RN-10) |
-| `vw_saldodocumentocxc` | `DocumentoCxC.saldo_pendiente` | Saldo pendiente por documento de CxC |
-| `vw_saldodocumentocxp` | `DocumentoCxP.saldo_pendiente` | Saldo pendiente por documento de CxP |
+| `vw_saldodocumentocxc` | `DocumentoCxC.saldo_pendiente` | Saldo pendiente por documento de CxC: monto total menos pagos aplicados y notas de crédito vigentes referenciadas; 0 para notas de crédito |
+| `vw_saldodocumentocxp` | `DocumentoCxP.saldo_pendiente` | Saldo pendiente por documento de CxP: monto total menos pagos aplicados y notas de crédito vigentes referenciadas; 0 para notas de crédito |

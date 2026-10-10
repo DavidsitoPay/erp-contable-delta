@@ -17,35 +17,36 @@ Fase 1: uso interno. Fase 2 (futura): comercialización SaaS B2B a PyMEs guatema
 
 | Capa | Tecnología |
 |---|---|
-| Frontend | React (SPA) |
-| Backend / API | C# con ASP.NET Core (API REST) |
-| Base de datos | PostgreSQL |
-| Contenedores | Docker / docker-compose |
-| CI/CD | Azure Pipelines |
-| Gestión de proyecto | Azure Boards |
+| Frontend | React 18 + Vite (SPA), desplegado en Vercel |
+| Backend / API | C# con ASP.NET Core 8 (API REST) + EF Core/Npgsql, imagen Docker desplegada en Azure Container Apps |
+| Base de datos | PostgreSQL 16 en Neon (ramas `production` y `development`) |
+| CI/CD | GitHub Actions (`backend-build-check`, `sonarcloud-analysis`, `backend-deploy`, `frontend-alias`) |
+| Calidad | SonarCloud (análisis, cobertura y duplicación) |
+| Gestión de proyecto | Azure Boards y Azure Test Plans |
 | Control de versiones | GitHub |
 | Editor de código | Visual Studio Code |
 
 ## Artefactos ya entregados (referencia)
 
-- `docs/architecture.md` — Arquitectura de 3 capas (entregado 05/09)
-- `docs/data-dictionary.md` — Diccionario de datos completo, 22 tablas (entregado 05/09)
-- `docs/business-rules.md` — Reglas de negocio RN-01 a RN-11, con la columna "Dónde se aplica" (entregado 15/08 + corrección oficial v2 12/09)
+- `docs/architecture.md` — Arquitectura de 3 capas
+- `docs/data-dictionary.md` — Diccionario de datos completo, 28 tablas
+- `docs/business-rules.md` — Reglas de negocio RN-01 a RN-16, con la columna "Dónde se aplica"
 - `docs/diagrams/` — Diagramas de clases (1/2 y 2/2), componentes, secuencia, contexto, arquitectura
 
 ## Módulos funcionales (Product Backlog de alto nivel)
 
 | Código | Módulo | Prioridad | Estado |
 |---|---|---|---|
-| M1 | Catálogo y parametrización contable | Alta | Implementado (cuentas contables, centros de costo, periodos — CRUD + backend) |
-| M2 | Registro de transacciones | Alta | Implementado (registro de asientos con RN-01/RN-02/RN-08; falta listado `GET /api/asientos`) |
-| M3 | Libros y auxiliares | Alta | Implementado (balance de saldos, libro diario y libro mayor, los tres calculados en tiempo real — `LibrosController`) |
-| M4 | Cuentas por cobrar | Alta | Implementado (facturas a clientes con asiento automático, recibos y aplicación de pagos con límite RN-05 — `CxCController`) |
-| M5 | Cuentas por pagar | Alta | Implementado (facturas de proveedores con asiento automático, pagos y aplicación con límite RN-05 — `CxPController`) |
-| M6 | Tesorería y bancos | Media | Diseñado |
-| M7 | Reportes y estados financieros | Alta | Diseñado |
-| M8 | Seguridad y auditoría | Alta | Implementado (login, JWT, roles, usuarios seed) |
+| M1 | Catálogo y parametrización contable | Alta | Implementado (cuentas contables, centros de costo, periodos) |
+| M2 | Registro de transacciones | Alta | Implementado (registro de asientos con RN-01/RN-02/RN-08 y reversión formal RN-03; la consulta de asientos se hace desde el libro diario) |
+| M3 | Libros y auxiliares | Alta | Implementado (balance de saldos, libro diario y libro mayor jerárquicos, calculados en tiempo real) |
+| M4 | Cuentas por cobrar | Alta | Implementado (facturas con asiento automático, notas de crédito, recibos y aplicación de pagos con límite RN-05) |
+| M5 | Cuentas por pagar | Alta | Implementado (facturas con asiento automático, notas de crédito, pagos y aplicación con límite RN-05) |
+| M6 | Tesorería y bancos | Media | Implementado (cuentas bancarias, movimientos, transferencias y conciliación bancaria) |
+| M7 | Reportes y estados financieros | Alta | Implementado (balance general y estado de resultados) |
+| M8 | Seguridad y auditoría | Alta | Implementado (login, JWT, roles, bitácora de auditoría) |
 | M9 | Carga inicial e importación | Media | Diseñado |
+| M10 | Cumplimiento fiscal y multimoneda | Alta | En curso (parámetros fiscales e IVA, registro de DTE de FEL, notas de crédito, libro de compras y ventas implementados; retenciones ISR/IVA y multimoneda con tipo de cambio de Banguat pendientes) |
 
 ## Etapas del ciclo de desarrollo (SDLC) aplicadas al proyecto
 
@@ -55,56 +56,48 @@ Cada etapa se mapea a un entregable del curso y a una carpeta del repositorio.
 Diagnóstico, modelo de negocio, requerimientos, UML, modelo relacional, diccionario de
 datos y arquitectura. Ver `/docs`.
 
-### Etapa 1 — DevOps 1 (entregable 19/09) ← **estamos aquí**
-Objetivo: dejar el repositorio y la infraestructura base listos para empezar a programar.
+### Etapa 1 — DevOps 1 (completada)
+Repositorio e infraestructura base.
 
-- [x] Repositorio Git inicializado con esta estructura (`git init`, primer commit, push a GitHub)
-- [x] `devops/docker-compose.yml` — 3 servicios: `frontend`, `backend`, `db` (igual al diagrama de arquitectura)
-- [x] `devops/Dockerfile.backend` y `devops/Dockerfile.frontend`
-- [x] Proyecto backend inicial (ASP.NET Core Web API) con estructura por capas (Api / Domain / Infrastructure) — ya con M1/M2/M8 funcionando, no solo el esqueleto
-- [x] Proyecto frontend inicial (React) con estructura de carpetas — ya con login, catálogo y registro de asientos funcionando, no solo el esqueleto
-- [ ] Azure Boards: crear el Product Backlog con los 9 módulos (M1–M9) como Epics/Features — pendiente, paso manual en el portal (ver `docs/azure-devops-checklist.md`)
-- [ ] Azure Repos o espejo del repo de GitHub conectado a Azure Pipelines — pendiente, paso manual en el portal
-- [x] `azure-pipelines.yml` — pipeline mínimo de build (compilar backend + frontend)
-- [ ] Azure Test Plans: crear el plan de pruebas vacío (se llena en DevOps 2) — pendiente, paso manual en el portal
+- [x] Repositorio Git en GitHub con estructura por capas
+- [x] `devops/Dockerfile.backend` — imagen del backend para Azure Container Apps
+- [x] Proyecto backend (ASP.NET Core Web API) con capas Api / Domain / Infrastructure
+- [x] Proyecto frontend (React + Vite)
+- [x] Azure Boards: Product Backlog con los módulos como Epics (E1–E10), ver `docs/backlog-features-historias.md`
+- [x] Azure Test Plans: plan de pruebas, ver `docs/plan-de-pruebas-inicial.md`
+- [x] Pipelines en GitHub Actions (`.github/workflows/`)
 
-### Etapa 2 — Base de datos (entregable 12/09, en paralelo/ya vencido)
-- [x] `database/01_tables.sql` — DDL de las 22 tablas del diccionario de datos
-- [x] `database/02_functions.sql` — funciones de apoyo de propósito general (ej. validación de consistencia de M9 Importación)
-- [x] `database/03_triggers.sql` — disparadores (partida doble, bloqueo de periodo cerrado, no eliminación de asientos, límites de pago, e inmutabilidad de `BitacoraAuditoria` y `SaldoCuentaPeriodo`)
-- [x] `database/04_procedures.sql` — procedimientos almacenados (cierre de periodo)
-- [x] `database/05_views.sql` — vistas (ej. saldo de cuenta contable en tiempo real)
-- [x] `database/06_seed_dev.sql` — usuarios de desarrollo (admin, contador, vendedor, técnico) para probar el login localmente
+### Etapa 2 — Base de datos (completada)
+Scripts numerados en `database/`, aplicados en orden por `database/run_migrations.sh` (cada script con `--single-transaction`). Un script ya aplicado no se edita: las correcciones van en un archivo nuevo.
 
-### Etapa 3 — Backend (núcleo contable primero, por dependencia de datos)
-Orden recomendado, siguiendo la dependencia real entre módulos (ver diagrama de componentes):
+- [x] `01_tables.sql` — DDL base
+- [x] `02_functions.sql`, `03_triggers.sql`, `04_procedures.sql`, `05_views.sql` — funciones, disparadores (partida doble, periodo cerrado, no eliminación de asientos, límites de pago, inmutabilidad de auditoría y saldos), procedimientos y vistas
+- [x] `06_seed_dev.sql` — usuarios de prueba por perfil
+- [x] `07` a `13` — perfil autorizado, correcciones de balance y cierre, tesorería, balance jerárquico, reportes, reversa de asientos y parámetros fiscales e IVA (M10)
+- [x] `database/demo/` — datos de demostración
 
-1. ✅ **M8 Seguridad** (Usuario, Perfil, autenticación por token) — todo lo demás depende de esto. Implementado: `AuthController`, JWT, roles (`Administrador`, `Contador`, `Vendedor`, `Tecnico`).
-2. ✅ **M1 Catálogo** (CuentaContable, CentroCosto, PeriodoContable). Implementado: CRUD completo de los tres controladores, con validación de jerarquía y naturaleza contable.
-3. ✅ **M2 Transacciones** (AsientoContable, LineaAsiento + validación de partida doble RN-01). Implementado: `AsientosController.Registrar` con RN-01/RN-02/RN-08 y monto calculado server-side. **Pendiente:** endpoint de listado/consulta (`GET /api/asientos`).
-4. ✅ **M3 Libros** (reportes de LineaAsiento). Implementado: `LibrosController` — balance de saldos (`vw_balance_saldos`), libro diario por periodo y libro mayor por cuenta con saldo acumulado, los tres calculados en tiempo real, sin tablas ni columnas precalculadas.
-5. ✅ **M4 / M5 CxC y CxP** (DocumentoCxC/CxP + aplicaciones de pago). Implementado: `ContrapartesController` (catálogo compartido clientes/proveedores), `CxCController` y `CxPController` — registrar una factura genera automáticamente su `AsientoContable` (débito/crédito a la cuenta de control indicada, contra la cuenta de cada línea), y los pagos (`ReciboPagoCliente`/`PagoProveedorCabecera`) validan RN-05 (no exceder el saldo pendiente, `vw_saldodocumentocxc`/`cxp`) en la API y en el trigger. Los pagos no generan asiento propio: el modelo de datos no les dio columna `asiento_id`; el impacto en bancos queda para M6.
-6. **M6 Tesorería** (CuentaBancaria, MovimientoTesoreria, conciliación) — no iniciado
-7. **M7 Reportes** — no iniciado
-8. **M9 Importación** — no iniciado
+### Etapa 3 — Backend (completada para M1–M8; M10 en curso)
+Orden seguido, según la dependencia entre módulos:
+
+1. ✅ **M8 Seguridad** — `AuthController`, JWT, roles (`Administrador`, `Contador`, `Vendedor`, `Tecnico`), bitácora de auditoría desde la API.
+2. ✅ **M1 Catálogo** — cuentas contables, centros de costo y periodos.
+3. ✅ **M2 Transacciones** — registro de asientos (RN-01/RN-02/RN-08) y reversión (RN-03, `POST api/asientos/{id}/reversar`). No existe `GET /api/asientos`: la consulta se hace por el libro diario.
+4. ✅ **M3 Libros** — balance de saldos, libro diario y libro mayor jerárquicos, calculados en tiempo real.
+5. ✅ **M4 / M5 CxC y CxP** — contrapartes, facturas con asiento automático, notas de crédito, y pagos con límite RN-05 en la API y en el trigger.
+6. ✅ **M6 Tesorería** — cuentas bancarias, movimientos, transferencias y conciliación (RN-10).
+7. ✅ **M7 Reportes** — balance general y estado de resultados.
+8. **M10 Cumplimiento fiscal** — en curso: configuración fiscal, catálogo de impuestos, IVA en facturas, DTE de FEL, notas de crédito y libro fiscal implementados; retenciones y multimoneda pendientes.
+9. **M9 Importación** — diseñado, no iniciado.
 
 ### Etapa 4 — Frontend
-En paralelo al backend, por módulo: login/autenticación → catálogo → registro de
-transacciones → CxC/CxP → reportes. Cada pantalla consume un endpoint ya probado del backend.
+Por módulo, cada pantalla consume un endpoint ya probado del backend.
 
-✅ Implementado: login, catálogo de cuentas contables (búsqueda, filtro por tipo, orden por
-columna, jerarquía con sangría), centros de costo, periodos contables, registro de asientos,
-balance de saldos, libro diario, libro mayor, catálogo de clientes/proveedores, facturación y
-pagos de cuentas por cobrar, y facturación y pagos de cuentas por pagar.
-Rediseño visual completo (tema sobrio, paleta de marca) con modo oscuro conmutable persistido
-por navegador. **Pendiente conocido:** las pantallas de catálogo no ocultan aún sus botones de
-edición a perfiles sin permiso (el backend sí devuelve 403; es solo inconsistencia de UX).
+✅ Implementado: login, catálogo de cuentas contables, centros de costo, periodos contables, registro y reversión de asientos, balance de saldos, libro diario y libro mayor, clientes/proveedores, facturación y pagos de CxC y CxP, tesorería (cuentas bancarias, movimientos, conciliación), reportes (balance general, estado de resultados), configuración fiscal, catálogo de impuestos y libro fiscal de compras y ventas. Tema sobrio con modo oscuro conmutable.
 
-### Etapa 5 — DevOps 2 (entregable 26/09)
-Integración continua real, plan de pruebas completo, pruebas automatizadas de las
-reglas de negocio críticas (RN-01, RN-02, RN-05, RN-08).
+### Etapa 5 — DevOps 2 (completada)
+Integración continua en GitHub Actions: pruebas del backend (xUnit contra un servicio PostgreSQL) y del frontend (Vitest), SonarCloud con puerta de calidad, cobertura mínima en el código modificado y control de duplicación. Plan de pruebas en `docs/plan-de-pruebas-inicial.md`.
 
-### Etapa 6 — Manual de usuario (03/10) y cierre (10/10 – 24/10)
+### Etapa 6 — Manual de usuario y cierre
 Documentación de usuario final, código terminado, documento integrado y presentación.
 
 ## Reglas de negocio críticas a implementar primero (ver docs/business-rules.md)
@@ -117,6 +110,6 @@ Documentación de usuario final, código terminado, documento integrado y presen
 
 ## Convenciones del repositorio
 
-- Ramas: `main` (estable), `develop` (integración), `feature/<módulo>-<descripción>` por historia de usuario.
-- Commits: `[M#] descripción corta` (ej. `[M2] agrega validación de partida doble`).
-- Cada Pull Request a `develop` debe referenciar el work item de Azure Boards correspondiente.
+- Ramas: `main` (estable; despliega backend y migra la base `production`) y `dev` (integración). El trabajo llega a `main` por Pull Request desde `dev`.
+- Commits: estilo Conventional Commits en español, `tipo(ámbito): descripción` (ej. `feat(asientos): reversión de asientos desde la API (RN-03)`).
+- Los módulos funcionales se llaman M1–M10 en el proyecto y E1–E10 (Epics) en Azure Boards.

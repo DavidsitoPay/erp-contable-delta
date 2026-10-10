@@ -25,21 +25,11 @@ public class CxPControllerTests
         var e = await _pg.Data.SembrarEscenarioAsync();
         var numero = $"P-{TestData.Sufijo()}";
         var client = _pg.CreateApiClient(e.UsuarioId);
-        var payload = new
+        var payload = FacturaPayloads.Cxp(e, numero, new[]
         {
-            numero,
-            tipoDocumento = "Factura",
-            proveedorId = e.ProveedorId,
-            fecha = "2025-03-15",
-            fechaVencimiento = "2025-04-15",
-            periodoId = e.PeriodoId,
-            cuentaControlId = e.CuentaCxP,
-            lineas = new object[]
-            {
-                new { descripcion = "Insumos", cantidad = 2m, precioUnitario = 100m, porcentajeImpuesto = 12m, centroCostoId = e.CentroCostoId, cuentaContableId = e.CuentaGasto },
-                new { descripcion = "Otro", cantidad = 1m, precioUnitario = 50.50m, porcentajeImpuesto = 0m, centroCostoId = (int?)null, cuentaContableId = e.CuentaGasto },
-            },
-        };
+            FacturaPayloads.Linea(e.ImpuestoIvaId, e.CuentaGasto, 2m, 100m, e.CentroCostoId),
+            FacturaPayloads.Linea(e.ImpuestoExentoId, e.CuentaGasto, 1m, 50.50m),
+        }).ConDte();
 
         var response = await client.PostAsJsonAsync("/api/cxp/facturas", payload);
 
@@ -47,22 +37,20 @@ public class CxPControllerTests
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         var documentoId = body.GetProperty("id").GetInt32();
         var asientoId = body.GetProperty("asientoId").GetInt32();
-        Assert.Equal(274.50m, body.GetProperty("montoTotal").GetDecimal());
+        Assert.Equal((250.50m, 229.07m, 21.43m), (body.GetProperty("montoTotal").GetDecimal(), body.GetProperty("montoBase").GetDecimal(), body.GetProperty("montoIva").GetDecimal()));
 
         var totalDebito = await _pg.Data.ScalarAsync<decimal>("SELECT COALESCE(SUM(debito), 0) FROM lineaasiento WHERE asiento_id = $1", asientoId);
         var totalCredito = await _pg.Data.ScalarAsync<decimal>("SELECT COALESCE(SUM(credito), 0) FROM lineaasiento WHERE asiento_id = $1", asientoId);
-        var creditoControl = await _pg.Data.ScalarAsync<decimal>("SELECT COALESCE(SUM(credito), 0) FROM lineaasiento WHERE asiento_id = $1 AND cuenta_id = $2", asientoId, e.CuentaCxP);
-        var debitoGasto = await _pg.Data.ScalarAsync<decimal>("SELECT COALESCE(SUM(debito), 0) FROM lineaasiento WHERE asiento_id = $1 AND cuenta_id = $2", asientoId, e.CuentaGasto);
         var estadoAsiento = await _pg.Data.ScalarAsync<string>("SELECT estado FROM asientocontable WHERE id = $1", asientoId);
-        Assert.Equal(274.50m, totalCredito);
+        Assert.Equal(250.50m, totalCredito);
         Assert.Equal(totalCredito, totalDebito);
-        Assert.Equal(274.50m, creditoControl);
-        Assert.Equal(274.50m, debitoGasto);
+        Assert.Equal(250.50m, await _pg.Data.CreditoAsync(asientoId, e.CuentaCxP));
+        Assert.Equal(229.07m, await _pg.Data.DebitoAsync(asientoId, e.CuentaGasto));
+        Assert.Equal(21.43m, await _pg.Data.DebitoAsync(asientoId, e.CuentaIvaCredito));
         Assert.Equal("Confirmado", estadoAsiento);
 
-        Assert.Equal(274.50m, await ObtenerSaldoAsync(client, documentoId));
-        var auditorias = await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM bitacoraauditoria WHERE usuario_id = $1 AND accion = 'registrar_factura_cxp'", e.UsuarioId);
-        Assert.Equal(1, auditorias);
+        Assert.Equal(250.50m, await ObtenerSaldoAsync(client, documentoId));
+        Assert.Equal(1, await _pg.Data.ContarAuditoriaAsync(e.UsuarioId, "registrar_factura_cxp"));
     }
 
     [Fact]
@@ -228,7 +216,7 @@ public class CxPControllerTests
 
         var pagos = response.EnumerateArray().ToList();
         Assert.NotEmpty(pagos);
-        var pago = pagos.First();
+        var pago = pagos[0];
         Assert.True(pago.GetProperty("proveedorNombre").GetString()!.Length > 0);
         Assert.Equal(50m, pago.GetProperty("montoTotal").GetDecimal());
     }
@@ -396,7 +384,7 @@ public class CxPControllerTests
         var client = _pg.CreateApiClient(e.UsuarioId);
         var numero = $"P-{TestData.Sufijo()}";
         var documentoId = await _pg.Data.ScalarAsync<int>(
-            "INSERT INTO documentocxp (numero, tipo_documento, proveedor_id, fecha, fecha_vencimiento, monto_total, estado) VALUES ($1, 'Factura', $2, $3, $4, 100, 'Vigente') RETURNING id",
+            "INSERT INTO documentocxp (numero, tipo_documento, proveedor_id, fecha, fecha_vencimiento, monto_total, monto_base, calculo_legado, estado) VALUES ($1, 'Factura', $2, $3, $4, 100, 100, TRUE, 'Vigente') RETURNING id",
             numero, e.ProveedorId, new DateOnly(2025, 3, 15), new DateOnly(2025, 4, 15));
 
         var response = await client.PostAsJsonAsync("/api/cxp/pagos", PayloadPago(e.ProveedorId, documentoId, 50m, cuenta.Id));
@@ -476,20 +464,8 @@ public class CxPControllerTests
         Assert.Equal(100m, await ObtenerSaldoAsync(client, documentoId));
     }
 
-    private static object PayloadFactura(Escenario e, string numero, int proveedorId, int cuentaLineaId) => new
-    {
-        numero,
-        tipoDocumento = "Factura",
-        proveedorId,
-        fecha = "2025-03-15",
-        fechaVencimiento = "2025-04-15",
-        periodoId = e.PeriodoId,
-        cuentaControlId = e.CuentaCxP,
-        lineas = new object[]
-        {
-            new { descripcion = "Insumos", cantidad = 1m, precioUnitario = 100m, porcentajeImpuesto = 0m, centroCostoId = (int?)null, cuentaContableId = cuentaLineaId },
-        },
-    };
+    private static Dictionary<string, object?> PayloadFactura(Escenario e, string numero, int proveedorId, int cuentaLineaId) =>
+        FacturaPayloads.Cxp(e, numero, new[] { FacturaPayloads.LineaExenta(e, cuentaLineaId) }, proveedorId);
 
     private static object PayloadPago(int proveedorId, int documentoId, decimal monto, int? cuentaBancariaId, string fecha = "2025-03-20") => new
     {

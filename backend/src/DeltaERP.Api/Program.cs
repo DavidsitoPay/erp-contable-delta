@@ -20,7 +20,10 @@ builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptio
 builder.Services.AddSingleton<TokenService>();
 builder.Services.AddScoped<ValidacionContable>();
 builder.Services.AddScoped<AuditoriaService>();
+builder.Services.AddScoped<ConfiguracionFiscalService>();
+builder.Services.AddScoped<FacturaFiscalService>();
 builder.Services.AddScoped<FacturaService>();
+builder.Services.AddScoped<LibroFiscalService>();
 builder.Services.AddScoped<TesoreriaService>();
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()

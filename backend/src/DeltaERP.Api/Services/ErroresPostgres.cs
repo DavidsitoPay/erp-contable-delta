@@ -11,10 +11,11 @@ public static class ErroresPostgres
         ["P0001"] = StatusCodes.Status403Forbidden,
         ["P0002"] = StatusCodes.Status404NotFound,
         ["55000"] = StatusCodes.Status409Conflict,
+        ["23514"] = StatusCodes.Status400BadRequest,
     };
 
     // Los procedimientos almacenados señalan perfil no autorizado (P0001), inexistente (P0002)
-    // y estado inválido (55000) con RAISE EXCEPTION; cualquier otro error se propaga.
+    // estado inválido (55000) y regla de check no cumplida (23514) con RAISE EXCEPTION; cualquier otro error se propaga.
     public static async Task<ObjectResult?> TraducirProcedimientoAsync(Func<Task> invocar)
     {
         try
@@ -31,9 +32,16 @@ public static class ErroresPostgres
     public static bool EsViolacionUnica(DbUpdateException ex, string constraint) =>
         ex.InnerException is PostgresException { SqlState: "23505" } pg && pg.ConstraintName == constraint;
 
-    public static ObjectResult? TraducirActualizacionAsync(DbUpdateException ex)
+    // Npgsql trata 55000 como transitorio y NpgsqlExecutionStrategy lo envuelve en InvalidOperationException.
+    public static PostgresException? ObtenerPostgres(Exception ex)
     {
-        if (ex.InnerException is PostgresException pg && EstadoHttpPorSqlState.TryGetValue(pg.SqlState, out var status))
+        var actualizacion = ex as DbUpdateException ?? (ex as InvalidOperationException)?.InnerException as DbUpdateException;
+        return actualizacion?.InnerException as PostgresException;
+    }
+
+    public static ObjectResult? TraducirActualizacionAsync(Exception ex)
+    {
+        if (ObtenerPostgres(ex) is { } pg && EstadoHttpPorSqlState.TryGetValue(pg.SqlState, out var status))
         {
             return new ObjectResult(new { error = pg.MessageText }) { StatusCode = status };
         }

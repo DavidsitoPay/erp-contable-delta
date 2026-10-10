@@ -80,12 +80,10 @@ for FILE in "$SCRIPT_DIR"/[0-9][0-9]_*.sql; do
     fi
 
     echo "== Aplicando $NAME =="
-    # ON_ERROR_STOP + una sola sesión de psql por archivo: si el script
-    # falla a mitad de camino, esa sesión aborta (nada queda a medias en
-    # cuanto a la transacción implícita que psql abre para un -f), el
-    # pipeline se detiene aquí (set -e) y el archivo NO se marca como
-    # aplicado, así que el siguiente run lo vuelve a intentar.
-    psql "$CONN_STRING" -v ON_ERROR_STOP=1 -f "$FILE"
+    # --single-transaction + ON_ERROR_STOP: si el script falla a mitad de camino,
+    # toda su transacción se revierte, el pipeline se detiene (set -e) y el archivo
+    # NO se marca como aplicado, así que el siguiente run lo vuelve a intentar.
+    psql "$CONN_STRING" -v ON_ERROR_STOP=1 --single-transaction -f "$FILE"
 
     psql "$CONN_STRING" -v ON_ERROR_STOP=1 -c \
         "INSERT INTO schema_migrations (filename) VALUES ('$NAME');"

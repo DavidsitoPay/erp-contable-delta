@@ -1,6 +1,4 @@
-using System.Security.Claims;
 using DeltaERP.Api.Auth;
-using DeltaERP.Api.Models;
 using DeltaERP.Api.Services;
 using DeltaERP.Domain.Entities;
 using DeltaERP.Domain.Rules;
@@ -16,23 +14,15 @@ namespace DeltaERP.Api.Controllers;
 [ApiController]
 [Route("api/cxp")]
 [Authorize]
-public class CxPController : ControllerBase
+public class CxPController : FacturaControllerBase
 {
-    private static readonly PerfilFactura Perfil = new("CxP", "Proveedor", DocumentoCxP.TiposDocumentoValidos, "Pasivo", "Acreedora", "Cuentas por pagar", LadoControl.Credito);
-
-    private readonly DeltaErpDbContext _db;
-    private readonly ValidacionContable _validacion;
-    private readonly AuditoriaService _auditoria;
-    private readonly FacturaService _facturas;
-    private readonly TesoreriaService _tesoreria;
+    private static readonly PerfilFactura Perfil = new(
+        "CxP", "Proveedor", DocumentoCxP.TiposDocumentoValidos, "Pasivo", "Acreedora", "Cuentas por pagar", LadoControl.Credito,
+        Impuesto.AmbitoCompras, "IVA crédito fiscal", false);
 
     public CxPController(DeltaErpDbContext db, ValidacionContable validacion, AuditoriaService auditoria, FacturaService facturas, TesoreriaService tesoreria)
+        : base(db, validacion, auditoria, facturas, tesoreria)
     {
-        _db = db;
-        _validacion = validacion;
-        _auditoria = auditoria;
-        _facturas = facturas;
-        _tesoreria = tesoreria;
     }
 
     [HttpGet("facturas")]
@@ -52,8 +42,13 @@ public class CxPController : ControllerBase
                 d.Fecha,
                 d.FechaVencimiento,
                 d.MontoTotal,
+                d.MontoBase,
+                d.MontoIva,
                 d.Estado,
                 d.AsientoId,
+                d.DteSerie,
+                d.DteNumero,
+                d.CalculoLegado,
                 s.SaldoPendiente,
                 ProveedorNombre = c.Nombre,
             }).ToListAsync();
@@ -70,28 +65,13 @@ public class CxPController : ControllerBase
             return NotFound();
         }
 
-        var saldo = await _db.SaldosDocumentoCxP.FirstOrDefaultAsync(s => s.DocumentoId == id);
-        var cuentas = await _validacion.ObtenerCuentasAsync(documento.Lineas);
-
-        return Ok(FacturaDetalle.Desde(documento, saldo?.SaldoPendiente ?? 0, cuentas, "proveedorId", documento.ProveedorId));
+        return Ok(await _validacion.ObtenerDetalleAsync(documento, Perfil));
     }
 
     [HttpPost("facturas")]
     [Authorize(Roles = Roles.GestionCxP)]
-    public async Task<IActionResult> CrearFactura([FromBody] DocumentoCxP documento)
-    {
-        // RN-04
-        var (proveedor, error) = await _validacion.ValidarFacturaAsync(documento, documento.ProveedorId, Perfil);
-        if (error is not null)
-        {
-            return BadRequest(new { error });
-        }
-
-        var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        await _facturas.RegistrarAsync(documento, proveedor!, Perfil, usuarioId);
-
-        return CreatedAtAction(nameof(ObtenerFactura), new { id = documento.Id }, documento);
-    }
+    public Task<IActionResult> CrearFactura([FromBody] DocumentoCxP documento) =>
+        RegistrarFacturaAsync(documento, Perfil, nameof(ObtenerFactura));
 
     [HttpGet("pagos")]
     public async Task<IActionResult> ListarPagos()
@@ -137,7 +117,7 @@ public class CxPController : ControllerBase
         }
 
         var (proveedor, errorProveedor) = await _validacion.ValidarTerceroAsync(pago.ProveedorId, "Proveedor");
-        if (errorProveedor is not null)
+        if (proveedor is null)
         {
             return BadRequest(new { error = errorProveedor });
         }
@@ -147,7 +127,7 @@ public class CxPController : ControllerBase
             from d in _db.DocumentosCxP
             join s in _db.SaldosDocumentoCxP on d.Id equals s.DocumentoId
             where idsDocumento.Contains(d.Id)
-            select new DocumentoPagable(d.Id, d.Numero, d.ProveedorId, d.Estado, s.SaldoPendiente, d.AsientoId)
+            select new DocumentoPagable(d.Id, d.Numero, d.ProveedorId, d.Estado, s.SaldoPendiente, d.AsientoId, d.TipoDocumento == TiposDocumento.NotaCredito)
             ).ToListAsync();
 
         var errorAplicaciones = PagoRules.ValidarAplicaciones("proveedor", pago.ProveedorId, aplicaciones, documentos);
@@ -157,12 +137,12 @@ public class CxPController : ControllerBase
         }
 
         var (desembolso, errorDesembolso) = await _tesoreria.PrepararPagoAsync(Perfil, pago.CuentaBancariaId, pago.Fecha, documentos, aplicaciones);
-        if (errorDesembolso is not null)
+        if (desembolso is null)
         {
             return BadRequest(new { error = errorDesembolso });
         }
 
-        var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var usuarioId = this.UsuarioId();
 
         pago.Id = 0;
         pago.MontoTotal = aplicaciones.Sum(a => a.Monto);
@@ -176,7 +156,7 @@ public class CxPController : ControllerBase
             _db.PagosProveedor.Add(pago);
             await _db.SaveChangesAsync();
             await _tesoreria.RegistrarMovimientoDePagoAsync(
-                desembolso!, Perfil, pago.Fecha, $"Pago {pago.Id} - {proveedor!.Nombre}", pago.ReferenciaBancaria, pago.Id, usuarioId);
+                desembolso, Perfil, pago.Fecha, $"Pago {pago.Id} - {proveedor.Nombre}", pago.ReferenciaBancaria, pago.Id, usuarioId);
 
             return $"Pago {pago.Id} (proveedor {proveedor.Nombre}) registrado, monto {pago.MontoTotal}";
         });

@@ -23,6 +23,7 @@ public class ErroresPostgresTests
     [InlineData("P0001", 403)]
     [InlineData("P0002", 404)]
     [InlineData("55000", 409)]
+    [InlineData("23514", 400)]
     public async Task Traducir_ConSqlStateConocido_DevuelveEstadoYMensaje(string sqlState, int estadoEsperado)
     {
         var resultado = await ErroresPostgres.TraducirProcedimientoAsync(() => Task.FromException(Pg(sqlState)));
@@ -47,5 +48,40 @@ public class ErroresPostgresTests
         Assert.False(ErroresPostgres.EsViolacionUnica(new DbUpdateException("x", Pg("23503", "uq_a")), "uq_a"));
         Assert.False(ErroresPostgres.EsViolacionUnica(new DbUpdateException("x", new InvalidOperationException()), "uq_a"));
         Assert.False(ErroresPostgres.EsViolacionUnica(new DbUpdateException("x"), "uq_a"));
+    }
+
+    [Theory]
+    [InlineData("23514", 400)]
+    [InlineData("55000", 409)]
+    public void TraducirActualizacion_ConSqlStateConocido_DevuelveEstadoYMensaje(string sqlState, int estadoEsperado)
+    {
+        var resultado = ErroresPostgres.TraducirActualizacionAsync(new DbUpdateException("x", Pg(sqlState)));
+
+        Assert.NotNull(resultado);
+        Assert.Equal(estadoEsperado, resultado.StatusCode);
+        Assert.Contains("mensaje de prueba", JsonSerializer.Serialize(resultado.Value));
+    }
+
+    [Fact]
+    public void TraducirActualizacion_ConOtroSqlState_DevuelveNull()
+    {
+        Assert.Null(ErroresPostgres.TraducirActualizacionAsync(new DbUpdateException("x", Pg("23505"))));
+    }
+
+    [Fact]
+    public void TraducirActualizacion_Con55000EnvueltoEnInvalidOperation_DevuelveConflicto()
+    {
+        var resultado = ErroresPostgres.TraducirActualizacionAsync(
+            new InvalidOperationException("x", new DbUpdateException("x", Pg("55000"))));
+
+        Assert.NotNull(resultado);
+        Assert.Equal(409, resultado.StatusCode);
+    }
+
+    [Fact]
+    public void TraducirActualizacion_Con23505EnvueltoEnInvalidOperation_DevuelveNull()
+    {
+        Assert.Null(ErroresPostgres.TraducirActualizacionAsync(
+            new InvalidOperationException("x", new DbUpdateException("x", Pg("23505")))));
     }
 }

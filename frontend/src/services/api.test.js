@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => {
 
 vi.mock("axios", () => ({ default: { create: mocks.create, get: mocks.get } }));
 
-import api, { asientosApi, checkHealth, conciliacionesApi, contrapartesApi, cuentasApi, cuentasBancariasApi, cxcApi, cxpApi, librosApi, login, movimientosTesoreriaApi, periodosApi, reportesApi } from "./api";
+import api, { asientosApi, checkHealth, conciliacionesApi, configuracionFiscalApi, contrapartesApi, cuentasApi, cuentasBancariasApi, cxcApi, cxpApi, impuestosApi, librosApi, librosFiscalesApi, login, movimientosTesoreriaApi, periodosApi, reportesApi } from "./api";
 
 const interceptor = mocks.instance.interceptors.request.use.mock.calls[0][0];
 const opcionesCreate = mocks.create.mock.calls[0][0];
@@ -183,5 +183,39 @@ describe("tesorería", () => {
     expect(mocks.instance.post).toHaveBeenNthCalledWith(3, "/conciliaciones/4/movimientos", { movimientoId: 9 });
     expect(mocks.instance.delete).toHaveBeenCalledWith("/conciliaciones/4/movimientos/9");
     expect(mocks.instance.post).toHaveBeenNthCalledWith(4, "/conciliaciones/4/finalizar");
+  });
+});
+
+describe("fiscal", () => {
+  it("configuracionFiscalApi obtiene y actualiza la configuración única", () => {
+    configuracionFiscalApi.obtener();
+    configuracionFiscalApi.actualizar({ regimenIsr: "UTILIDADES" });
+
+    expect(mocks.instance.get).toHaveBeenCalledWith("/configuracion-fiscal");
+    expect(mocks.instance.put).toHaveBeenCalledWith("/configuracion-fiscal", { regimenIsr: "UTILIDADES" });
+  });
+
+  it("impuestosApi usa sus rutas, envía filtros y normaliza el id", () => {
+    impuestosApi.listar();
+    impuestosApi.listar({ vigenteEn: "2026-10-09", aplicaA: "VENTAS" });
+    impuestosApi.obtener("3");
+    impuestosApi.crear({ codigo: "NUEVO" });
+    impuestosApi.actualizar("3", { nombre: "x" });
+    impuestosApi.desactivar("3");
+
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(1, "/impuestos", { params: {} });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(2, "/impuestos", { params: { vigenteEn: "2026-10-09", aplicaA: "VENTAS" } });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(3, "/impuestos/3");
+    expect(mocks.instance.post).toHaveBeenCalledWith("/impuestos", { codigo: "NUEVO" });
+    expect(mocks.instance.put).toHaveBeenCalledWith("/impuestos/3", { nombre: "x" });
+    expect(mocks.instance.delete).toHaveBeenCalledWith("/impuestos/3");
+  });
+
+  it("librosFiscalesApi consulta ventas y compras por año y mes", () => {
+    librosFiscalesApi.ventas(2026, 10);
+    librosFiscalesApi.compras(2026, 9);
+
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(1, "/libros/fiscal/ventas", { params: { anio: 2026, mes: 10 } });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(2, "/libros/fiscal/compras", { params: { anio: 2026, mes: 9 } });
   });
 });

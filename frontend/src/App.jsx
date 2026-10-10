@@ -17,7 +17,10 @@ import CuentasPorPagar from "./components/CxP/CuentasPorPagar";
 import Tesoreria from "./components/Tesoreria/Tesoreria";
 import BalanceGeneral from "./components/Reportes/BalanceGeneral";
 import EstadoResultados from "./components/Reportes/EstadoResultados";
-import { puedeGestionarTesoreria } from "./utils/perfiles";
+import ConfiguracionFiscal from "./components/Catalogo/ConfiguracionFiscal";
+import Impuestos from "./components/Catalogo/Impuestos";
+import LibroFiscal from "./components/Libros/LibroFiscal";
+import { puedeAdministrarConfiguracionFiscal, puedeGestionarFiscal, puedeGestionarTesoreria } from "./utils/perfiles";
 
 function TabLink({ to, children }) {
   return (
@@ -62,6 +65,8 @@ function App() {
   }
 
   const esAdminOContador = puedeGestionarTesoreria(usuario.perfil);
+  const esAdmin = puedeAdministrarConfiguracionFiscal(usuario.perfil);
+  const gestionaFiscal = puedeGestionarFiscal(usuario.perfil);
 
   return (
     <div className="app-shell">
@@ -90,12 +95,15 @@ function App() {
         <TabLink to="/catalogo/cuentas">Cuentas contables</TabLink>
         <TabLink to="/catalogo/centros-costo">Centros de costo</TabLink>
         <TabLink to="/catalogo/periodos">Periodos</TabLink>
+        {esAdmin && <TabLink to="/catalogo/configuracion-fiscal">Configuración fiscal</TabLink>}
+        {gestionaFiscal && <TabLink to="/catalogo/impuestos">Impuestos</TabLink>}
         <TabLink to="/libros/balance">Balance de saldos</TabLink>
         <TabLink to="/libros/diario">Libro diario</TabLink>
         <TabLink to="/libros/mayor">Libro mayor</TabLink>
+        {gestionaFiscal && <TabLink to="/libros/fiscal">Compras y ventas</TabLink>}
         <TabLink to="/contrapartes">Clientes y proveedores</TabLink>
         <TabLink to="/cxc">Cuentas por cobrar</TabLink>
-        <TabLink to="/cxp">Cuentas por pagar</TabLink>
+        {esAdminOContador && <TabLink to="/cxp">Cuentas por pagar</TabLink>}
         {esAdminOContador && <TabLink to="/tesoreria">Tesorería</TabLink>}
         {esAdminOContador && <TabLink to="/reportes/balance-general">Balance general</TabLink>}
         {esAdminOContador && <TabLink to="/reportes/estado-resultados">Estado de resultados</TabLink>}
@@ -117,12 +125,43 @@ function App() {
           <Route path="/catalogo/cuentas" element={<CuentasContables />} />
           <Route path="/catalogo/centros-costo" element={<CentrosCosto />} />
           <Route path="/catalogo/periodos" element={<PeriodosContables />} />
+          <Route
+            path="/catalogo/configuracion-fiscal"
+            element={
+              <Restringida permitido={esAdmin} perfil={usuario.perfil} seccion="Configuración fiscal">
+                <ConfiguracionFiscal />
+              </Restringida>
+            }
+          />
+          <Route
+            path="/catalogo/impuestos"
+            element={
+              <Restringida permitido={gestionaFiscal} perfil={usuario.perfil} seccion="Impuestos">
+                <Impuestos />
+              </Restringida>
+            }
+          />
           <Route path="/libros/balance" element={<BalanceSaldos />} />
           <Route path="/libros/diario" element={<LibroDiario />} />
           <Route path="/libros/mayor" element={<LibroMayor />} />
+          <Route
+            path="/libros/fiscal"
+            element={
+              <Restringida permitido={gestionaFiscal} perfil={usuario.perfil} seccion="Compras y ventas">
+                <LibroFiscal />
+              </Restringida>
+            }
+          />
           <Route path="/contrapartes" element={<Contrapartes />} />
           <Route path="/cxc" element={<CuentasPorCobrar />} />
-          <Route path="/cxp" element={<CuentasPorPagar />} />
+          <Route
+            path="/cxp"
+            element={
+              <Restringida permitido={esAdminOContador} perfil={usuario.perfil} seccion="Cuentas por pagar">
+                <CuentasPorPagar />
+              </Restringida>
+            }
+          />
           <Route
             path="/tesoreria"
             element={
