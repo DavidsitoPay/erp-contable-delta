@@ -149,8 +149,11 @@ Soporte de las pruebas de integración (`Support/`):
 
 - `PostgresFixture` lee la cadena de conexión de la variable `TEST_PG_CONN`; si falta,
   las pruebas fallan (no se omiten). El nombre de la base debe contener `test`. Al
-  iniciar recrea el esquema `public` y aplica `database/01` a `05` y `07` a `13`; no aplica
-  `06` (datos semilla). Después deja configuradas las cuentas de IVA. `FacturaPayloads`
+  iniciar recrea el esquema `public` y aplica `database/01` a `05` y `07` a `14`; no aplica
+  `06` (datos semilla). Después deja configuradas las cuentas de IVA, da `LOGIN` con una
+  contraseña aleatoria por ejecución a `delta_api` y conecta toda la suite HTTP con ese rol;
+  la siembra de datos y las pruebas de triggers siguen con el propietario. `PermisosApiTests`
+  verifica lo permitido, lo denegado (42501) y la decisión de permisos por tabla. `FacturaPayloads`
   construye las facturas de prueba (impuesto, líneas y DTE).
 - Aislamiento: bitácora, saldos, asientos y usuarios son inmutables, así que no hay
   limpieza entre pruebas. Cada prueba siembra sus propias filas con sufijos únicos
@@ -198,7 +201,7 @@ independientes (`.github/workflows/`):
 
 - `backend-deploy.yml`: en cada push a `main` (ignora los cambios que solo tocan
   `backend/tests/`), aplica las migraciones pendientes
-  contra la rama `production` de Neon (`run_migrations.sh` ejecuta cada script con
+  contra la rama `production` de Neon con el rol propietario (`run_migrations.sh` ejecuta cada script con
   `psql --single-transaction`: si falla, se revierte completo y no se registra como aplicado) y, solo si eso funciona, construye y publica
   la imagen del backend y actualiza Azure Container Apps.
 - `frontend-alias.yml`: tras cada deploy de producción en Vercel, reapunta el
@@ -227,7 +230,25 @@ de datos:
 - Operaciones sensibles (reapertura de un periodo cerrado, finalización de una
   conciliación bancaria) verifican el perfil del usuario **dentro del propio
   procedimiento almacenado** (`sp_reabrir_periodo`, `sp_finalizar_conciliacion`).
-- La API se conecta con un rol de base de datos con permisos de **ejecución** sobre
-  procedimientos y de **lectura** sobre vistas, pero sin permisos directos de
-  modificación sobre las tablas transaccionales — toda operación pasa
-  necesariamente por las reglas implementadas.
+- La base opera con dos roles. El propietario (`neondb_owner`) solo aplica las
+  migraciones, mediante el secreto `NEON_PROD_CONNECTION_STRING` de `backend-deploy.yml`.
+  La API en ejecución usa `delta_api`, cuya cadena de conexión (por el pooler de Neon) es
+  un secreto de la Container App referenciado con `secretref`. `delta_api` se crea por SQL
+  (`database/14_rol_api.sql`, `NOLOGIN` y sin contraseña en el repo; `LOGIN` y contraseña se
+  asignan por rama con `ALTER ROLE`), por lo que no es miembro de `neon_superuser`.
+- Permisos de `delta_api` (mínimo privilegio): `CONNECT` y `USAGE` en `public`; DML solo en
+  las 25 de 29 tablas que usa la API; sin `UPDATE` en las tablas inmutables
+  (`bitacoraauditoria`, `saldocuentaperiodo`, `movimientotesoreria`, `lineaasiento`, pagos,
+  aplicaciones y detalles); `DELETE` solo en `detalleconciliacion`; `bitacoraauditoria` y
+  `saldocuentaperiodo` solo con `INSERT` (se escriben vía procedimientos y triggers y se
+  leen por vistas y funciones); `SELECT` en 6 vistas; `USAGE` en 21 secuencias; `EXECUTE`
+  solo en 9 rutinas (`fn_reporte_saldos`, `sp_registrar_auditoria`, `sp_cerrar_periodo`,
+  `sp_reabrir_periodo`, `sp_reversar_asiento`, `sp_finalizar_conciliacion`,
+  `fn_perfil_contador`, `fn_perfil_administrador_sistema`,
+  `fn_usuario_tiene_perfil_autorizado`). Se revocan a `PUBLIC` el `EXECUTE` en rutinas (también
+  como default privilege), `CREATE` en `public` y `TEMPORARY` en la base.
+- Ninguna rutina es `SECURITY DEFINER`: triggers y procedimientos corren con los permisos
+  del llamador, por lo que la matriz de `delta_api` incluye lo que ellos tocan.
+- Convención: toda migración que cree tablas o rutinas declara sus `GRANT` a `delta_api`.
+  `PermisosApiTests` falla si una tabla no tiene decisión de permisos o si hay más de 9
+  rutinas ejecutables.

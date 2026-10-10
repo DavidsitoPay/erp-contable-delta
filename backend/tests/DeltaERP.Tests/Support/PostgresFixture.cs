@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using DeltaERP.Api.Auth;
 using Npgsql;
 
@@ -21,9 +22,11 @@ public sealed class PostgresFixture : IAsyncLifetime
         "11_reportes.sql",
         "12_reversa_asientos.sql",
         "13_fiscal_iva.sql",
+        "14_rol_api.sql",
     };
 
     public NpgsqlDataSource DataSource { get; private set; } = null!;
+    public NpgsqlDataSource ApiDataSource { get; private set; } = null!;
     public ApiFactory Factory { get; private set; } = null!;
     public TestData Data { get; private set; } = null!;
 
@@ -57,9 +60,18 @@ public sealed class PostgresFixture : IAsyncLifetime
             }
         }
 
+        var contrasenaApi = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
+        await EjecutarAsync($"ALTER ROLE delta_api WITH LOGIN PASSWORD '{contrasenaApi}'");
+        var cadenaApi = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            Username = "delta_api",
+            Password = contrasenaApi,
+        }.ConnectionString;
+        ApiDataSource = NpgsqlDataSource.Create(cadenaApi);
+
         Data = new TestData(DataSource);
         await Data.SembrarConfiguracionFiscalAsync();
-        Factory = new ApiFactory(connectionString);
+        Factory = new ApiFactory(cadenaApi);
     }
 
     public async Task DisposeAsync()
@@ -67,6 +79,10 @@ public sealed class PostgresFixture : IAsyncLifetime
         if (Factory is not null)
         {
             await Factory.DisposeAsync();
+        }
+        if (ApiDataSource is not null)
+        {
+            await ApiDataSource.DisposeAsync();
         }
         if (DataSource is not null)
         {
