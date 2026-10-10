@@ -714,7 +714,13 @@ Los casos de prueba son elementos de tipo Test Case en Azure Boards (organizaci√
 
 ---
 
-## 1.6 Resultados
+## 1.6 Manual de usuario
+
+### Lo realiza Alejandro
+
+---
+
+## 1.7 Resultados
 
 ### Beneficios obtenidos
 
