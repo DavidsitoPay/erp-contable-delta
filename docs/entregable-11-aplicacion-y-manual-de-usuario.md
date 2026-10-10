@@ -212,182 +212,253 @@ sequenceDiagram
 
 *Figura 3. Diagrama de secuencia del flujo crítico.*
 
-Los diagramas de clases describen el modelo de dominio en dos partes: el núcleo contable y los módulos de cuentas por cobrar, cuentas por pagar y tesorería.
+Los diagramas entidad-relación describen el modelo de datos en dos partes: el núcleo contable y los módulos de cuentas por cobrar, cuentas por pagar y tesorería. La clave primaria (PK) identifica cada fila de una entidad. La clave foránea (FK) referencia la clave primaria de otra entidad, y la etiqueta de cada línea indica la columna de unión. La entidad de saldos por periodo es una tabla que se escribe una sola vez al cierre y se identifica por su propia clave primaria.
 
 ```mermaid
-classDiagram
-    class CuentaContable {
-        +int id
-        +string codigo
-        +string nombre
-        +string tipo
-        +string naturaleza
-        +int cuentaPadreId
-        +bool activa
+erDiagram
+    PERFIL {
+        int id PK
+        string nombre
     }
-    class PeriodoContable {
-        +int id
-        +string nombre
-        +date fechaInicio
-        +date fechaFin
-        +string estado
-        +int cierres
+    USUARIO {
+        int id PK
+        string nombre
+        string email
+        int perfil_id FK
+        bool activo
     }
-    class AsientoContable {
-        +int id
-        +string numero
-        +date fecha
-        +decimal monto
-        +string estado
-        +int reversaDeId
+    BITACORA_AUDITORIA {
+        int id PK
+        int usuario_id FK
+        date fecha
+        string accion
+        string tabla_afectada
+        string detalle
     }
-    class LineaAsiento {
-        +int id
-        +decimal debito
-        +decimal credito
+    CUENTA_CONTABLE {
+        int id PK
+        string codigo
+        string nombre
+        string tipo
+        string naturaleza
+        int cuenta_padre_id FK
+        bool activa
     }
-    class SaldoCuentaPeriodo {
-        +decimal totalDebito
-        +decimal totalCredito
-        +decimal saldoFinal
+    PERIODO_CONTABLE {
+        int id PK
+        string nombre
+        date fecha_inicio
+        date fecha_fin
+        string estado
+        int cierres
     }
-    class CentroCosto {
-        +int id
-        +string codigo
-        +string nombre
-        +bool activo
+    CENTRO_COSTO {
+        int id PK
+        string codigo
+        string nombre
+        bool activo
     }
-    class Usuario {
-        +int id
-        +string nombre
-        +string email
-        +bool activo
+    ASIENTO_CONTABLE {
+        int id PK
+        string numero
+        date fecha
+        int periodo_id FK
+        decimal monto
+        string estado
+        int usuario_id FK
+        int reversa_de_id FK
     }
-    class Perfil {
-        +int id
-        +string nombre
+    LINEA_ASIENTO {
+        int id PK
+        int asiento_id FK
+        int cuenta_id FK
+        int centro_costo_id FK
+        decimal debito
+        decimal credito
     }
-    class BitacoraAuditoria {
-        +int id
-        +date fecha
-        +string accion
-        +string tablaAfectada
+    SALDO_CUENTA_PERIODO {
+        int id PK
+        int periodo_id FK
+        int cuenta_id FK
+        int cierre_numero
+        decimal total_debito
+        decimal total_credito
+        decimal saldo_final
     }
-    CuentaContable "0..1" <-- "0..*" CuentaContable : cuentaPadre
-    PeriodoContable "1" --> "0..*" AsientoContable : contiene
-    AsientoContable "0..1" --> "0..1" AsientoContable : reversa de
-    AsientoContable "1" *-- "1..*" LineaAsiento : líneas
-    CuentaContable "1" --> "0..*" LineaAsiento : afectada en
-    CentroCosto "0..1" --> "0..*" LineaAsiento : clasifica
-    PeriodoContable "1" --> "0..*" SaldoCuentaPeriodo : cierre
-    CuentaContable "1" --> "0..*" SaldoCuentaPeriodo : saldo
-    Perfil "1" --> "0..*" Usuario : asignado a
-    Usuario "1" --> "0..*" AsientoContable : registra
-    Usuario "1" --> "0..*" BitacoraAuditoria : genera
+    PERFIL ||--o{ USUARIO : "perfil_id"
+    USUARIO ||--o{ BITACORA_AUDITORIA : "usuario_id"
+    USUARIO ||--o{ ASIENTO_CONTABLE : "usuario_id"
+    PERIODO_CONTABLE ||--o{ ASIENTO_CONTABLE : "periodo_id"
+    ASIENTO_CONTABLE |o--o| ASIENTO_CONTABLE : "reversa_de_id"
+    CUENTA_CONTABLE |o--o{ CUENTA_CONTABLE : "cuenta_padre_id"
+    ASIENTO_CONTABLE ||--|{ LINEA_ASIENTO : "asiento_id"
+    CUENTA_CONTABLE ||--o{ LINEA_ASIENTO : "cuenta_id"
+    CENTRO_COSTO |o--o{ LINEA_ASIENTO : "centro_costo_id"
+    PERIODO_CONTABLE ||--o{ SALDO_CUENTA_PERIODO : "periodo_id"
+    CUENTA_CONTABLE ||--o{ SALDO_CUENTA_PERIODO : "cuenta_id"
 ```
 
-*Figura 4. Diagrama de clases del núcleo contable.*
+*Figura 4. Modelo entidad-relación del núcleo contable.*
 
 ```mermaid
-classDiagram
-    class Contraparte {
-        +int id
-        +string tipo
-        +string nombre
-        +string nit
+erDiagram
+    CONTRAPARTE {
+        int id PK
+        string tipo
+        string nombre
+        string nit
+        string direccion
     }
-    class DocumentoCxC {
-        +int id
-        +string numero
-        +string tipoDocumento
-        +date fechaVencimiento
-        +decimal montoTotal
-        +string estado
+    DOCUMENTO_CXC {
+        int id PK
+        string numero
+        string tipo_documento
+        int cliente_id FK
+        date fecha
+        date fecha_vencimiento
+        decimal monto_total
+        string estado
+        int asiento_id FK
     }
-    class LineaDocumentoCxC {
-        +decimal cantidad
-        +decimal precioUnitario
-        +decimal porcentajeImpuesto
+    LINEA_DOCUMENTO_CXC {
+        int id PK
+        int documento_id FK
+        string descripcion
+        decimal cantidad
+        decimal precio_unitario
+        decimal porcentaje_impuesto
+        int centro_costo_id FK
+        int cuenta_contable_id FK
     }
-    class ReciboPagoCliente {
-        +int id
-        +date fecha
-        +decimal montoTotal
-        +string metodoPago
+    RECIBO_PAGO_CLIENTE {
+        int id PK
+        int cliente_id FK
+        date fecha
+        decimal monto_total
+        string metodo_pago
+        string referencia_bancaria
+        int cuenta_bancaria_id FK
     }
-    class AplicacionPagoCliente {
-        +decimal montoAplicado
+    APLICACION_PAGO_CLIENTE {
+        int id PK
+        int recibo_pago_id FK
+        int documento_id FK
+        decimal monto_aplicado
     }
-    class DocumentoCxP {
-        +int id
-        +string numero
-        +string tipoDocumento
-        +date fechaVencimiento
-        +decimal montoTotal
-        +string estado
+    DOCUMENTO_CXP {
+        int id PK
+        string numero
+        string tipo_documento
+        int proveedor_id FK
+        date fecha
+        date fecha_vencimiento
+        decimal monto_total
+        string estado
+        int asiento_id FK
     }
-    class LineaDocumentoCxP {
-        +decimal cantidad
-        +decimal precioUnitario
-        +decimal porcentajeImpuesto
+    LINEA_DOCUMENTO_CXP {
+        int id PK
+        int documento_id FK
+        string descripcion
+        decimal cantidad
+        decimal precio_unitario
+        decimal porcentaje_impuesto
+        int centro_costo_id FK
+        int cuenta_contable_id FK
     }
-    class PagoProveedorCabecera {
-        +int id
-        +date fecha
-        +decimal montoTotal
-        +string metodoPago
+    PAGO_PROVEEDOR_CABECERA {
+        int id PK
+        int proveedor_id FK
+        date fecha
+        decimal monto_total
+        string metodo_pago
+        string referencia_bancaria
+        int cuenta_bancaria_id FK
     }
-    class AplicacionPagoProveedor {
-        +decimal montoAplicado
+    APLICACION_PAGO_PROVEEDOR {
+        int id PK
+        int pago_cabecera_id FK
+        int documento_id FK
+        decimal monto_aplicado
     }
-    class CuentaBancaria {
-        +int id
-        +string banco
-        +string numero
-        +string tipo
-        +decimal saldoApertura
+    CUENTA_BANCARIA {
+        int id PK
+        string banco
+        string numero
+        string tipo
+        bool activa
+        int cuenta_contable_id FK
+        decimal saldo_apertura
+        date fecha_apertura
     }
-    class MovimientoTesoreria {
-        +int id
-        +date fecha
-        +string tipo
-        +decimal monto
-        +string origen
+    MOVIMIENTO_TESORERIA {
+        int id PK
+        int cuenta_bancaria_id FK
+        date fecha
+        string tipo
+        decimal monto
+        int asiento_id FK
+        string descripcion
+        string referencia
+        string origen
+        int recibo_pago_id FK
+        int pago_proveedor_id FK
     }
-    class ConciliacionBancaria {
-        +int id
-        +date fecha
-        +string estado
-        +decimal saldoExtracto
+    CONCILIACION_BANCARIA {
+        int id PK
+        int cuenta_bancaria_id FK
+        int periodo_id FK
+        date fecha
+        string estado
+        decimal saldo_extracto
     }
-    class DetalleConciliacion {
-        +int id
+    DETALLE_CONCILIACION {
+        int id PK
+        int conciliacion_id FK
+        int movimiento_id FK
     }
-    class AsientoContable
-    class CuentaContable
-    Contraparte "1" --> "0..*" DocumentoCxC : cliente
-    Contraparte "1" --> "0..*" DocumentoCxP : proveedor
-    DocumentoCxC "1" *-- "1..*" LineaDocumentoCxC
-    DocumentoCxP "1" *-- "1..*" LineaDocumentoCxP
-    Contraparte "1" --> "0..*" ReciboPagoCliente
-    Contraparte "1" --> "0..*" PagoProveedorCabecera
-    ReciboPagoCliente "1" *-- "1..*" AplicacionPagoCliente
-    PagoProveedorCabecera "1" *-- "1..*" AplicacionPagoProveedor
-    AplicacionPagoCliente "0..*" --> "1" DocumentoCxC : aplica a
-    AplicacionPagoProveedor "0..*" --> "1" DocumentoCxP : aplica a
-    ReciboPagoCliente "0..*" --> "0..1" CuentaBancaria
-    PagoProveedorCabecera "0..*" --> "0..1" CuentaBancaria
-    CuentaBancaria "1" --> "0..*" MovimientoTesoreria
-    CuentaBancaria "1" --> "0..*" ConciliacionBancaria
-    ConciliacionBancaria "1" *-- "0..*" DetalleConciliacion
-    DetalleConciliacion "0..*" --> "1" MovimientoTesoreria
-    CuentaBancaria "0..*" --> "1" CuentaContable : cuenta contable
-    DocumentoCxC "0..*" --> "0..1" AsientoContable : genera
-    DocumentoCxP "0..*" --> "0..1" AsientoContable : genera
-    MovimientoTesoreria "0..*" --> "1" AsientoContable : genera
+    ASIENTO_CONTABLE {
+        int id PK
+    }
+    CUENTA_CONTABLE {
+        int id PK
+    }
+    CENTRO_COSTO {
+        int id PK
+    }
+    PERIODO_CONTABLE {
+        int id PK
+    }
+    CONTRAPARTE ||--o{ DOCUMENTO_CXC : "cliente_id"
+    CONTRAPARTE ||--o{ RECIBO_PAGO_CLIENTE : "cliente_id"
+    CONTRAPARTE ||--o{ DOCUMENTO_CXP : "proveedor_id"
+    CONTRAPARTE ||--o{ PAGO_PROVEEDOR_CABECERA : "proveedor_id"
+    DOCUMENTO_CXC ||--|{ LINEA_DOCUMENTO_CXC : "documento_id"
+    DOCUMENTO_CXP ||--|{ LINEA_DOCUMENTO_CXP : "documento_id"
+    RECIBO_PAGO_CLIENTE ||--|{ APLICACION_PAGO_CLIENTE : "recibo_pago_id"
+    DOCUMENTO_CXC ||--o{ APLICACION_PAGO_CLIENTE : "documento_id"
+    PAGO_PROVEEDOR_CABECERA ||--|{ APLICACION_PAGO_PROVEEDOR : "pago_cabecera_id"
+    DOCUMENTO_CXP ||--o{ APLICACION_PAGO_PROVEEDOR : "documento_id"
+    CUENTA_BANCARIA |o--o{ RECIBO_PAGO_CLIENTE : "cuenta_bancaria_id"
+    CUENTA_BANCARIA |o--o{ PAGO_PROVEEDOR_CABECERA : "cuenta_bancaria_id"
+    CUENTA_BANCARIA ||--o{ MOVIMIENTO_TESORERIA : "cuenta_bancaria_id"
+    CUENTA_BANCARIA ||--o{ CONCILIACION_BANCARIA : "cuenta_bancaria_id"
+    CONCILIACION_BANCARIA ||--o{ DETALLE_CONCILIACION : "conciliacion_id"
+    MOVIMIENTO_TESORERIA ||--o| DETALLE_CONCILIACION : "movimiento_id"
+    CUENTA_CONTABLE ||--o| CUENTA_BANCARIA : "cuenta_contable_id"
+    ASIENTO_CONTABLE |o--o{ DOCUMENTO_CXC : "asiento_id"
+    ASIENTO_CONTABLE |o--o{ DOCUMENTO_CXP : "asiento_id"
+    ASIENTO_CONTABLE ||--o{ MOVIMIENTO_TESORERIA : "asiento_id"
+    RECIBO_PAGO_CLIENTE |o--o| MOVIMIENTO_TESORERIA : "recibo_pago_id"
+    PAGO_PROVEEDOR_CABECERA |o--o| MOVIMIENTO_TESORERIA : "pago_proveedor_id"
+    CUENTA_CONTABLE ||--o{ LINEA_DOCUMENTO_CXC : "cuenta_contable_id"
+    CUENTA_CONTABLE ||--o{ LINEA_DOCUMENTO_CXP : "cuenta_contable_id"
+    CENTRO_COSTO |o--o{ LINEA_DOCUMENTO_CXC : "centro_costo_id"
+    CENTRO_COSTO |o--o{ LINEA_DOCUMENTO_CXP : "centro_costo_id"
+    PERIODO_CONTABLE ||--o{ CONCILIACION_BANCARIA : "periodo_id"
 ```
 
-*Figura 5. Diagrama de clases de cuentas por cobrar, cuentas por pagar y tesorería.*
+*Figura 5. Modelo entidad-relación de cuentas por cobrar, cuentas por pagar y tesorería.*
 
 ### Funcionalidades
 
