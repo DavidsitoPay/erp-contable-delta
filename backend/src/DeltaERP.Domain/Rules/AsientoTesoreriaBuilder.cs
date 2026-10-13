@@ -39,4 +39,24 @@ public static class AsientoTesoreriaBuilder
         }
         return asiento;
     }
+
+    // RN-01: banco por el neto + retenciones = total de las contrapartidas.
+    public static AsientoContable ConstruirCobroConRetenciones(
+        string prefijo, DateOnly fecha, int periodoId, int usuarioId, int cuentaBancoId,
+        IReadOnlyList<(int CuentaId, decimal Monto)> contrapartidas,
+        IReadOnlyList<(int CuentaId, decimal Monto)> retenciones)
+    {
+        var asiento = Construir(prefijo, fecha, periodoId, usuarioId, MovimientoTesoreria.TipoIngreso, cuentaBancoId, contrapartidas);
+        var retenido = retenciones.Sum(r => r.Monto);
+        if (retenido >= asiento.Monto)
+        {
+            throw new InvalidOperationException("Las retenciones deben ser menores al total cobrado.");
+        }
+        asiento.Lineas[0].Debito -= retenido;
+        foreach (var (cuentaId, monto) in retenciones)
+        {
+            asiento.Lineas.Add(new LineaAsiento { CuentaId = cuentaId, Debito = monto });
+        }
+        return asiento;
+    }
 }

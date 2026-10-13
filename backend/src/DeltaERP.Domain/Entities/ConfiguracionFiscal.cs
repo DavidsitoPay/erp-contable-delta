@@ -19,6 +19,8 @@ public class ConfiguracionFiscal
     public string? TipoAgenteIva { get; set; }
     public int? CuentaIvaDebitoId { get; set; }
     public int? CuentaIvaCreditoId { get; set; }
+    public int? CuentaIsrRetenidoPagarId { get; set; }
+    public int? CuentaIvaRetenidoClientesId { get; set; }
     public DateTimeOffset ActualizadoEn { get; set; }
     public int? ActualizadoPor { get; set; }
 }

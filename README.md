@@ -54,7 +54,7 @@ arriba), no la usa nada desplegado ni el pipeline.
 
 ## Migraciones y pruebas
 
-`database/run_migrations.sh` aplica los scripts numerados (01–14) en orden, cada uno con
+`database/run_migrations.sh` aplica los scripts numerados (01–15) en orden, cada uno con
 `psql -v ON_ERROR_STOP=1 --single-transaction`. Un script ya aplicado no se edita: las
 correcciones van en un archivo nuevo.
 
@@ -84,7 +84,7 @@ delta-erp-contable/
 ├── docs/                   # Arquitectura, reglas de negocio, diccionario de datos, diagramas
 ├── backend/                # API REST en ASP.NET Core (Api / Domain / Infrastructure)
 ├── frontend/                # SPA en React
-├── database/                # Scripts SQL numerados 01–13 (tablas, funciones, triggers, procedimientos, vistas, tesorería, reportes, fiscal) y datos demo
+├── database/                # Scripts SQL numerados 01–15 (tablas, funciones, triggers, procedimientos, vistas, tesorería, reportes, fiscal, rol de la API, retenciones) y datos demo
 ├── devops/                  # Dockerfile.backend (Azure Container Apps)
 └── .github/workflows/       # backend-build-check, sonarcloud-analysis, backend-deploy, frontend-alias
 ```

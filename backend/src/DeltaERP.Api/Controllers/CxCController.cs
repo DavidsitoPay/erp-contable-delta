@@ -1,4 +1,5 @@
 using DeltaERP.Api.Auth;
+using DeltaERP.Api.Models;
 using DeltaERP.Api.Services;
 using DeltaERP.Domain.Entities;
 using DeltaERP.Domain.Rules;
@@ -20,9 +21,14 @@ public class CxCController : FacturaControllerBase
         "CxC", "Cliente", DocumentoCxC.TiposDocumentoValidos, "Activo", "Deudora", "Cuentas por cobrar", LadoControl.Debito,
         Impuesto.AmbitoVentas, "IVA débito fiscal", true);
 
-    public CxCController(DeltaErpDbContext db, ValidacionContable validacion, AuditoriaService auditoria, FacturaService facturas, TesoreriaService tesoreria)
+    private readonly RetencionService _retenciones;
+
+    public CxCController(
+        DeltaErpDbContext db, ValidacionContable validacion, AuditoriaService auditoria, FacturaService facturas, TesoreriaService tesoreria,
+        RetencionService retenciones)
         : base(db, validacion, auditoria, facturas, tesoreria)
     {
+        _retenciones = retenciones;
     }
 
     [HttpGet("facturas")]
@@ -73,6 +79,14 @@ public class CxCController : FacturaControllerBase
     public Task<IActionResult> CrearFactura([FromBody] DocumentoCxC documento) =>
         RegistrarFacturaAsync(documento, Perfil, nameof(ObtenerFactura));
 
+    [HttpGet("facturas/{id:int}/retencion-iva-sugerida")]
+    [Authorize(Roles = Roles.RegistroPagos)]
+    public async Task<IActionResult> RetencionIvaSugerida(int id)
+    {
+        var sugerencia = await _retenciones.SugerirIvaAsync(id);
+        return sugerencia is null ? NotFound() : Ok(sugerencia);
+    }
+
     [HttpGet("pagos")]
     public async Task<IActionResult> ListarPagos()
     {
@@ -86,8 +100,12 @@ public class CxCController : FacturaControllerBase
         var ids = pagos.Select(p => p.Id).ToList();
         var aplicaciones = await _db.AplicacionesPagoCliente
             .Where(a => ids.Contains(a.ReciboPagoId))
-            .Join(_db.DocumentosCxC, a => a.DocumentoId, d => d.Id, (a, d) => new { a.ReciboPagoId, d.Numero, a.MontoAplicado })
+            .Join(_db.DocumentosCxC, a => a.DocumentoId, d => d.Id, (a, d) => new { a.Id, a.ReciboPagoId, d.Numero, a.MontoAplicado })
             .ToListAsync();
+        var idsAplicacion = aplicaciones.Select(a => (int?)a.Id).ToList();
+        var retenido = await _db.Retenciones
+            .Where(r => r.Concepto == Retencion.ConceptoIva && idsAplicacion.Contains(r.AplicacionPagoClienteId))
+            .ToDictionaryAsync(r => r.AplicacionPagoClienteId ?? 0, r => r.MontoRetenido);
 
         var resultado = pagos.Select(p => new
         {
@@ -96,9 +114,12 @@ public class CxCController : FacturaControllerBase
             p.ClienteNombre,
             p.Fecha,
             p.MontoTotal,
+            MontoNeto = p.MontoTotal - aplicaciones.Where(a => a.ReciboPagoId == p.Id).Sum(a => retenido.GetValueOrDefault(a.Id)),
             p.MetodoPago,
             p.ReferenciaBancaria,
-            Aplicaciones = aplicaciones.Where(a => a.ReciboPagoId == p.Id).Select(a => new { a.Numero, a.MontoAplicado }),
+            Aplicaciones = aplicaciones
+                .Where(a => a.ReciboPagoId == p.Id)
+                .Select(a => new { a.Numero, a.MontoAplicado, RetencionIva = retenido.GetValueOrDefault(a.Id) }),
         });
 
         return Ok(resultado);
@@ -136,7 +157,14 @@ public class CxCController : FacturaControllerBase
             return BadRequest(new { error = errorAplicaciones });
         }
 
-        var (bancario, errorBanco) = await _tesoreria.PrepararPagoAsync(Perfil, recibo.CuentaBancariaId, recibo.Fecha, documentos, aplicaciones);
+        var (retencionIva, errorRetencion) = await _retenciones.PrepararIvaClienteAsync(cliente, recibo);
+        if (errorRetencion is not null)
+        {
+            return StatusCode(errorRetencion.Estado, new { error = errorRetencion.Mensaje });
+        }
+
+        var (bancario, errorBanco) = await _tesoreria.PrepararPagoAsync(
+            Perfil, recibo.CuentaBancariaId, recibo.Fecha, documentos, aplicaciones, retencionIva.ParaAsiento());
         if (bancario is null)
         {
             return BadRequest(new { error = errorBanco });
@@ -151,16 +179,27 @@ public class CxCController : FacturaControllerBase
             aplicacion.Id = 0;
         }
 
-        await _auditoria.EjecutarAsync(usuarioId, "registrar_pago_cxc", "recibopagocliente", async () =>
+        IReadOnlyList<RetencionCobroRespuesta> retenciones = [];
+        var conflicto = await this.GuardarAuditadoAsync(_auditoria, "registrar_pago_cxc", "recibopagocliente", async () =>
         {
             _db.RecibosPagoCliente.Add(recibo);
             await _db.SaveChangesAsync();
-            await _tesoreria.RegistrarMovimientoDePagoAsync(
+            var asientoId = await _tesoreria.RegistrarMovimientoDePagoAsync(
                 bancario, Perfil, recibo.Fecha, $"Cobro {recibo.Id} - {cliente.Nombre}", recibo.ReferenciaBancaria, recibo.Id, usuarioId);
+            retenciones = await _retenciones.RegistrarIvaClienteAsync(retencionIva, recibo, asientoId, usuarioId);
 
-            return $"Recibo {recibo.Id} (cliente {cliente.Nombre}) registrado, monto {recibo.MontoTotal}";
+            var detalleRetencion = retenciones.Count == 0 ? string.Empty : $", retención IVA Q{retenciones.Sum(r => r.Monto)}, cobro neto Q{bancario.Neto}";
+            return $"Recibo {recibo.Id} (cliente {cliente.Nombre}) registrado, monto {recibo.MontoTotal}{detalleRetencion}";
         });
 
-        return CreatedAtAction(nameof(ListarPagos), new { }, recibo);
+        var aplicacionesGuardadas = recibo.Aplicaciones
+            .Select(a => new AplicacionCobroRespuesta(a.Id, a.ReciboPagoId, a.DocumentoId, a.MontoAplicado))
+            .ToList();
+        return conflicto ?? CreatedAtAction(
+            nameof(ListarPagos),
+            new { },
+            new ReciboCobroRespuesta(
+                recibo.Id, recibo.ClienteId, recibo.Fecha, recibo.MontoTotal, bancario.Neto, recibo.MetodoPago, recibo.ReferenciaBancaria,
+                recibo.CuentaBancariaId, aplicacionesGuardadas, retenciones, retencionIva.Advertencias));
     }
 }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using DeltaERP.Domain.Entities;
 using DeltaERP.Domain.Rules;
 
@@ -32,7 +33,7 @@ public class ImpuestoRulesTests
     [InlineData("2026-10-10", "2026-01-01", "2026-10-09", false)]
     public void EstaVigente_ConLimitesInclusivosYHastaOpcional(string fecha, string desde, string? hasta, bool esperado)
     {
-        var resultado = ImpuestoRules.EstaVigente(DateOnly.Parse(desde), hasta is null ? null : DateOnly.Parse(hasta), DateOnly.Parse(fecha));
+        var resultado = VigenciaRules.EstaVigente(DateOnly.Parse(desde, CultureInfo.InvariantCulture), hasta is null ? null : DateOnly.Parse(hasta, CultureInfo.InvariantCulture), DateOnly.Parse(fecha, CultureInfo.InvariantCulture));
 
         Assert.Equal(esperado, resultado);
     }

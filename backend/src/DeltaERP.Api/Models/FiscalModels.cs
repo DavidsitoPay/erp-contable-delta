@@ -12,6 +12,8 @@ public sealed record ConfiguracionFiscalRespuesta(
     string? TipoAgenteIva,
     int? CuentaIvaDebitoId,
     int? CuentaIvaCreditoId,
+    int? CuentaIsrRetenidoPagarId,
+    int? CuentaIvaRetenidoClientesId,
     DateTimeOffset ActualizadoEn,
     string? ActualizadoPorNombre);
 

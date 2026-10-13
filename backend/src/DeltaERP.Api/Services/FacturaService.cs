@@ -6,33 +6,46 @@ using Npgsql;
 
 namespace DeltaERP.Api.Services;
 
+public sealed record ResultadoRegistro(
+    ErrorValidacion? Error,
+    RetencionIsrPreparada? Retencion,
+    int? RetencionId,
+    IReadOnlyList<string> Advertencias)
+{
+    public static ResultadoRegistro Fallo(ErrorValidacion error) => new(error, null, null, []);
+}
+
 public class FacturaService
 {
     private readonly DeltaErpDbContext _db;
     private readonly AuditoriaService _auditoria;
     private readonly FacturaFiscalService _fiscal;
+    private readonly RetencionService _retenciones;
 
-    public FacturaService(DeltaErpDbContext db, AuditoriaService auditoria, FacturaFiscalService fiscal)
+    public FacturaService(DeltaErpDbContext db, AuditoriaService auditoria, FacturaFiscalService fiscal, RetencionService retenciones)
     {
         _db = db;
         _auditoria = auditoria;
         _fiscal = fiscal;
+        _retenciones = retenciones;
     }
 
     // El asiento se guarda primero porque la factura necesita su AsientoId.
-    public async Task<ErrorValidacion?> RegistrarAsync(IDocumentoFactura documento, Contraparte tercero, PerfilFactura perfil, int usuarioId)
+    public async Task<ResultadoRegistro> RegistrarAsync(IDocumentoFactura documento, Contraparte tercero, PerfilFactura perfil, int usuarioId)
     {
         var (fiscal, error) = await _fiscal.PrepararAsync(documento, tercero, perfil);
         if (fiscal is null)
         {
-            return error;
+            return ResultadoRegistro.Fallo(error ?? ErrorValidacion.Solicitud("No se pudo preparar la factura."));
         }
 
         var sigla = perfil.Sigla.ToLowerInvariant();
         FacturaRules.PrepararNuevo(documento, fiscal.Resumen);
         var asiento = AsientoFacturaBuilder.Construir(
-            perfil.Sigla.ToUpperInvariant(), documento, fiscal.Resumen, perfil.LadoControl, usuarioId, fiscal.CuentaIvaId);
+            perfil.Sigla.ToUpperInvariant(), documento, fiscal.Resumen, perfil.LadoControl, usuarioId, fiscal.CuentaIvaId,
+            fiscal.Retencion?.ParaAsiento);
 
+        Retencion? registrada = null;
         try
         {
             await _auditoria.EjecutarAsync(usuarioId, $"registrar_factura_{sigla}", $"documento{sigla}", async () =>
@@ -44,19 +57,35 @@ public class FacturaService
                 _db.Add((object)documento);
                 await _db.SaveChangesAsync();
 
-                return $"Factura {documento.Numero} (id {documento.Id}) registrada para {perfil.TipoTercero.ToLowerInvariant()} {tercero.Nombre}, monto {asiento.Monto}, base {documento.MontoBase}, IVA {documento.MontoIva}";
+                registrada = await _retenciones.RegistrarIsrAsync(documento, fiscal.Retencion, asiento.Id, usuarioId);
+
+                return $"Factura {documento.Numero} (id {documento.Id}) registrada para {perfil.TipoTercero.ToLowerInvariant()} {tercero.Nombre}, monto {asiento.Monto}, base {documento.MontoBase}, IVA {documento.MontoIva}{DescribirRetencion(fiscal.Retencion)}";
             });
-            return null;
+            return new ResultadoRegistro(null, fiscal.Retencion, registrada?.Id, fiscal.Advertencias);
         }
-        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException
-            && ErroresPostgres.ObtenerPostgres(ex) is { SqlState: "55000" } conflicto)
+        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException && ErroresPostgres.MensajeConflicto(ex) is { } conflicto)
         {
-            return ErrorValidacion.Conflicto(conflicto.MessageText);
+            return ResultadoRegistro.Fallo(ErrorValidacion.Conflicto(conflicto));
         }
         catch (DbUpdateException ex) when (MensajeDteDuplicado(ex, documento) is { } duplicado)
         {
-            return ErrorValidacion.Conflicto(duplicado);
+            return ResultadoRegistro.Fallo(ErrorValidacion.Conflicto(duplicado));
         }
+    }
+
+    private static string DescribirRetencion(RetencionIsrPreparada? retencion)
+    {
+        if (retencion is null)
+        {
+            return string.Empty;
+        }
+        var detalle = retencion.Monto > 0
+            ? $", retención ISR Q{retencion.Monto} (base {retencion.Base}, tasa {retencion.Tasa}), parámetro {retencion.Parametro?.Codigo}"
+            : $", sin retención ({retencion.Motivo ?? retencion.MotivoAjuste})";
+        var motivo = retencion.MotivoAjuste ?? retencion.RevisionMotivo;
+        return motivo is null
+            ? detalle
+            : $"{detalle}, calculado Q{retencion.MontoCalculado}, aplicado Q{retencion.Monto}, motivo: {motivo}";
     }
 
     private static string? MensajeDteDuplicado(DbUpdateException ex, IDocumentoFactura documento) =>

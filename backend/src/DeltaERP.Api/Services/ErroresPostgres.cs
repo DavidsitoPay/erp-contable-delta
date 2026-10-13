@@ -14,6 +14,14 @@ public static class ErroresPostgres
         ["23514"] = StatusCodes.Status400BadRequest,
     };
 
+    private static readonly Dictionary<string, string> MensajePorRestriccionUnica = new()
+    {
+        ["ux_retencion_isr_documento"] = "La factura ya tiene retención de ISR registrada.",
+        ["ux_retencion_iva_documento"] = "La factura ya tiene IVA retenido registrado.",
+        ["ux_constancia_retencion"] = "La retención ya tiene una constancia emitida.",
+        ["ux_constancia_numero"] = "Ya existe una constancia emitida con ese número para el mismo tipo y retenedor.",
+    };
+
     // Los procedimientos almacenados señalan perfil no autorizado (P0001), inexistente (P0002)
     // estado inválido (55000) y regla de check no cumplida (23514) con RAISE EXCEPTION; cualquier otro error se propaga.
     public static async Task<ObjectResult?> TraducirProcedimientoAsync(Func<Task> invocar)
@@ -45,6 +53,18 @@ public static class ErroresPostgres
         {
             return new ObjectResult(new { error = pg.MessageText }) { StatusCode = status };
         }
-        return null;
+        return MensajeRestriccionUnica(ex) is { } mensaje
+            ? new ObjectResult(new { error = mensaje }) { StatusCode = StatusCodes.Status409Conflict }
+            : null;
     }
+
+    // Conflicto (409) de los triggers (55000) y de los índices únicos de retenciones y constancias.
+    public static string? MensajeConflicto(Exception ex) =>
+        ObtenerPostgres(ex) is { SqlState: "55000" } pg ? pg.MessageText : MensajeRestriccionUnica(ex);
+
+    private static string? MensajeRestriccionUnica(Exception ex) =>
+        ObtenerPostgres(ex) is { SqlState: "23505", ConstraintName: { } restriccion }
+        && MensajePorRestriccionUnica.TryGetValue(restriccion, out var mensaje)
+            ? mensaje
+            : null;
 }

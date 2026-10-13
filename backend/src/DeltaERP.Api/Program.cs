@@ -21,10 +21,14 @@ builder.Services.AddSingleton<TokenService>();
 builder.Services.AddScoped<ValidacionContable>();
 builder.Services.AddScoped<AuditoriaService>();
 builder.Services.AddScoped<ConfiguracionFiscalService>();
+builder.Services.AddScoped<ConstanciaRetencionService>();
+builder.Services.AddScoped<RetencionService>();
+builder.Services.AddScoped<ReporteRetencionService>();
 builder.Services.AddScoped<FacturaFiscalService>();
 builder.Services.AddScoped<FacturaService>();
 builder.Services.AddScoped<LibroFiscalService>();
 builder.Services.AddScoped<TesoreriaService>();
+builder.Services.AddSingleton(TimeProvider.System);
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? throw new InvalidOperationException("Falta la sección Jwt en la configuración.");

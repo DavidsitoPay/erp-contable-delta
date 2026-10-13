@@ -1,4 +1,3 @@
-using System.Globalization;
 using DeltaERP.Domain.Entities;
 
 namespace DeltaERP.Domain.Rules;
@@ -25,14 +24,11 @@ public static class ImpuestoRules
     private const decimal TasaMaxima = 100m;
     private const int DecimalesTasa = 4;
 
-    public static bool EstaVigente(DateOnly desde, DateOnly? hasta, DateOnly fecha) =>
-        fecha >= desde && (hasta is null || fecha <= hasta);
-
     public static bool ResolverGeneraCredito(DatosImpuesto datos) =>
         datos.GeneraCredito ?? datos.Tipo == Impuesto.TipoIvaGeneral;
 
     public static string? ValidarAlta(DatosImpuesto datos) =>
-        ValidarTextos(datos) ?? ValidarTipoYTasa(datos) ?? ValidarCreditoYAmbito(datos) ?? ValidarVigencia(datos);
+        ValidarTextos(datos) ?? ValidarTipoYTasa(datos) ?? ValidarCreditoYAmbito(datos) ?? VigenciaRules.Validar(datos.VigenteDesde, datos.VigenteHasta);
 
     public static string? ValidarParaFactura(Impuesto impuesto, string aplicaImpuestoA, string siglaFactura, DateOnly fecha)
     {
@@ -40,10 +36,10 @@ public static class ImpuestoRules
         {
             return $"El impuesto '{impuesto.Nombre}' está inactivo y no puede usarse en documentos nuevos.";
         }
-        if (!EstaVigente(impuesto.VigenteDesde, impuesto.VigenteHasta, fecha))
+        if (!VigenciaRules.EstaVigente(impuesto.VigenteDesde, impuesto.VigenteHasta, fecha))
         {
-            var hasta = impuesto.VigenteHasta is { } fin ? Iso(fin) : "sin fecha final";
-            return $"El impuesto '{impuesto.Nombre}' no está vigente el {Iso(fecha)} (vigencia: {Iso(impuesto.VigenteDesde)} a {hasta}).";
+            var hasta = impuesto.VigenteHasta is { } fin ? VigenciaRules.Iso(fin) : "sin fecha final";
+            return $"El impuesto '{impuesto.Nombre}' no está vigente el {VigenciaRules.Iso(fecha)} (vigencia: {VigenciaRules.Iso(impuesto.VigenteDesde)} a {hasta}).";
         }
         if (impuesto.AplicaA != Impuesto.AmbitoAmbos && impuesto.AplicaA != aplicaImpuestoA)
         {
@@ -88,8 +84,6 @@ public static class ImpuestoRules
         };
         return new ParametroImpuesto(impuesto.Id, tipo, impuesto.Tasa, impuesto.GeneraCredito);
     }
-
-    public static string Iso(DateOnly fecha) => fecha.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     private static string? ValidarTextos(DatosImpuesto datos)
     {
@@ -143,14 +137,5 @@ public static class ImpuestoRules
         return datos.AplicaA is null || !Impuesto.AmbitosValidos.Contains(datos.AplicaA)
             ? $"Ámbito inválido. Debe ser uno de: {string.Join(", ", Impuesto.AmbitosValidos)}."
             : null;
-    }
-
-    private static string? ValidarVigencia(DatosImpuesto datos)
-    {
-        if (datos.VigenteDesde is null)
-        {
-            return "La vigencia inicial es obligatoria.";
-        }
-        return datos.VigenteHasta < datos.VigenteDesde ? "La vigencia final no puede ser anterior a la inicial." : null;
     }
 }

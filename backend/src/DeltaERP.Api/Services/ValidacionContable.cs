@@ -51,8 +51,13 @@ public class ValidacionContable
     private async Task<ReferenciasDetalle> ObtenerReferenciasAsync(IDocumentoFactura documento, decimal saldoPendiente, PerfilFactura perfil)
     {
         var origen = documento.DocumentoOrigenId is { } origenId ? await ObtenerDocumentoAsync(perfil.EsVenta, origenId) : null;
-        return new ReferenciasDetalle(saldoPendiente, await ObtenerCuentasAsync(documento.Lineas), await ObtenerImpuestosAsync(documento.Lineas), origen);
+        var retencion = perfil.EsVenta ? null : await ObtenerRetencionIsrAsync(documento.Id);
+        return new ReferenciasDetalle(
+            saldoPendiente, await ObtenerCuentasAsync(documento.Lineas), await ObtenerImpuestosAsync(documento.Lineas), origen, retencion);
     }
+
+    public async Task<Retencion?> ObtenerRetencionIsrAsync(int documentoCxpId) =>
+        await _db.Retenciones.FirstOrDefaultAsync(r => r.DocumentoCxpId == documentoCxpId && r.Concepto == Retencion.ConceptoIsr);
 
     private async Task<string?> ValidarPeriodoDelDocumentoAsync(IDocumentoFactura documento)
     {

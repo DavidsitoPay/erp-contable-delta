@@ -1,5 +1,6 @@
 using DeltaERP.Api.Auth;
 using DeltaERP.Api.Services;
+using DeltaERP.Domain.Rules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,14 +26,7 @@ public class LibroFiscalController : ControllerBase
 
     private async Task<IActionResult> GenerarAsync(bool esVenta, int anio, int mes)
     {
-        if (mes is < 1 or > 12)
-        {
-            return BadRequest(new { error = "El mes debe estar entre 1 y 12." });
-        }
-        if (anio is < 2000 or > 2100)
-        {
-            return BadRequest(new { error = "El año debe estar entre 2000 y 2100." });
-        }
-        return Ok(await _libro.GenerarAsync(esVenta, anio, mes));
+        var error = PeriodoFiscalRules.Validar(anio, mes);
+        return error is null ? Ok(await _libro.GenerarAsync(esVenta, anio, mes)) : BadRequest(new { error });
     }
 }

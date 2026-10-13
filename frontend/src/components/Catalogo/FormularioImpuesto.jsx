@@ -1,5 +1,6 @@
 import { AMBITOS_IMPUESTO, TIPOS_IMPUESTO } from "../../utils/etiquetasFiscales";
 import CampoFormulario from "../CampoFormulario";
+import CamposVigencia from "../CamposVigencia";
 import OpcionesSelect from "../OpcionesSelect";
 import { FormularioCatalogo } from "./CatalogoCrud";
 
@@ -46,12 +47,7 @@ function FormularioImpuesto({ form, onCambio, modo, enUso, cargando, error, onSu
         <CampoFormulario id="imp-articulo" etiqueta="Referencia legal">
           <input id="imp-articulo" className="input" maxLength={200} value={form.articuloLegal} onChange={cambiar("articuloLegal")} required />
         </CampoFormulario>
-        <CampoFormulario id="imp-desde" etiqueta="Vigente desde">
-          <input id="imp-desde" type="date" className="input" value={form.vigenteDesde} onChange={cambiar("vigenteDesde")} disabled={bloqueado} required />
-        </CampoFormulario>
-        <CampoFormulario id="imp-hasta" etiqueta="Vigente hasta (opcional)">
-          <input id="imp-hasta" type="date" className="input" min={form.vigenteDesde} value={form.vigenteHasta} onChange={cambiar("vigenteHasta")} />
-        </CampoFormulario>
+        <CamposVigencia prefijo="imp" form={form} cambiar={cambiar} desdeBloqueado={bloqueado} />
         {modo !== "crear" && (
           <button type="button" className="btn btn-outline" onClick={onCancelar}>
             Cancelar

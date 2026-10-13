@@ -32,6 +32,9 @@ public class FiscalEsquemaTests
     [InlineData(typeof(LineaDocumentoCxC))]
     [InlineData(typeof(DocumentoCxP))]
     [InlineData(typeof(LineaDocumentoCxP))]
+    [InlineData(typeof(ParametroRetencion))]
+    [InlineData(typeof(Retencion))]
+    [InlineData(typeof(ConstanciaRetencion))]
     public async Task ColumnasMapeadas_ExistenEnLaBaseReal(Type tipo)
     {
         using var scope = _pg.Factory.Services.CreateScope();

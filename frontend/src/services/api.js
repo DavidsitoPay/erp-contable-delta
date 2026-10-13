@@ -68,6 +68,7 @@ export const cxcApi = {
   crearFactura: (factura) => api.post("/cxc/facturas", factura),
   listarPagos: () => api.get("/cxc/pagos"),
   crearPago: (pago) => api.post("/cxc/pagos", pago),
+  retencionIvaSugerida: (id) => api.get(`/cxc/facturas/${idRuta(id)}/retencion-iva-sugerida`),
 };
 
 export const cxpApi = {
@@ -76,6 +77,8 @@ export const cxpApi = {
   crearFactura: (factura) => api.post("/cxp/facturas", factura),
   listarPagos: () => api.get("/cxp/pagos"),
   crearPago: (pago) => api.post("/cxp/pagos", pago),
+  retencionPrevia: (cuerpo) => api.post("/cxp/facturas/retencion-previa", cuerpo),
+  resolverRevisionRetencion: (id, motivo) => api.post(`/cxp/facturas/${idRuta(id)}/revision-retencion`, { motivo }),
 };
 
 export const cuentasBancariasApi = {
@@ -126,6 +129,18 @@ const consultaLibroFiscal = (tipo) => (anio, mes) => api.get(`/libros/fiscal/${t
 export const librosFiscalesApi = {
   ventas: consultaLibroFiscal("ventas"),
   compras: consultaLibroFiscal("compras"),
+};
+
+export const parametrosRetencionApi = {
+  listar: (filtros = {}) => api.get("/retenciones/parametros", { params: filtros }),
+  crear: (parametro) => api.post("/retenciones/parametros", parametro),
+  actualizar: (id, cambios) => api.put(`/retenciones/parametros/${idRuta(id)}`, cambios),
+};
+
+export const retencionesApi = {
+  reporte: (filtros = {}) => api.get("/retenciones/reporte", { params: filtros }),
+  registrarConstancia: (retencionId, constancia) => api.post(`/retenciones/${idRuta(retencionId)}/constancia`, constancia),
+  anularConstancia: (id, motivo) => api.post(`/retenciones/constancias/${idRuta(id)}/anular`, { motivo }),
 };
 
 export default api;

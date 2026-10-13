@@ -8,12 +8,19 @@ public enum LadoControl
     Credito,
 }
 
+public sealed record RetencionAsiento(int CuentaId, decimal Monto);
+
 public static class AsientoFacturaBuilder
 {
-    // RN-01: cuadra por construcción (Base + IVA = MontoLinea en cada línea).
+    // RN-01: cuadra por construcción (Base + IVA = MontoLinea en cada línea; control + retención = Total).
     public static AsientoContable Construir(
-        string prefijo, IDocumentoFactura documento, ResumenFiscal resumen, LadoControl ladoControl, int usuarioId, int? cuentaIvaId)
+        string prefijo, IDocumentoFactura documento, ResumenFiscal resumen, LadoControl ladoControl, int usuarioId, int? cuentaIvaId,
+        RetencionAsiento? retencion = null)
     {
+        if (retencion is not null && (ladoControl != LadoControl.Credito || documento.TipoDocumento != TiposDocumento.Factura))
+        {
+            throw new InvalidOperationException("La retención solo aplica a facturas de compra.");
+        }
         var esNotaCredito = documento.TipoDocumento == TiposDocumento.NotaCredito;
         var controlEsDebito = (ladoControl == LadoControl.Debito) != esNotaCredito;
         var ivaSeparado = (ResultadoLinea r) => ladoControl == LadoControl.Debito || r.IvaAcreditable;
@@ -28,7 +35,7 @@ public static class AsientoFacturaBuilder
             TipoCambioAplicado = documento.TipoCambioAplicado,
             Monto = resumen.Total,
         };
-        asiento.Lineas.Add(NuevaLinea(documento.CuentaControlId, null, resumen.Total, controlEsDebito));
+        asiento.Lineas.Add(NuevaLinea(documento.CuentaControlId, null, resumen.Total - (retencion?.Monto ?? 0m), controlEsDebito));
         for (var i = 0; i < resumen.Lineas.Count; i++)
         {
             var calculo = resumen.Lineas[i];
@@ -41,6 +48,10 @@ public static class AsientoFacturaBuilder
         {
             var cuentaIva = cuentaIvaId ?? throw new InvalidOperationException("Falta la cuenta de IVA para asentar la factura.");
             asiento.Lineas.Add(NuevaLinea(cuentaIva, null, iva, !controlEsDebito));
+        }
+        if (retencion is not null)
+        {
+            asiento.Lineas.Add(NuevaLinea(retencion.CuentaId, null, retencion.Monto, false));
         }
         return asiento;
     }

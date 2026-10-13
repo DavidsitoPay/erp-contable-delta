@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { impuestosApi } from "../../services/api";
 import { calcularResumen, dtePayload, dteValido, impuestoDeLinea, impuestoPorDefecto, impuestosPermitidos } from "../../utils/fiscal";
 import { hoyIso, mensajeError, monto } from "../../utils/formato";
+import { AJUSTE_VACIO, ajusteValido, payloadAjuste, permiteAjuste } from "../../utils/retenciones";
 import { useLineas } from "../useLineas";
 import CamposCabeceraFactura from "./CamposCabeceraFactura";
 import DatosDte from "./DatosDte";
 import LineasFactura from "./LineasFactura";
+import PanelRetencionIsr from "./PanelRetencionIsr";
 import ResumenFactura from "./ResumenFactura";
+import { useRetencionPrevia } from "./useRetencionPrevia";
 
 const DTE_VACIO = { dteUuid: "", dteSerie: "", dteNumero: "", dteFechaCertificacion: "" };
 
@@ -44,6 +47,8 @@ function FormularioFactura({ config, contrapartes, hojas, cuentasControl, centro
   const [impuestos, setImpuestos] = useState([]);
   const [error, setError] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [ajuste, setAjuste] = useState(AJUSTE_VACIO);
+  const [advertencias, setAdvertencias] = useState([]);
   const { lineas, actualizarLinea, agregarLinea, quitarLinea, reiniciarLineas } = useLineas(() => lineaVacia(tipoBienDefecto), 1);
 
   useEffect(() => {
@@ -74,6 +79,17 @@ function FormularioFactura({ config, contrapartes, hojas, cuentasControl, centro
     }))
   );
 
+  const estadoRetencion = useRetencionPrevia({
+    api,
+    activo: Boolean(config.retencionIsr) && form.tipoDocumento === "Factura",
+    proveedorId: form[campoContraparteId],
+    fecha: form.fecha,
+    montoBase: resumen.base,
+    montoTotal: resumen.total,
+  });
+  const ajusteActivo = ajuste.activo && permiteAjuste(estadoRetencion.previa);
+  const ajusteIncompleto = ajusteActivo && !ajusteValido(ajuste, resumen.total);
+
   const esNotaCredito = form.tipoDocumento === "NotaCredito";
   const origenes = facturas.filter(
     (f) =>
@@ -90,11 +106,12 @@ function FormularioFactura({ config, contrapartes, hojas, cuentasControl, centro
     form.numero.trim() !== "" && form[campoContraparteId] !== "" && form.periodoId !== "" && form.cuentaControlId !== "";
   const lineasCompletas = lineas.every((l) => l.cuentaContableId !== "" && monto(l.cantidad) > 0);
   const puedeEnviar =
-    !enviando && encabezadoCompleto && lineasCompletas && defecto !== null && dteValido(dte, dteObligatorio) && origenCompleto;
+    !enviando && encabezadoCompleto && lineasCompletas && defecto !== null && dteValido(dte, dteObligatorio) && origenCompleto && !estadoRetencion.bloqueada && !ajusteIncompleto;
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    setAdvertencias([]);
     setEnviando(true);
     try {
       const payload = {
@@ -107,6 +124,7 @@ function FormularioFactura({ config, contrapartes, hojas, cuentasControl, centro
         cuentaControlId: Number(form.cuentaControlId),
         ...(esNotaCredito ? { documentoOrigenId: Number(form.documentoOrigenId) } : {}),
         ...dtePayload(dte),
+        ...(ajusteActivo ? { retencionIsrAjuste: payloadAjuste(ajuste) } : {}),
         lineas: lineas.map((l) => ({
           descripcion: l.descripcion || null,
           cantidad: monto(l.cantidad),
@@ -117,9 +135,11 @@ function FormularioFactura({ config, contrapartes, hojas, cuentasControl, centro
           cuentaContableId: Number(l.cuentaContableId),
         })),
       };
-      await api.crearFactura(payload);
+      const { data } = await api.crearFactura(payload);
+      setAdvertencias(data?.advertencias ?? []);
       setForm({ ...formVacio(), periodoId: form.periodoId, cuentaControlId: form.cuentaControlId });
       setDte(DTE_VACIO);
+      setAjuste(AJUSTE_VACIO);
       reiniciarLineas();
       await onRegistrada();
     } catch (err) {
@@ -162,8 +182,13 @@ function FormularioFactura({ config, contrapartes, hojas, cuentasControl, centro
 
       <ResumenFactura resumen={resumen} etiquetaIva={etiquetaIva} esCompra={aplicaImpuestoA === "COMPRAS"} />
 
+      <PanelRetencionIsr estado={estadoRetencion} total={resumen.total} ajuste={ajuste} onAjuste={setAjuste} />
+
       {excedeSaldo && <p className="warning-chip">El monto de la nota de crédito excede el saldo pendiente del documento de origen.</p>}
       {error && <p className="error-chip">{error}</p>}
+      {advertencias.map((texto) => (
+        <p key={texto} className="warning-chip">{texto}</p>
+      ))}
 
       <button type="submit" disabled={!puedeEnviar} className="btn btn-primary">
         {enviando ? "Registrando..." : "Registrar factura"}

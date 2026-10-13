@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => {
 
 vi.mock("axios", () => ({ default: { create: mocks.create, get: mocks.get } }));
 
-import api, { asientosApi, checkHealth, conciliacionesApi, configuracionFiscalApi, contrapartesApi, cuentasApi, cuentasBancariasApi, cxcApi, cxpApi, impuestosApi, librosApi, librosFiscalesApi, login, movimientosTesoreriaApi, periodosApi, reportesApi } from "./api";
+import api, { asientosApi, checkHealth, conciliacionesApi, configuracionFiscalApi, contrapartesApi, cuentasApi, cuentasBancariasApi, cxcApi, cxpApi, impuestosApi, librosApi, librosFiscalesApi, login, movimientosTesoreriaApi, parametrosRetencionApi, periodosApi, reportesApi, retencionesApi } from "./api";
 
 const interceptor = mocks.instance.interceptors.request.use.mock.calls[0][0];
 const opcionesCreate = mocks.create.mock.calls[0][0];
@@ -217,5 +217,45 @@ describe("fiscal", () => {
 
     expect(mocks.instance.get).toHaveBeenNthCalledWith(1, "/libros/fiscal/ventas", { params: { anio: 2026, mes: 10 } });
     expect(mocks.instance.get).toHaveBeenNthCalledWith(2, "/libros/fiscal/compras", { params: { anio: 2026, mes: 9 } });
+  });
+});
+
+describe("retenciones", () => {
+  it("cxpApi consulta la retención previa y resuelve la revisión de una factura", () => {
+    cxpApi.retencionPrevia({ proveedorId: 4 });
+    cxpApi.resolverRevisionRetencion("9", "Régimen confirmado");
+
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(1, "/cxp/facturas/retencion-previa", { proveedorId: 4 });
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(2, "/cxp/facturas/9/revision-retencion", { motivo: "Régimen confirmado" });
+  });
+
+  it("cxcApi consulta el IVA retenido sugerido de una factura", () => {
+    cxcApi.retencionIvaSugerida("5");
+
+    expect(mocks.instance.get).toHaveBeenCalledWith("/cxc/facturas/5/retencion-iva-sugerida");
+  });
+
+  it("parametrosRetencionApi lista con filtros, crea y actualiza con el id normalizado", () => {
+    parametrosRetencionApi.listar();
+    parametrosRetencionApi.listar({ incluirInactivos: true });
+    parametrosRetencionApi.crear({ codigo: "ISR_PROVEEDOR_ROS" });
+    parametrosRetencionApi.actualizar("3", { activo: false });
+
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(1, "/retenciones/parametros", { params: {} });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(2, "/retenciones/parametros", { params: { incluirInactivos: true } });
+    expect(mocks.instance.post).toHaveBeenCalledWith("/retenciones/parametros", { codigo: "ISR_PROVEEDOR_ROS" });
+    expect(mocks.instance.put).toHaveBeenCalledWith("/retenciones/parametros/3", { activo: false });
+  });
+
+  it("retencionesApi consulta el reporte y registra o anula constancias", () => {
+    retencionesApi.reporte();
+    retencionesApi.reporte({ anio: 2026, mes: 10, sentido: "EFECTUADA" });
+    retencionesApi.registrarConstancia("7", { numero: "A-1" });
+    retencionesApi.anularConstancia("2", "Error de captura");
+
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(1, "/retenciones/reporte", { params: {} });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(2, "/retenciones/reporte", { params: { anio: 2026, mes: 10, sentido: "EFECTUADA" } });
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(1, "/retenciones/7/constancia", { numero: "A-1" });
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(2, "/retenciones/constancias/2/anular", { motivo: "Error de captura" });
   });
 });

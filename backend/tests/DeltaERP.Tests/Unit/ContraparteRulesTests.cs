@@ -44,6 +44,6 @@ public class ContraparteRulesTests
     {
         var error = ContraparteRules.ValidarFiscal(Datos(null, regimenIsr: "OTRO"), "Cliente");
 
-        Assert.Equal("Régimen de ISR inválido. Debe ser uno de: UTILIDADES, SIMPLIFICADO.", error);
+        Assert.Equal("Régimen de ISR inválido. Debe ser uno de: UTILIDADES, SIMPLIFICADO, PAGO_DIRECTO, EXENTO, NO_DEFINIDO.", error);
     }
 }

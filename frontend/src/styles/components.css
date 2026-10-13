@@ -678,3 +678,7 @@ input[type="radio"]:focus-visible {
   display: block;
   color: var(--color-text-strong-muted);
 }
+
+.data-table tbody tr.row-alerta td {
+  background: var(--color-warning-bg);
+}

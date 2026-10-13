@@ -6,7 +6,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DeltaERP.Api.Services;
 
-public sealed record PagoBancario(CuentaBancaria Cuenta, int PeriodoId, IReadOnlyList<(int CuentaId, decimal Monto)> Contrapartidas);
+public sealed record PagoBancario(
+    CuentaBancaria Cuenta,
+    int PeriodoId,
+    IReadOnlyList<(int CuentaId, decimal Monto)> Contrapartidas,
+    IReadOnlyList<(int CuentaId, decimal Monto)> Retenciones)
+{
+    public decimal Neto => Contrapartidas.Sum(c => c.Monto) - Retenciones.Sum(r => r.Monto);
+}
 
 public class TesoreriaService
 {
@@ -197,16 +204,19 @@ public class TesoreriaService
         int? cuentaBancariaId,
         DateOnly fecha,
         IReadOnlyCollection<DocumentoPagable> documentos,
-        IReadOnlyCollection<(int DocumentoId, decimal Monto)> aplicaciones)
+        IReadOnlyCollection<(int DocumentoId, decimal Monto)> aplicaciones,
+        IReadOnlyList<(int CuentaId, decimal Monto)>? retenciones = null)
     {
         if (cuentaBancariaId is null)
         {
             return (null, "La cuenta bancaria es obligatoria para registrar un cobro o un pago.");
         }
-        var errorEscala = TesoreriaRules.ValidarEscalaPago(aplicaciones.Select(a => a.Monto));
-        if (errorEscala is not null)
+        var retenido = retenciones ?? [];
+        var errorMontos = TesoreriaRules.ValidarEscalaPago(aplicaciones.Select(a => a.Monto))
+            ?? TesoreriaRules.ValidarCobroNeto(aplicaciones.Sum(a => a.Monto), retenido.Sum(r => r.Monto));
+        if (errorMontos is not null)
         {
-            return (null, errorEscala);
+            return (null, errorMontos);
         }
         var (cuenta, errorCuenta) = await ValidarCuentaOperableAsync(cuentaBancariaId.Value);
         if (errorCuenta is not null)
@@ -231,20 +241,21 @@ public class TesoreriaService
         }
 
         var contrapartidas = TesoreriaRules.AgruparPorCuentaControl(aplicaciones, controlPorDocumento);
-        return (new PagoBancario(cuenta!, periodoId, contrapartidas), null);
+        return (new PagoBancario(cuenta!, periodoId, contrapartidas, retenido), null);
     }
 
     // Sin transacción propia: el llamador ya está dentro de AuditoriaService.EjecutarAsync.
-    public async Task RegistrarMovimientoDePagoAsync(
+    public async Task<int> RegistrarMovimientoDePagoAsync(
         PagoBancario pago, PerfilFactura perfil, DateOnly fecha, string descripcion, string? referencia, int pagoId, int usuarioId)
     {
         var esCobro = perfil.LadoControl == LadoControl.Debito;
         var tipo = esCobro ? MovimientoTesoreria.TipoIngreso : MovimientoTesoreria.TipoEgreso;
-        var asiento = AsientoTesoreriaBuilder.Construir(
-            $"TES-{perfil.Sigla.ToUpperInvariant()}", fecha, pago.PeriodoId, usuarioId, tipo,
-            pago.Cuenta.CuentaContableId, pago.Contrapartidas);
-        var movimiento = NuevoMovimiento(
-            pago.Cuenta.Id, fecha, tipo, pago.Contrapartidas.Sum(c => c.Monto), descripcion, referencia, perfil.Sigla);
+        var prefijo = $"TES-{perfil.Sigla.ToUpperInvariant()}";
+        var asiento = pago.Retenciones.Count == 0
+            ? AsientoTesoreriaBuilder.Construir(prefijo, fecha, pago.PeriodoId, usuarioId, tipo, pago.Cuenta.CuentaContableId, pago.Contrapartidas)
+            : AsientoTesoreriaBuilder.ConstruirCobroConRetenciones(
+                prefijo, fecha, pago.PeriodoId, usuarioId, pago.Cuenta.CuentaContableId, pago.Contrapartidas, pago.Retenciones);
+        var movimiento = NuevoMovimiento(pago.Cuenta.Id, fecha, tipo, pago.Neto, descripcion, referencia, perfil.Sigla);
         if (esCobro)
         {
             movimiento.ReciboPagoId = pagoId;
@@ -254,16 +265,18 @@ public class TesoreriaService
             movimiento.PagoProveedorId = pagoId;
         }
         await InsertarAsientoYMovimientosAsync(asiento, new[] { movimiento });
+        return asiento.Id;
     }
 
-    // La línea de control es la única del lado de control (débito en CxC, crédito en CxP).
+    // La línea de control es la única del lado de control (débito en CxC, crédito en CxP) salvo las retenciones de la factura.
     private async Task<Dictionary<int, int>> ObtenerControlPorAsientoAsync(PerfilFactura perfil, IReadOnlyCollection<DocumentoPagable> documentos)
     {
-        var asientosId = documentos.Where(d => d.AsientoId is not null).Select(d => d.AsientoId!.Value).Distinct().ToList();
+        var asientosId = documentos.Select(d => d.AsientoId).OfType<int>().Distinct().ToList();
         var lineas = _db.LineasAsiento.Where(l => asientosId.Contains(l.AsientoId));
         lineas = perfil.LadoControl == LadoControl.Debito
             ? lineas.Where(l => l.Debito > 0)
             : lineas.Where(l => l.Credito > 0);
+        lineas = lineas.Where(l => !_db.Retenciones.Any(r => r.AsientoId == l.AsientoId && r.CuentaId == l.CuentaId));
         var controles = await lineas.OrderBy(l => l.Id).Select(l => new { l.AsientoId, l.CuentaId }).ToListAsync();
         return controles.GroupBy(l => l.AsientoId).ToDictionary(g => g.Key, g => g.First().CuentaId);
     }
@@ -276,7 +289,7 @@ public class TesoreriaService
             return error;
         }
         var cuenta = await _db.CuentasContables.FindAsync(cuentaId);
-        return cuenta!.Tipo == tipo ? null : mensajeTipo;
+        return cuenta is not null && cuenta.Tipo == tipo ? null : mensajeTipo;
     }
 
     private static (int CuentaId, decimal Monto)[] UnaContrapartida(int cuentaId, decimal monto) =>

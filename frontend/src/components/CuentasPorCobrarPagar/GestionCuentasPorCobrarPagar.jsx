@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
 import { centrosCostoApi, contrapartesApi, cuentasApi, cuentasBancariasApi, periodosApi } from "../../services/api";
 import { cuentasHoja } from "../../utils/cuentas";
-import { formatoMoneda, hoyIso, monto } from "../../utils/formato";
+import { hoyIso, monto } from "../../utils/formato";
 import { perfilActual, puedeGestionarTesoreria } from "../../utils/perfiles";
+import { aplicacionesConRetencion, hayErrorRetencionIva, resumenCobro } from "../../utils/retenciones";
+import FormularioMotivo from "../FormularioMotivo";
 import SelectCuentaBancaria from "../Tesoreria/SelectCuentaBancaria";
 import FormularioFactura from "./FormularioFactura";
+import ResumenCobro from "./ResumenCobro";
+import TablaAplicaciones from "./TablaAplicaciones";
 import TablaFacturas from "./TablaFacturas";
+import TablaPagos from "./TablaPagos";
+import { useRetencionesCobro } from "./useRetencionesCobro";
 
 // config aísla las diferencias de terminología/cuenta de control entre CxC y
 // CxP, de ahí las claves dinámicas como pagoContraparteId.
@@ -31,6 +37,7 @@ function GestionCuentasPorCobrarPagar({ config }) {
   const [puedeRegistrarPagos] = useState(() => puedeGestionarTesoreria(perfilActual()));
 
   const [errorPago, setErrorPago] = useState("");
+  const [advertenciasPago, setAdvertenciasPago] = useState([]);
   const [enviandoPago, setEnviandoPago] = useState(false);
   const [pagoContraparteId, setPagoContraparteId] = useState("");
   const [pagoCuentaBancariaId, setPagoCuentaBancariaId] = useState("");
@@ -38,6 +45,9 @@ function GestionCuentasPorCobrarPagar({ config }) {
   const [pagoMetodo, setPagoMetodo] = useState("");
   const [pagoReferencia, setPagoReferencia] = useState("");
   const [montosAplicados, setMontosAplicados] = useState({}); // documentoId -> string
+  const [soloPorRevisar, setSoloPorRevisar] = useState(false);
+  const [revisionDe, setRevisionDe] = useState(null);
+  const retencionesCobro = useRetencionesCobro(api);
 
   async function cargarFacturas() {
     const { data } = await api.listarFacturas();
@@ -62,31 +72,65 @@ function GestionCuentasPorCobrarPagar({ config }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tipoContraparte]);
 
+  const conRetencionIsr = Boolean(config.retencionIsr);
+  const conRetencionIva = Boolean(config.retencionIvaCobro);
   const hojas = cuentasHoja(cuentas);
   const cuentasControl = hojas.filter(filtroCuentaControl);
   const periodosAbiertos = periodos.filter((p) => p.estado === "Abierto");
+  const facturasVisibles = soloPorRevisar ? facturas.filter((f) => f.revisionRetencion === "PENDIENTE") : facturas;
 
   const facturasDeLaContraparte = facturas.filter(
     (f) => String(f[campoContraparteId]) === String(pagoContraparteId) && f.estado === "Vigente" && f.saldoPendiente > 0
   );
+  const clienteAgente = Boolean(contrapartes.find((c) => String(c.id) === String(pagoContraparteId))?.esAgenteRetencionIva);
 
   function actualizarMontoAplicado(documentoId, valor) {
     setMontosAplicados((prev) => ({ ...prev, [documentoId]: valor }));
+    if (conRetencionIva && monto(valor) > 0) void retencionesCobro.solicitarSugerencia(documentoId);
   }
 
-  const aplicacionesConMonto = facturasDeLaContraparte
+  function seleccionarContraparte(valor) {
+    setPagoContraparteId(valor);
+    setMontosAplicados({});
+    retencionesCobro.reiniciar();
+  }
+
+  const aplicacionesBase = facturasDeLaContraparte
     .map((f) => ({ documentoId: f.id, montoAplicado: monto(montosAplicados[f.id]) }))
     .filter((a) => a.montoAplicado > 0);
+  const aplicacionesConMonto = conRetencionIva
+    ? aplicacionesConRetencion(aplicacionesBase, retencionesCobro.valores, retencionesCobro.sugerencias, clienteAgente)
+    : aplicacionesBase;
+  const retencionInvalida =
+    conRetencionIva && hayErrorRetencionIva(aplicacionesBase, retencionesCobro.valores, retencionesCobro.sugerencias, clienteAgente);
+  const retencionIva = conRetencionIva
+    ? { valores: retencionesCobro.valores, sugerencias: retencionesCobro.sugerencias, clienteAgente, onCambio: retencionesCobro.cambiar }
+    : null;
+
+  const resumenPago = resumenCobro(aplicacionesConMonto);
 
   const puedeEnviarPago =
-    !enviandoPago && pagoContraparteId !== "" && pagoCuentaBancariaId !== "" && pagoMetodo.trim() !== "" && aplicacionesConMonto.length > 0;
+    !enviandoPago &&
+    pagoContraparteId !== "" &&
+    pagoCuentaBancariaId !== "" &&
+    pagoMetodo.trim() !== "" &&
+    aplicacionesConMonto.length > 0 &&
+    resumenPago.neto > 0 &&
+    !retencionInvalida;
+
+  async function resolverRevision(motivo) {
+    await api.resolverRevisionRetencion(revisionDe.id, motivo);
+    setRevisionDe(null);
+    await cargarFacturas();
+  }
 
   async function handleSubmitPago(e) {
     e.preventDefault();
     setErrorPago("");
+    setAdvertenciasPago([]);
     setEnviandoPago(true);
     try {
-      await api.crearPago({
+      const { data } = await api.crearPago({
         [campoContraparteId]: Number(pagoContraparteId),
         cuentaBancariaId: Number(pagoCuentaBancariaId),
         fecha: pagoFecha,
@@ -94,9 +138,11 @@ function GestionCuentasPorCobrarPagar({ config }) {
         referenciaBancaria: pagoReferencia || null,
         aplicaciones: aplicacionesConMonto,
       });
+      setAdvertenciasPago(data?.advertencias ?? []);
       setPagoMetodo("");
       setPagoReferencia("");
       setMontosAplicados({});
+      retencionesCobro.reiniciar();
       await Promise.all([cargarFacturas(), cargarPagos()]);
     } catch (err) {
       setErrorPago(err.response?.data?.error || "No se pudo registrar el pago.");
@@ -132,7 +178,28 @@ function GestionCuentasPorCobrarPagar({ config }) {
           />
 
           <h3>Facturas registradas</h3>
-          <TablaFacturas facturas={facturas} etiquetaContraparte={etiquetaContraparte} campoContraparteNombre={campoContraparteNombre} />
+          {conRetencionIsr && (
+            <label>
+              <input type="checkbox" checked={soloPorRevisar} onChange={(e) => setSoloPorRevisar(e.target.checked)} />
+              <span>Solo facturas por revisar</span>
+            </label>
+          )}
+          {revisionDe && (
+            <FormularioMotivo
+              titulo={`Motivo de la revisión de ${revisionDe.numero}`}
+              etiquetaConfirmar="Resolver revisión"
+              mensajeFallo="No se pudo resolver la revisión."
+              onConfirmar={resolverRevision}
+              onCancelar={() => setRevisionDe(null)}
+            />
+          )}
+          <TablaFacturas
+            facturas={facturasVisibles}
+            etiquetaContraparte={etiquetaContraparte}
+            campoContraparteNombre={campoContraparteNombre}
+            conRetencion={conRetencionIsr}
+            onResolverRevision={setRevisionDe}
+          />
         </>
       )}
 
@@ -141,7 +208,7 @@ function GestionCuentasPorCobrarPagar({ config }) {
           {puedeRegistrarPagos ? (
             <form onSubmit={handleSubmitPago}>
               <div className="catalog-form">
-                <select className="select" aria-label={etiquetaContraparte} value={pagoContraparteId} onChange={(e) => { setPagoContraparteId(e.target.value); setMontosAplicados({}); }} required>
+                <select className="select" aria-label={etiquetaContraparte} value={pagoContraparteId} onChange={(e) => seleccionarContraparte(e.target.value)} required>
                   <option value="">Selecciona {etiquetaContraparte.toLowerCase()}</option>
                   {contrapartes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                 </select>
@@ -152,43 +219,20 @@ function GestionCuentasPorCobrarPagar({ config }) {
               </div>
 
               {pagoContraparteId !== "" && (
-                <div className="table-wrap">
-                  <div className="table-scroll">
-                    <table className="data-table">
-                      <thead>
-                        <tr><th>Factura</th><th className="numeric">Saldo pendiente</th><th className="numeric">Monto a aplicar</th></tr>
-                      </thead>
-                      <tbody>
-                        {facturasDeLaContraparte.length === 0 ? (
-                          <tr><td colSpan="3">No hay facturas con saldo pendiente para esta selección.</td></tr>
-                        ) : (
-                          facturasDeLaContraparte.map((f) => (
-                            <tr key={f.id}>
-                              <td>{f.numero}</td>
-                              <td className="numeric">{formatoMoneda.format(f.saldoPendiente)}</td>
-                              <td className="numeric">
-                                <input
-                                  type="number"
-                                  className="input input-money"
-                                  aria-label={`Monto a aplicar a ${f.numero}`}
-                                  min="0"
-                                  max={f.saldoPendiente}
-                                  step="0.01"
-                                  placeholder="0.00"
-                                  value={montosAplicados[f.id] || ""}
-                                  onChange={(e) => actualizarMontoAplicado(f.id, e.target.value)}
-                                />
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                <TablaAplicaciones
+                  facturas={facturasDeLaContraparte}
+                  montosAplicados={montosAplicados}
+                  onMonto={actualizarMontoAplicado}
+                  retencionIva={retencionIva}
+                />
               )}
 
+              {conRetencionIva && aplicacionesConMonto.length > 0 && <ResumenCobro resumen={resumenPago} />}
+
               {errorPago && <p className="error-chip">{errorPago}</p>}
+              {advertenciasPago.map((texto) => (
+                <p key={texto} className="warning-chip">{texto}</p>
+              ))}
 
               <button type="submit" disabled={!puedeEnviarPago} className="btn btn-primary">
                 {enviandoPago ? "Registrando..." : "Registrar pago"}
@@ -199,30 +243,7 @@ function GestionCuentasPorCobrarPagar({ config }) {
           )}
 
           <h3>Pagos registrados</h3>
-          <div className="table-wrap">
-            <div className="table-scroll">
-              <table className="data-table">
-                <thead>
-                  <tr><th>{etiquetaContraparte}</th><th>Fecha</th><th className="numeric">Monto</th><th>Método</th><th>Aplicado a</th></tr>
-                </thead>
-                <tbody>
-                  {pagos.length === 0 ? (
-                    <tr><td colSpan="5">No hay pagos registrados todavía.</td></tr>
-                  ) : (
-                    pagos.map((p) => (
-                      <tr key={p.id}>
-                        <td>{p[campoContraparteNombre]}</td>
-                        <td>{p.fecha}</td>
-                        <td className="numeric">{formatoMoneda.format(p.montoTotal)}</td>
-                        <td>{p.metodoPago}</td>
-                        <td>{p.aplicaciones.map((a) => `${a.numero} (${formatoMoneda.format(a.montoAplicado)})`).join(", ")}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <TablaPagos pagos={pagos} etiquetaContraparte={etiquetaContraparte} campoContraparteNombre={campoContraparteNombre} conNeto={conRetencionIva} />
         </>
       )}
     </div>

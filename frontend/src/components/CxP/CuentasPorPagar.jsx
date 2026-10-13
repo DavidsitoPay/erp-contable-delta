@@ -16,6 +16,7 @@ const CONFIG_CXP = {
   etiquetaIva: "IVA crédito",
   dteObligatorio: false,
   tipoBienDefecto: "BIEN",
+  retencionIsr: true,
 };
 
 function CuentasPorPagar() {
