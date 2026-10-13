@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatoFechaHora, formatoMoneda, hoyIso, mensajeError, monto } from "./formato";
+import { formatoFechaHora, formatoMoneda, hoyIso, MESES, mensajeError, monto } from "./formato";
 
 describe("formato", () => {
   it("formatoMoneda usa siempre dos decimales", () => {
@@ -23,5 +23,11 @@ describe("formato", () => {
 
   it("formatoFechaHora muestra el año de una marca ISO", () => {
     expect(formatoFechaHora("2026-10-09T15:00:00Z")).toMatch(/2026/);
+  });
+
+  it("MESES lista los doce meses en orden", () => {
+    expect(MESES).toHaveLength(12);
+    expect(MESES[0]).toBe("Enero");
+    expect(MESES[11]).toBe("Diciembre");
   });
 });

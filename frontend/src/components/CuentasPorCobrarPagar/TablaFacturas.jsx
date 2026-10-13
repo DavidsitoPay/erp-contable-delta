@@ -1,8 +1,26 @@
 import { formatoMoneda } from "../../utils/formato";
 
-const COLUMNAS = 10;
+const COLUMNAS_BASE = 10;
+const COLUMNAS_RETENCION = 2;
 
-function TablaFacturas({ facturas, etiquetaContraparte, campoContraparteNombre }) {
+function RevisionRetencion({ factura, onResolver }) {
+  if (factura.revisionRetencion === "PENDIENTE") {
+    return (
+      <>
+        <span className="badge badge-warning">Por revisar</span>
+        <button type="button" className="btn btn-outline btn-sm" aria-label={`Resolver revisión de ${factura.numero}`} onClick={() => onResolver(factura)}>
+          Resolver revisión
+        </button>
+      </>
+    );
+  }
+  if (factura.revisionRetencion === "RESUELTA") return <small className="nota-fiscal">{`Resuelta: ${factura.revisionMotivo}`}</small>;
+  return "—";
+}
+
+function TablaFacturas({ facturas, etiquetaContraparte, campoContraparteNombre, conRetencion = false, onResolverRevision }) {
+  const columnas = COLUMNAS_BASE + (conRetencion ? COLUMNAS_RETENCION : 0);
+
   return (
     <div className="table-wrap">
       <div className="table-scroll">
@@ -16,14 +34,16 @@ function TablaFacturas({ facturas, etiquetaContraparte, campoContraparteNombre }
               <th className="numeric">Base</th>
               <th className="numeric">IVA</th>
               <th className="numeric">Monto total</th>
+              {conRetencion && <th className="numeric">Retención ISR</th>}
               <th className="numeric">Saldo pendiente</th>
               <th>DTE</th>
               <th>Estado</th>
+              {conRetencion && <th>Revisión</th>}
             </tr>
           </thead>
           <tbody>
             {facturas.length === 0 ? (
-              <tr><td colSpan={COLUMNAS}>No hay facturas registradas todavía.</td></tr>
+              <tr><td colSpan={columnas}>No hay facturas registradas todavía.</td></tr>
             ) : (
               facturas.map((f) => (
                 <tr key={f.id}>
@@ -37,9 +57,15 @@ function TablaFacturas({ facturas, etiquetaContraparte, campoContraparteNombre }
                   <td className="numeric">{formatoMoneda.format(f.montoBase)}</td>
                   <td className="numeric">{formatoMoneda.format(f.montoIva)}</td>
                   <td className="numeric">{formatoMoneda.format(f.montoTotal)}</td>
+                  {conRetencion && <td className="numeric">{formatoMoneda.format(f.montoRetencionIsr ?? 0)}</td>}
                   <td className="numeric">{formatoMoneda.format(f.saldoPendiente)}</td>
                   <td>{f.dteSerie ? `${f.dteSerie}-${f.dteNumero}` : "—"}</td>
                   <td>{f.estado}</td>
+                  {conRetencion && (
+                    <td>
+                      <RevisionRetencion factura={f} onResolver={onResolverRevision} />
+                    </td>
+                  )}
                 </tr>
               ))
             )}

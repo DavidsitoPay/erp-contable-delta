@@ -17,6 +17,8 @@ const cuentas = [
   { id: 14, codigo: "2106", nombre: "Pasivo inactivo", tipo: "Pasivo", naturaleza: "Acreedora", activa: false, cuentaPadreId: null },
   { id: 15, codigo: "2100", nombre: "Pasivos", tipo: "Pasivo", naturaleza: "Acreedora", activa: true, cuentaPadreId: null },
   { id: 16, codigo: "2100-1", nombre: "Pasivo hijo", tipo: "Pasivo", naturaleza: "Acreedora", activa: true, cuentaPadreId: 15 },
+  { id: 17, codigo: "2107", nombre: "ISR retenido", tipo: "Pasivo", naturaleza: "Acreedora", activa: true, cuentaPadreId: null },
+  { id: 18, codigo: "1106", nombre: "IVA retenido por clientes", tipo: "Activo", naturaleza: "Deudora", activa: true, cuentaPadreId: null },
 ];
 
 const configCompleta = {
@@ -29,16 +31,18 @@ const configCompleta = {
   tipoAgenteIva: null,
   cuentaIvaDebitoId: 11,
   cuentaIvaCreditoId: 12,
+  cuentaIsrRetenidoPagarId: 17,
+  cuentaIvaRetenidoClientesId: 18,
   actualizadoEn: "2026-10-09T15:00:00Z",
   actualizadoPorNombre: "Administradora Delta",
 };
-const configSinCuentas = { ...configCompleta, cuentaIvaDebitoId: null, cuentaIvaCreditoId: null };
+const configSinCuentas = { ...configCompleta, cuentaIvaDebitoId: null, cuentaIvaCreditoId: null, cuentaIsrRetenidoPagarId: null, cuentaIvaRetenidoClientesId: null };
 
 async function renderCon(config) {
   configuracionFiscalApi.obtener.mockResolvedValue({ data: config });
   render(<ConfiguracionFiscal />);
   await screen.findByLabelText("NIT de la empresa");
-  await screen.findByRole("option", { name: "2105 - IVA por pagar" });
+  await screen.findAllByRole("option", { name: "2105 - IVA por pagar" });
 }
 
 describe("ConfiguracionFiscal", () => {
@@ -118,6 +122,8 @@ describe("ConfiguracionFiscal", () => {
         tipoAgenteIva: "SECTOR_PUBLICO",
         cuentaIvaDebitoId: 11,
         cuentaIvaCreditoId: 12,
+        cuentaIsrRetenidoPagarId: null,
+        cuentaIvaRetenidoClientesId: null,
       })
     );
     expect(await screen.findByText("Configuración guardada.")).toBeInTheDocument();
@@ -142,6 +148,8 @@ describe("ConfiguracionFiscal", () => {
         tipoAgenteIva: null,
         cuentaIvaDebitoId: null,
         cuentaIvaCreditoId: null,
+        cuentaIsrRetenidoPagarId: null,
+        cuentaIvaRetenidoClientesId: null,
       })
     );
   });
@@ -156,6 +164,53 @@ describe("ConfiguracionFiscal", () => {
     configuracionFiscalApi.actualizar.mockRejectedValueOnce(new Error("Network Error"));
     fireEvent.click(screen.getByRole("button", { name: "Guardar configuración" }));
     expect(await screen.findByText("No se pudo guardar la configuración fiscal.")).toBeInTheDocument();
+  });
+
+  it("avisa cuando faltan las cuentas de retención y no cuando están configuradas", async () => {
+    await renderCon(configSinCuentas);
+    expect(screen.getByText(/Falta configurar las cuentas de retención/)).toBeInTheDocument();
+  });
+
+  it("no avisa de las cuentas de retención con ambas configuradas", async () => {
+    await renderCon(configCompleta);
+    expect(screen.queryByText(/Falta configurar las cuentas de retención/)).toBeNull();
+    expect(screen.getByLabelText("Cuenta de ISR retenido por pagar (Pasivo)")).toHaveValue("17");
+    expect(screen.getByLabelText("Cuenta de IVA retenido por clientes (Activo)")).toHaveValue("18");
+  });
+
+  it("ofrece para las cuentas de retención solo hojas activas del tipo y naturaleza exigidos", async () => {
+    await renderCon(configSinCuentas);
+
+    const isr = screen.getByLabelText("Cuenta de ISR retenido por pagar (Pasivo)");
+    expect(within(isr).getByRole("option", { name: "2107 - ISR retenido" })).toBeInTheDocument();
+    expect(within(isr).queryByRole("option", { name: "1106 - IVA retenido por clientes" })).toBeNull();
+    const ivaRetenido = screen.getByLabelText("Cuenta de IVA retenido por clientes (Activo)");
+    expect(within(ivaRetenido).getByRole("option", { name: "1106 - IVA retenido por clientes" })).toBeInTheDocument();
+    expect(within(ivaRetenido).queryByRole("option", { name: "2107 - ISR retenido" })).toBeNull();
+  });
+
+  it("guarda las cuentas de retención elegidas", async () => {
+    configuracionFiscalApi.actualizar.mockResolvedValue({ data: configCompleta });
+    await renderCon(configSinCuentas);
+
+    fireEvent.change(screen.getByLabelText("Cuenta de ISR retenido por pagar (Pasivo)"), { target: { value: "17" } });
+    fireEvent.change(screen.getByLabelText("Cuenta de IVA retenido por clientes (Activo)"), { target: { value: "18" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar configuración" }));
+
+    await waitFor(() =>
+      expect(configuracionFiscalApi.actualizar).toHaveBeenCalledWith(
+        expect.objectContaining({ cuentaIsrRetenidoPagarId: 17, cuentaIvaRetenidoClientesId: 18 })
+      )
+    );
+  });
+
+  it("muestra el aviso de que la retención de IVA como agente no está disponible cuando la empresa es agente", async () => {
+    await renderCon(configCompleta);
+    expect(screen.queryByText("La retención de IVA como agente no está disponible en esta versión.")).toBeNull();
+
+    fireEvent.click(screen.getByLabelText("La empresa es agente de retención de IVA"));
+
+    expect(screen.getByText("La retención de IVA como agente no está disponible en esta versión.")).toBeInTheDocument();
   });
 
   it("muestra el error cuando no se puede cargar la configuración", async () => {

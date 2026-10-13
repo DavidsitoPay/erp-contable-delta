@@ -3,9 +3,11 @@ import { impuestosApi } from "../../services/api";
 import { AMBITOS_IMPUESTO, TIPOS_IMPUESTO, etiquetaDe } from "../../utils/etiquetasFiscales";
 import { FORMULARIO_VACIO, formularioDesdeImpuesto, payloadCierre, payloadCreacion, payloadEdicion } from "../../utils/formularioImpuesto";
 import { hoyIso, mensajeError } from "../../utils/formato";
-import CampoFormulario from "../CampoFormulario";
 import { TablaCatalogo } from "./CatalogoCrud";
+import CasillaInactivos from "./CasillaInactivos";
+import CierreVigencia from "./CierreVigencia";
 import FormularioImpuesto from "./FormularioImpuesto";
+import { useAccionCatalogo } from "./useAccionCatalogo";
 
 const ENCABEZADOS = ["Nombre", "Tipo", "Tasa (%)", "Aplica a", "Crédito fiscal", "Artículo legal", "Vigencia", "Estado"];
 
@@ -41,32 +43,17 @@ function Impuestos() {
   const [origen, setOrigen] = useState(null);
   const [form, setForm] = useState(FORMULARIO_VACIO);
   const [cierre, setCierre] = useState(null);
-  const [error, setError] = useState("");
-  const [cargando, setCargando] = useState(false);
 
   async function cargar() {
     const { data } = await impuestosApi.listar({ incluirInactivos });
     setImpuestos(data);
   }
 
+  const { error, setError, cargando, ejecutar } = useAccionCatalogo(cargar);
+
   useEffect(() => {
     cargar().catch((err) => setError(mensajeError(err, "No se pudieron cargar los impuestos.")));
   }, [incluirInactivos]);
-
-  async function ejecutar(accion, mensajeFallo) {
-    setError("");
-    setCargando(true);
-    try {
-      await accion();
-      await cargar();
-      return true;
-    } catch (err) {
-      setError(mensajeError(err, mensajeFallo));
-      return false;
-    } finally {
-      setCargando(false);
-    }
-  }
 
   function volverACrear() {
     setModo("crear");
@@ -92,7 +79,7 @@ function Impuestos() {
 
   async function handleCierre(e) {
     e.preventDefault();
-    const { impuesto, fecha } = cierre;
+    const { item: impuesto, fecha } = cierre;
     if (await ejecutar(() => impuestosApi.actualizar(impuesto.id, payloadCierre(impuesto, fecha)), "No se pudo cerrar la vigencia.")) {
       setCierre(null);
     }
@@ -119,23 +106,16 @@ function Impuestos() {
       />
 
       {cierre && (
-        <form className="catalog-form" onSubmit={handleCierre}>
-          <CampoFormulario id="imp-cierre" etiqueta={`Fecha final de vigencia de ${cierre.impuesto.nombre}`}>
-            <input id="imp-cierre" type="date" className="input" min={cierre.impuesto.vigenteDesde} value={cierre.fecha} onChange={(e) => setCierre({ ...cierre, fecha: e.target.value })} required />
-          </CampoFormulario>
-          <button type="submit" className="btn btn-primary" disabled={cargando}>
-            Confirmar cierre
-          </button>
-          <button type="button" className="btn btn-outline" onClick={() => setCierre(null)}>
-            Cancelar cierre
-          </button>
-        </form>
+        <CierreVigencia
+          id="imp-cierre"
+          cierre={cierre}
+          cargando={cargando}
+          onCambio={setCierre}
+          onConfirmar={handleCierre}
+        />
       )}
 
-      <label>
-        <input type="checkbox" checked={incluirInactivos} onChange={(e) => setIncluirInactivos(e.target.checked)} />
-        <span>Incluir inactivos</span>
-      </label>
+      <CasillaInactivos marcada={incluirInactivos} onCambio={setIncluirInactivos} />
 
       <TablaCatalogo encabezados={ENCABEZADOS}>
         {impuestos.length === 0 ? (
@@ -160,7 +140,7 @@ function Impuestos() {
                 impuesto={i}
                 onEditar={(imp) => iniciar("editar", imp)}
                 onVersion={(imp) => iniciar("version", imp)}
-                onCerrar={(imp) => setCierre({ impuesto: imp, fecha: hoyIso() })}
+                onCerrar={(imp) => setCierre({ item: imp, fecha: hoyIso() })}
                 onDesactivar={handleDesactivar}
               />
             </tr>

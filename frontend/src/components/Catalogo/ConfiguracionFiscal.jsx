@@ -7,6 +7,16 @@ import CampoFormulario from "../CampoFormulario";
 import OpcionesSelect from "../OpcionesSelect";
 
 const AVISO_CUENTAS = "Falta configurar las cuentas de IVA: no se podrán registrar facturas con IVA hasta que se configuren.";
+const AVISO_CUENTAS_RETENCION =
+  "Falta configurar las cuentas de retención: no se podrán registrar facturas de compra con retención de ISR ni cobros con IVA retenido por el cliente.";
+const AVISO_AGENTE = "La retención de IVA como agente no está disponible en esta versión.";
+
+const CAMPOS_CUENTA = [
+  { campo: "cuentaIvaDebitoId", id: "cf-iva-debito", etiqueta: "Cuenta de IVA débito fiscal (Pasivo)", tipo: "Pasivo" },
+  { campo: "cuentaIvaCreditoId", id: "cf-iva-credito", etiqueta: "Cuenta de IVA crédito fiscal (Activo)", tipo: "Activo" },
+  { campo: "cuentaIsrRetenidoPagarId", id: "cf-isr-retenido", etiqueta: "Cuenta de ISR retenido por pagar (Pasivo)", tipo: "Pasivo" },
+  { campo: "cuentaIvaRetenidoClientesId", id: "cf-iva-retenido", etiqueta: "Cuenta de IVA retenido por clientes (Activo)", tipo: "Activo" },
+];
 
 const textoId = (id) => (id ? String(id) : "");
 const idONulo = (valor) => (valor ? Number(valor) : null);
@@ -18,8 +28,7 @@ function aFormulario(config) {
     regimenIsr: config.regimenIsr,
     agenteRetencionIva: config.agenteRetencionIva,
     tipoAgenteIva: config.tipoAgenteIva ?? "",
-    cuentaIvaDebitoId: textoId(config.cuentaIvaDebitoId),
-    cuentaIvaCreditoId: textoId(config.cuentaIvaCreditoId),
+    ...Object.fromEntries(CAMPOS_CUENTA.map(({ campo }) => [campo, textoId(config[campo])])),
   };
 }
 
@@ -30,8 +39,7 @@ function aPayload(form) {
     regimenIsr: form.regimenIsr,
     agenteRetencionIva: form.agenteRetencionIva,
     tipoAgenteIva: form.agenteRetencionIva ? form.tipoAgenteIva : null,
-    cuentaIvaDebitoId: idONulo(form.cuentaIvaDebitoId),
-    cuentaIvaCreditoId: idONulo(form.cuentaIvaCreditoId),
+    ...Object.fromEntries(CAMPOS_CUENTA.map(({ campo }) => [campo, idONulo(form[campo])])),
   };
 }
 
@@ -84,9 +92,12 @@ function ConfiguracionFiscal() {
   };
 
   const hojas = cuentasHoja(cuentas);
-  const cuentasDebito = hojas.filter((c) => c.tipo === "Pasivo" && c.naturaleza === "Acreedora");
-  const cuentasCredito = hojas.filter((c) => c.tipo === "Activo" && c.naturaleza === "Deudora");
+  const cuentasPorTipo = {
+    Pasivo: hojas.filter((c) => c.tipo === "Pasivo" && c.naturaleza === "Acreedora"),
+    Activo: hojas.filter((c) => c.tipo === "Activo" && c.naturaleza === "Deudora"),
+  };
   const faltanCuentas = !config.cuentaIvaDebitoId || !config.cuentaIvaCreditoId;
+  const faltanCuentasRetencion = !config.cuentaIsrRetenidoPagarId || !config.cuentaIvaRetenidoClientesId;
   const puedeGuardar = !guardando && (!form.agenteRetencionIva || form.tipoAgenteIva !== "");
   const autor = config.actualizadoPorNombre ? ` por ${config.actualizadoPorNombre}` : "";
 
@@ -152,11 +163,14 @@ function ConfiguracionFiscal() {
         </div>
 
         <div className="catalog-form">
-          <SelectCuentaFiscal id="cf-iva-debito" etiqueta="Cuenta de IVA débito fiscal (Pasivo)" valor={form.cuentaIvaDebitoId} onChange={cambiar("cuentaIvaDebitoId")} cuentas={cuentasDebito} />
-          <SelectCuentaFiscal id="cf-iva-credito" etiqueta="Cuenta de IVA crédito fiscal (Activo)" valor={form.cuentaIvaCreditoId} onChange={cambiar("cuentaIvaCreditoId")} cuentas={cuentasCredito} />
+          {CAMPOS_CUENTA.map(({ campo, id, etiqueta, tipo }) => (
+            <SelectCuentaFiscal key={id} id={id} etiqueta={etiqueta} valor={form[campo]} onChange={cambiar(campo)} cuentas={cuentasPorTipo[tipo]} />
+          ))}
         </div>
 
         {faltanCuentas && <p className="warning-chip">{AVISO_CUENTAS}</p>}
+        {faltanCuentasRetencion && <p className="warning-chip">{AVISO_CUENTAS_RETENCION}</p>}
+        {form.agenteRetencionIva && <p className="warning-chip">{AVISO_AGENTE}</p>}
         {error && <p className="error-chip">{error}</p>}
         {guardado && <p className="success-chip">Configuración guardada.</p>}
 

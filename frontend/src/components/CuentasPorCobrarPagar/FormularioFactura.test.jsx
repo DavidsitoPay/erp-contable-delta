@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { configure, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { impuestosApi } from "../../services/api";
 import { AVISO_DTE } from "../../utils/fiscal";
 import { formatoMoneda } from "../../utils/formato";
@@ -61,6 +61,28 @@ function configCompras() {
     dteObligatorio: false,
     tipoBienDefecto: "BIEN",
   };
+}
+
+const previaRetenida = {
+  estado: "Retenida",
+  motivo: null,
+  base: 40000,
+  tasaBase: 5,
+  tramoLimite: 30000,
+  tasaExcedente: 7,
+  umbralMinimo: 2500,
+  retencion: 2200,
+  neto: 42600,
+  parametroId: 1,
+  referencial: true,
+  advertencias: [],
+};
+
+function configComprasConRetencion() {
+  const config = configCompras();
+  config.retencionIsr = true;
+  config.api.retencionPrevia = vi.fn().mockResolvedValue({ data: previaRetenida });
+  return config;
 }
 
 async function renderFormulario({ config = configVentas(), listaFacturas = [] } = {}) {
@@ -401,5 +423,113 @@ describe("FormularioFactura", () => {
 
     expect(screen.getByLabelText("Documento de origen")).toHaveValue("");
     expect(textosDeOpciones("Documento de origen")).toEqual(["Selecciona factura de origen", `F-2 — saldo ${formatoMoneda.format(80)}`]);
+  });
+});
+
+describe("FormularioFactura con retención de ISR", () => {
+  beforeEach(() => {
+    configure({ asyncUtilTimeout: 3000 });
+    impuestosApi.listar.mockReset();
+    impuestosApi.listar.mockResolvedValue({ data: impuestos });
+  });
+
+  afterEach(() => {
+    configure({ asyncUtilTimeout: 1000 });
+  });
+
+  it("consulta la retención previa con proveedor, fecha, base y total, y muestra el resultado", async () => {
+    const config = configComprasConRetencion();
+    await renderFormulario({ config });
+    completarCabecera(config);
+
+    expect(await screen.findByText(`Retención de ISR: ${formatoMoneda.format(2200)}`)).toBeInTheDocument();
+    expect(config.api.retencionPrevia).toHaveBeenCalledTimes(1);
+    expect(config.api.retencionPrevia).toHaveBeenCalledWith({
+      proveedorId: 5,
+      fecha: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      montoBase: 89.29,
+      montoTotal: 100,
+    });
+    expect(screen.getByText(`Neto a pagar al proveedor: ${formatoMoneda.format(42600)}`)).toBeInTheDocument();
+    expect(screen.getByText("Referencial, validar con asesor")).toBeInTheDocument();
+  });
+
+  it("advierte cuando el proveedor no tiene régimen definido y permite registrar", async () => {
+    const config = configComprasConRetencion();
+    config.api.retencionPrevia.mockResolvedValue({
+      data: { ...previaRetenida, estado: "PendienteRevision", motivo: "El proveedor ACME no tiene régimen de ISR definido.", retencion: 0, neto: 100 },
+    });
+    await renderFormulario({ config });
+    completarCabecera(config);
+
+    expect(await screen.findByText("El proveedor ACME no tiene régimen de ISR definido.")).toBeInTheDocument();
+    expect(botonRegistrar()).toBeEnabled();
+  });
+
+  it("un 409 de la vista previa se muestra en el panel y bloquea el envío", async () => {
+    const config = configComprasConRetencion();
+    config.api.retencionPrevia.mockRejectedValue({ response: { status: 409, data: { error: "No hay parámetro de retención vigente en la fecha de la factura." } } });
+    await renderFormulario({ config });
+    completarCabecera(config);
+
+    expect(await screen.findByText("No hay parámetro de retención vigente en la fecha de la factura.")).toBeInTheDocument();
+    expect(botonRegistrar()).toBeDisabled();
+  });
+
+  it("el ajuste exige monto y motivo y se envía como retencionIsrAjuste", async () => {
+    const config = configComprasConRetencion();
+    await renderFormulario({ config });
+    completarCabecera(config);
+    await screen.findByText(`Retención de ISR: ${formatoMoneda.format(2200)}`);
+
+    fireEvent.click(screen.getByLabelText("Ajustar retención"));
+    expect(botonRegistrar()).toBeDisabled();
+    escribir("Monto de retención ajustado", "0");
+    escribir("Motivo del ajuste", "Constancia de exención");
+    expect(botonRegistrar()).toBeEnabled();
+    expect(screen.getByText(`Neto a pagar al proveedor: ${formatoMoneda.format(100)}`)).toBeInTheDocument();
+
+    fireEvent.click(botonRegistrar());
+
+    await waitFor(() =>
+      expect(config.api.crearFactura).toHaveBeenCalledWith(
+        expect.objectContaining({ retencionIsrAjuste: { monto: 0, motivo: "Constancia de exención" } })
+      )
+    );
+  });
+
+  it("sin ajuste no envía retencionIsrAjuste", async () => {
+    const config = configComprasConRetencion();
+    await renderFormulario({ config });
+    completarCabecera(config);
+    await screen.findByText(`Retención de ISR: ${formatoMoneda.format(2200)}`);
+
+    fireEvent.click(botonRegistrar());
+
+    await waitFor(() => expect(config.api.crearFactura).toHaveBeenCalledTimes(1));
+    expect(config.api.crearFactura.mock.calls[0][0]).not.toHaveProperty("retencionIsrAjuste");
+  });
+
+  it("no consulta la retención para una nota de crédito", async () => {
+    const config = configComprasConRetencion();
+    await renderFormulario({ config, listaFacturas: facturas });
+    escribir("Tipo de documento", "NotaCredito");
+    completarCabecera(config);
+
+    await new Promise((resolver) => setTimeout(resolver, 400));
+
+    expect(config.api.retencionPrevia).not.toHaveBeenCalled();
+    expect(screen.queryByText("Retención de ISR")).toBeNull();
+  });
+
+  it("lista las advertencias de la respuesta tras registrar", async () => {
+    const config = configComprasConRetencion();
+    config.api.crearFactura.mockResolvedValue({ data: { advertencias: ["La factura quedó marcada para revisión de retención."] } });
+    await renderFormulario({ config });
+    completarCabecera(config);
+
+    fireEvent.click(botonRegistrar());
+
+    expect(await screen.findByText("La factura quedó marcada para revisión de retención.")).toBeInTheDocument();
   });
 });

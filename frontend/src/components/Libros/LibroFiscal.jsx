@@ -4,8 +4,8 @@ import { descargarCsv } from "../../utils/csv";
 import { AVISO_DTE } from "../../utils/fiscal";
 import { formatoMoneda, mensajeError } from "../../utils/formato";
 import { COLUMNAS_TABLA, csvLibro, nombreArchivoCsv } from "../../utils/libroFiscal";
+import CamposAnioMes from "../CamposAnioMes";
 
-const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 const COLUMNAS_ETIQUETA = COLUMNAS_TABLA.filter((c) => !c.numerica).length;
 
 function etiquetaTipo(fila) {
@@ -113,12 +113,7 @@ function LibroFiscal() {
       </div>
 
       <form className="catalog-form no-print" onSubmit={handleConsultar}>
-        <input type="number" className="input" aria-label="Año" min="2000" max="2100" value={anio} onChange={(e) => setAnio(e.target.value)} required />
-        <select className="select" aria-label="Mes" value={mes} onChange={(e) => setMes(e.target.value)}>
-          {MESES.map((nombre, indice) => (
-            <option key={nombre} value={indice + 1}>{nombre}</option>
-          ))}
-        </select>
+        <CamposAnioMes anio={anio} mes={mes} onAnio={setAnio} onMes={setMes} />
         <button type="submit" className="btn btn-primary" disabled={cargando}>Consultar</button>
         {reporte && (
           <button type="button" className="btn btn-outline" onClick={handleExportar}>Exportar CSV</button>

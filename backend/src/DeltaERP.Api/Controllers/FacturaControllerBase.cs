@@ -33,13 +33,18 @@ public abstract class FacturaControllerBase : ControllerBase
             return BadRequest(new { error });
         }
 
-        var usuarioId = this.UsuarioId();
-        var errorFiscal = await _facturas.RegistrarAsync(documento, tercero, perfil, usuarioId);
-        if (errorFiscal is not null)
+        var registro = await _facturas.RegistrarAsync(documento, tercero, perfil, this.UsuarioId());
+        if (registro.Error is { } errorFiscal)
         {
             return StatusCode(errorFiscal.Estado, new { error = errorFiscal.Mensaje });
         }
 
-        return CreatedAtAction(accionDetalle, new { id = documento.Id }, await _validacion.ObtenerDetalleAsync(documento, perfil));
+        var detalle = await _validacion.ObtenerDetalleAsync(documento, perfil);
+        var respuesta = detalle with
+        {
+            Advertencias = registro.Advertencias,
+            RetencionIsr = registro.Retencion?.ComoRespuesta(registro.RetencionId, documento.MontoTotal) ?? detalle.RetencionIsr,
+        };
+        return CreatedAtAction(accionDetalle, new { id = documento.Id }, respuesta);
     }
 }

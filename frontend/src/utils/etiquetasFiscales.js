@@ -35,6 +35,52 @@ export const TIPOS_BIEN_SERVICIO = [
   { valor: "SERVICIO", etiqueta: "Servicio" },
 ];
 
+export const REGIMENES_ISR_CONTRAPARTE = [
+  { valor: "NO_DEFINIDO", etiqueta: "No definido" },
+  ...REGIMENES_ISR,
+  { valor: "PAGO_DIRECTO", etiqueta: "Pago directo (PAGO_DIRECTO)" },
+  { valor: "EXENTO", etiqueta: "Exento (EXENTO)" },
+];
+
+export const TIPOS_AGENTE_IVA_CLIENTE = [
+  { valor: "SECTOR_PUBLICO", etiqueta: "Sector público" },
+  { valor: "AGENTE_PRIVADO", etiqueta: "Agente privado" },
+];
+
+export const CONCEPTOS_PARAMETRO = [
+  { valor: "ISR_PROVEEDOR_ROS", etiqueta: "ISR a proveedores del régimen simplificado" },
+  { valor: "IVA_RETENIDO_CLIENTE", etiqueta: "IVA retenido por clientes" },
+  { valor: "PLAZO_CONSTANCIA", etiqueta: "Plazo de la constancia" },
+];
+
+export const BASES_UMBRAL = [
+  { valor: "BASE", etiqueta: "Base sin IVA" },
+  { valor: "TOTAL", etiqueta: "Total de la factura" },
+];
+
+export const SENTIDOS_RETENCION = [
+  { valor: "EFECTUADA", etiqueta: "Efectuada" },
+  { valor: "RECIBIDA", etiqueta: "Recibida" },
+];
+
+export const CONCEPTOS_RETENCION = [
+  { valor: "ISR_ROS", etiqueta: "ISR a proveedores" },
+  { valor: "IVA_CLIENTE", etiqueta: "IVA retenido por clientes" },
+];
+
+export const ESTADOS_CONSTANCIA = [
+  { valor: "PENDIENTE", etiqueta: "Pendiente" },
+  { valor: "VENCIDA", etiqueta: "Vencida" },
+  { valor: "EMITIDA", etiqueta: "Emitida" },
+  { valor: "ANULADA", etiqueta: "Anulada" },
+];
+
+export const FORMULARIOS_CONSTANCIA = [
+  { valor: "SAT-1331", etiqueta: "SAT-1331" },
+  { valor: "SAT-1352", etiqueta: "SAT-1352" },
+  { valor: "SAT-2340", etiqueta: "SAT-2340" },
+];
+
 export function etiquetaDe(opciones, valor) {
   return opciones.find((opcion) => opcion.valor === valor)?.etiqueta ?? "—";
 }

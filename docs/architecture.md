@@ -43,14 +43,25 @@ su perfil:
   `DteRules` valida el UUID, serie, número y fecha de certificación. `AsientoFacturaBuilder`
   recibe el resumen fiscal: separa el IVA en su propia línea (débito fiscal en ventas,
   crédito fiscal en compras), lleva a costo el IVA no acreditable e invierte los lados en
-  una nota de crédito.
+  una nota de crédito; en una factura de compra con retención de ISR acredita Cuentas por
+  pagar por el neto y agrega al final una línea de crédito por la retención.
+  `RetencionRules` calcula la escala de ISR y evalúa si un proveedor retiene (régimen,
+  residencia, pequeño contribuyente, umbral), sugiere y valida el IVA retenido por un
+  cliente y deriva el estado de una constancia. `ParametroRetencionRules` valida altas y
+  cambios de parámetros; `VigenciaRules` y `PeriodoFiscalRules` son comunes a impuestos,
+  parámetros y reportes. `AsientoTesoreriaBuilder` acepta retenciones de IVA en un cobro:
+  Banco por el neto, una línea por retención y Cuentas por cobrar por el total aplicado.
 - `DeltaERP.Api/Services/`: `ValidacionContable` verifica contra la base la
   contraparte (RN-04), el periodo abierto (RN-02), las cuentas (existentes, activas,
   no de mayor), la cuenta de control y los centros de costo. `FacturaService` arma y
   persiste asiento y factura. `FacturaFiscalService` valida impuestos (existencia, estado,
   vigencia, ámbito y régimen de la contraparte), calcula con `MotorFiscal` y comprueba las
   cuentas de IVA configuradas; `ConfiguracionFiscalService` lee la fila única de
-  configuración fiscal y `LibroFiscalService` arma el libro de compras y ventas. Las
+  configuración fiscal y `LibroFiscalService` arma el libro de compras y ventas.
+  `RetencionService` resuelve parámetros vigentes, evalúa y valida las retenciones de ISR
+  (factura CxP) y de IVA (cobro CxC) y persiste las filas de `retencion`;
+  `ConstanciaRetencionService` registra y anula constancias y `ReporteRetencionService`
+  arma el reporte y su conciliación. Las
   violaciones de unicidad del DTE y el exceso de una nota de crédito sobre el saldo de su
   origen los resuelve la base de datos y `FacturaService` los traduce a `409`.
   `AuditoriaService` ejecuta la operación y la llamada a
@@ -83,6 +94,7 @@ su perfil:
   `tipoBienServicio`, el precio con IVA incluido, los datos del DTE y, en notas de crédito,
   `documentoOrigenId`; el `POST` responde `201` con el mismo detalle que el `GET`, con montos
   de base e IVA, datos del DTE y de la factura de origen.
+- Retenciones (M10, I2): ver "Fiscal: retenciones (M10, I2)" más abajo.
 - `DeltaERP.Api/Models/`: modelos de detalle de factura y de sus líneas que devuelven
   los controladores `CxCController` y `CxPController`.
 
@@ -112,6 +124,30 @@ La base de datos conserva lo que sí le corresponde: exigir por llave foránea q
 usuario exista y esté activo, e impedir — mediante trigger — que cualquiera, incluido
 el administrador, modifique o elimine registros de auditoría ya escritos.
 
+## Fiscal: retenciones (M10, I2)
+
+Migración `database/15_retenciones.sql`. Alcance implementado: ISR retenido a proveedores del régimen simplificado, IVA retenido por clientes agentes, constancias registradas, parámetros con vigencia y reporte por período y NIT. Tasas, tramo y umbrales son datos en `parametroretencion`, con la leyenda "Referencial, validar con asesor"; ningún valor fiscal vive en el código.
+
+**ISR al registrar una factura CxP (RN-18, RN-19).** `FacturaFiscalService.PrepararAsync` calcula el IVA como en I1 y, solo en compras, pide a `RetencionService` la evaluación del proveedor con el parámetro `ISR_PROVEEDOR_ROS` vigente en la fecha de la factura. Si retiene, `AsientoFacturaBuilder` acredita Cuentas por pagar por el neto y "ISR retenido por pagar" por la retención; `FacturaService` guarda asiento, factura y fila de `retencion` en una sola transacción con la bitácora. El pago posterior no cambia (Debe Cuentas por pagar / Haber Banco): lo que cambia es el saldo. `vw_saldodocumentocxp`, `fn_limite_pago_cxp` y `fn_nota_credito_valida_cxp` restan la retención leída de `retencion` (`ISR_ROS`), de modo que listados, pagos y notas de crédito usan el saldo neto sin duplicar el importe en `documentocxp`. `TesoreriaService` identifica la cuenta de control de la factura excluyendo las líneas que coinciden con una fila de `retencion`, y la API rechaza una cuenta de control igual a la de ISR retenido por pagar.
+
+Si el proveedor no tiene régimen definido o es no residente, la factura se registra sin retención con `revision_retencion = PENDIENTE` y una advertencia; se resuelve con `POST api/cxp/facturas/{id}/revision-retencion` y un motivo. Un proveedor simplificado sin parámetro vigente o una cuenta de retención sin configurar responden `409`. El ajuste manual (`retencionIsrAjuste`) exige motivo. `POST api/cxp/facturas/retencion-previa` devuelve el cálculo sin escribir, y el formulario de factura lo consume en lugar de replicar la escala.
+
+**IVA retenido por clientes en el cobro (RN-21).** `POST api/cxc/pagos` acepta `retencionIva` por aplicación. `RetencionService.PrepararIvaClienteAsync` valida factura, cliente, topes (IVA de la factura menos el de sus notas de crédito, y monto aplicado), una sola retención por factura y cobro neto positivo. `AsientoTesoreriaBuilder` debita Banco por el neto y la cuenta "IVA retenido por clientes" por la retención, y acredita Cuentas por cobrar por el total; el movimiento de tesorería (y la conciliación) usa el neto, mientras el recibo conserva el total aplicado. `GET api/cxc/facturas/{id}/retencion-iva-sugerida` calcula el sugerido con el tipo de agente del cliente; el monto lo decide el usuario y una diferencia solo advierte. Un cliente no agente exige `confirmaClienteNoAgente`.
+
+**Constancias y reporte (RN-22, RN-23).** El sistema registra los datos de la constancia; no la emite. `POST api/retenciones/{retencionId}/constancia` y `POST api/retenciones/constancias/{id}/anular` no tocan asientos y se permiten con el período cerrado. El estado pendiente o vencido se deriva en la API con el parámetro `PLAZO_CONSTANCIA_ISR`. `GET api/retenciones/reporte` (`anio`, `mes`, `sentido`, `concepto`, `nit`, `estadoConstancia`) lee `vw_retencion_reporte`, agrupa por el mes de la factura y concilia contra las cuentas de retención; las diferencias por cobros en otro mes se marcan con `periodoContableDistinto`. El CSV lo genera el frontend.
+
+**Endpoints y roles.** `api/retenciones/parametros` (`GET` y `GET {id}` con `Roles.ReportesFiscales`; `POST` y `PUT {id}` solo Administrador, con auditoría; `PUT` cambia únicamente nota, estado y vigencia final, y una reforma es siempre una versión nueva), `api/retenciones/**` con `Roles.ReportesFiscales` (Administrador o Contador; el Vendedor recibe `403`), `api/cxp/facturas` y su revisión con `Roles.GestionCxP`, y los cobros con `Roles.RegistroPagos`. `api/configuracion-fiscal` y `api/contrapartes` agregan las cuentas de retención, el fundamento de ISR y el tipo de agente de IVA. Toda escritura pasa por `AuditoriaService` (RN-08); `GuardadoAuditado` centraliza el guardado auditado y la traducción de errores de la base (`55000`, `23505`) a `409`.
+
+**Frontend.** Rutas `/catalogo/parametros-retencion` y `/libros/retenciones` (visibles para Administrador y Contador; el Contador ve los parámetros en solo lectura), panel de retención en el formulario de factura CxP, filtro de facturas por revisar, captura del IVA retenido en el cobro con resumen de neto, y campos de retención en Contrapartes y Configuración fiscal.
+
+**Decisiones.**
+
+- Delta no es agente de retención de IVA: si la configuración fiscal lo marca, solo se avisa (RN-20).
+- La retención de ISR se reconoce al registrar la factura (no al pagar), con el saldo neto como fuente única; `retencion` es append-only por privilegios y guarda una instantánea (base, tasa, parámetro, cuenta, montos).
+- Los parámetros de retención son una tabla propia (no se reutiliza `impuesto`) con el mismo patrón de vigencia y los mismos códigos de error `55000`.
+- Un tercero sin datos de retención se advierte y se marca para revisión; no se bloquea el registro.
+- Pendiente para I3: retención a no residentes (art. 104), multimoneda con tipo de cambio de Banguat, retención de IVA como agente y a pequeño contribuyente, ajuste automático por nota de crédito posterior y enteramiento.
+
 ## Relación con el modelo de datos
 
 - Núcleo contable (M2, M3) → `AsientoContable`, `LineaAsiento`, `CuentaContable`, `CentroCosto`.
@@ -121,6 +157,7 @@ el administrador, modifique o elimine registros de auditoría ya escritos.
 - Cierre contable → `PeriodoContable` y `SaldoCuentaPeriodo` (saldos consolidados e inmutables por periodo).
 - Reportes (M7) → sin tablas propias: `fn_reporte_saldos` combina `SaldoCuentaPeriodo` de periodos cerrados con asientos en vivo.
 - Fiscal (M10) → `Impuesto`, `ConfiguracionFiscal` (fila única), `Moneda` (moneda funcional) y los campos fiscales y de DTE de `Contraparte`, `DocumentoCxC`/`DocumentoCxP` y sus líneas.
+- Retenciones (M10, I2) → `ParametroRetencion`, `Retencion`, `ConstanciaRetencion`, `vw_retencion_reporte`, las cuentas de retención de `ConfiguracionFiscal` y los campos de retención de `Contraparte` y `DocumentoCxP`.
 
 Ningún módulo del frontend accede directamente a la base de datos; todo pasa por la
 API.
@@ -132,14 +169,16 @@ API.
 - Unitarias (`Unit/`): reglas puras del dominio (`AsientoFacturaBuilder`,
   `AsientoTesoreriaBuilder`, `FacturaRules`, `PagoRules`, `PartidaDobleValidator`,
   `TesoreriaRules`, `EstadosFinancieros`, `MotorFiscal`, `ImpuestoRules`,
-  `ConfiguracionFiscalRules`, `NitRules`, `DteRules`) y `ErroresPostgres`, sin base de datos.
+  `ConfiguracionFiscalRules`, `NitRules`, `DteRules`, `RetencionRules`,
+  `ParametroRetencionRules`, `ContraparteRules`) y `ErroresPostgres`, sin base de datos.
 - Integración (`Integration/`, trait `Category=Integration`): levantan la API con
   `WebApplicationFactory` contra un PostgreSQL 16 real, de modo que los triggers
   (RN-01, RN-03, RN-05) actúan igual que en producción. Cubren todos los controladores
   de la API: asientos, auth, centros de costo, contrapartes, cuentas bancarias,
   cuentas contables, conciliaciones, configuración fiscal, CxC, CxP, impuestos, libros,
   libro fiscal, movimientos de tesorería, periodos contables y reportes, y el esquema
-  fiscal (`FiscalEsquemaTests`). Las pruebas de login verifican la emisión del
+  fiscal (`FiscalEsquemaTests`), las retenciones (parámetros, facturas CxP, cobros CxC,
+  constancias, reporte y esquema). Las pruebas de login verifican la emisión del
   token (`AuthController`/`TokenService`) con un cliente anónimo y el esquema JWT
   real; el resto usa `TestAuthHandler`. Las operaciones cuya autorización vive en un
   procedimiento almacenado (cerrar y reabrir periodo) se validan contra el perfil
@@ -149,7 +188,7 @@ Soporte de las pruebas de integración (`Support/`):
 
 - `PostgresFixture` lee la cadena de conexión de la variable `TEST_PG_CONN`; si falta,
   las pruebas fallan (no se omiten). El nombre de la base debe contener `test`. Al
-  iniciar recrea el esquema `public` y aplica `database/01` a `05` y `07` a `14`; no aplica
+  iniciar recrea el esquema `public` y aplica `database/01` a `05` y `07` a `15`; no aplica
   `06` (datos semilla). Después deja configuradas las cuentas de IVA, da `LOGIN` con una
   contraseña aleatoria por ejecución a `delta_api` y conecta toda la suite HTTP con ese rol;
   la siembra de datos y las pruebas de triggers siguen con el propietario. `PermisosApiTests`
@@ -237,11 +276,11 @@ de datos:
   (`database/14_rol_api.sql`, `NOLOGIN` y sin contraseña en el repo; `LOGIN` y contraseña se
   asignan por rama con `ALTER ROLE`), por lo que no es miembro de `neon_superuser`.
 - Permisos de `delta_api` (mínimo privilegio): `CONNECT` y `USAGE` en `public`; DML solo en
-  las 25 de 29 tablas que usa la API; sin `UPDATE` en las tablas inmutables
-  (`bitacoraauditoria`, `saldocuentaperiodo`, `movimientotesoreria`, `lineaasiento`, pagos,
+  las 28 de 32 tablas que usa la API; sin `UPDATE` en las tablas inmutables
+  (`bitacoraauditoria`, `saldocuentaperiodo`, `movimientotesoreria`, `lineaasiento`, `retencion`, pagos,
   aplicaciones y detalles); `DELETE` solo en `detalleconciliacion`; `bitacoraauditoria` y
   `saldocuentaperiodo` solo con `INSERT` (se escriben vía procedimientos y triggers y se
-  leen por vistas y funciones); `SELECT` en 6 vistas; `USAGE` en 21 secuencias; `EXECUTE`
+  leen por vistas y funciones); `SELECT` en 7 vistas; `USAGE` en 24 secuencias; `EXECUTE`
   solo en 9 rutinas (`fn_reporte_saldos`, `sp_registrar_auditoria`, `sp_cerrar_periodo`,
   `sp_reabrir_periodo`, `sp_reversar_asiento`, `sp_finalizar_conciliacion`,
   `fn_perfil_contador`, `fn_perfil_administrador_sistema`,

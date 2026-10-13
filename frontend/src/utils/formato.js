@@ -16,3 +16,4 @@ export function mensajeError(err, porDefecto) {
 export function formatoFechaHora(valor) {
   return new Date(valor).toLocaleString("es-GT");
 }
+export const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];

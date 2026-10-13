@@ -138,4 +138,94 @@ public class ConfiguracionFiscalControllerTests
         Assert.Contains(fragmento, await response.LeerErrorAsync());
         Assert.Equal(TestData.NitValido, await _pg.Data.ScalarAsync<string>("SELECT nit_empresa FROM configuracionfiscal WHERE id = 1"));
     }
+
+    [Fact]
+    public async Task Obtener_IncluyeLasCuentasDeRetencionSembradas()
+    {
+        var client = _pg.CreateApiClient(await _pg.Data.CrearUsuarioAsync(), Roles.Contador);
+
+        var body = await client.GetFromJsonAsync<JsonElement>(Ruta);
+
+        Assert.Equal(
+            (await _pg.Data.CuentaPorCodigoAsync(TestData.CodigoCuentaIsrRetenido), await _pg.Data.CuentaPorCodigoAsync(TestData.CodigoCuentaIvaRetenidoClientes)),
+            (body.GetProperty("cuentaIsrRetenidoPagarId").GetInt32(), body.GetProperty("cuentaIvaRetenidoClientesId").GetInt32()));
+    }
+
+    [Fact]
+    public async Task Actualizar_ConLasCuentasDeRetencion_LasPersiste()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var isr = await _pg.Data.CrearCuentaAsync("Pasivo", "Acreedora");
+        var ivaClientes = await _pg.Data.CrearCuentaAsync("Activo", "Deudora");
+        var client = _pg.CreateApiClient(e.UsuarioId, Roles.Administrador);
+        try
+        {
+            var response = await client.PutAsJsonAsync(Ruta, CuerpoConRetenciones(e.CuentaIvaDebito, e.CuentaIvaCredito, isr, ivaClientes));
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var body = await response.LeerJsonAsync();
+            Assert.Equal((isr, ivaClientes), (body.GetProperty("cuentaIsrRetenidoPagarId").GetInt32(), body.GetProperty("cuentaIvaRetenidoClientesId").GetInt32()));
+        }
+        finally
+        {
+            await _pg.Data.RestaurarConfiguracionFiscalAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Actualizar_SinLasCuentasDeRetencion_ConservaLasConfiguradas()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var isr = await _pg.Data.CrearCuentaAsync("Pasivo", "Acreedora");
+        var ivaClientes = await _pg.Data.CrearCuentaAsync("Activo", "Deudora");
+        var client = _pg.CreateApiClient(e.UsuarioId, Roles.Administrador);
+        try
+        {
+            await client.PutAsJsonAsync(Ruta, CuerpoConRetenciones(e.CuentaIvaDebito, e.CuentaIvaCredito, isr, ivaClientes));
+
+            var response = await client.PutAsJsonAsync(Ruta, Cuerpo(e.CuentaIvaDebito, e.CuentaIvaCredito));
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var body = await response.LeerJsonAsync();
+            Assert.Equal((isr, ivaClientes), (body.GetProperty("cuentaIsrRetenidoPagarId").GetInt32(), body.GetProperty("cuentaIvaRetenidoClientesId").GetInt32()));
+        }
+        finally
+        {
+            await _pg.Data.RestaurarConfiguracionFiscalAsync();
+        }
+    }
+
+    [Theory]
+    [InlineData(0, "La cuenta de ISR retenido por pagar debe ser de tipo Pasivo y naturaleza Acreedora.")]
+    [InlineData(1, "La cuenta de IVA retenido por clientes debe ser de tipo Activo y naturaleza Deudora.")]
+    [InlineData(2, "deben ser distintas entre sí")]
+    public async Task Actualizar_ConCuentasDeRetencionInvalidas_Responde400(int caso, string fragmento)
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var cuerpo = caso switch
+        {
+            0 => CuerpoConRetenciones(e.CuentaIvaDebito, e.CuentaIvaCredito, e.CuentaCxC, null),
+            1 => CuerpoConRetenciones(e.CuentaIvaDebito, e.CuentaIvaCredito, null, e.CuentaCxP),
+            _ => CuerpoConRetenciones(e.CuentaIvaDebito, e.CuentaIvaCredito, e.CuentaIvaDebito, null),
+        };
+        var client = _pg.CreateApiClient(e.UsuarioId, Roles.Administrador);
+
+        var response = await client.PutAsJsonAsync(Ruta, cuerpo);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(fragmento, await response.LeerErrorAsync());
+    }
+
+    private static object CuerpoConRetenciones(int debitoId, int creditoId, int? isrId, int? ivaClientesId) => new
+    {
+        nitEmpresa = "7654321-8",
+        nombreLegal = "Delta Actualizada, S.A.",
+        regimenIsr = "UTILIDADES",
+        agenteRetencionIva = false,
+        tipoAgenteIva = (string?)null,
+        cuentaIvaDebitoId = debitoId,
+        cuentaIvaCreditoId = creditoId,
+        cuentaIsrRetenidoPagarId = isrId,
+        cuentaIvaRetenidoClientesId = ivaClientesId,
+    };
 }

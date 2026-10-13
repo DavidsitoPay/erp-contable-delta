@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using DeltaERP.Api.Auth;
 using DeltaERP.Api.Models;
 using DeltaERP.Api.Services;
@@ -35,18 +34,21 @@ public class ConfiguracionFiscalController : ControllerBase
 
     [HttpPut]
     [Authorize(Roles = Roles.Administrador)]
-    public async Task<IActionResult> Actualizar([FromBody] DatosConfiguracionFiscal datos)
+    public async Task<IActionResult> Actualizar([FromBody] DatosConfiguracionFiscal recibidos)
     {
-        var error = ConfiguracionFiscalRules.Validar(datos)
-            ?? await ValidarCuentaAsync(datos.CuentaIvaDebitoId, "Pasivo", "Acreedora", "La cuenta de IVA débito fiscal debe ser de tipo Pasivo y naturaleza Acreedora.")
-            ?? await ValidarCuentaAsync(datos.CuentaIvaCreditoId, "Activo", "Deudora", "La cuenta de IVA crédito fiscal debe ser de tipo Activo y naturaleza Deudora.");
+        var configuracion = await _configuracion.ObtenerAsync();
+        var datos = recibidos with
+        {
+            CuentaIsrRetenidoPagarId = recibidos.CuentaIsrRetenidoPagarId ?? configuracion.CuentaIsrRetenidoPagarId,
+            CuentaIvaRetenidoClientesId = recibidos.CuentaIvaRetenidoClientesId ?? configuracion.CuentaIvaRetenidoClientesId,
+        };
+        var error = ConfiguracionFiscalRules.Validar(datos) ?? await ValidarCuentasAsync(datos);
         if (error is not null)
         {
             return BadRequest(new { error });
         }
 
-        var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var configuracion = await _configuracion.ObtenerAsync();
+        var usuarioId = this.UsuarioId();
         var anterior = Describir(configuracion);
         configuracion.NitEmpresa = NitRules.Normalizar(datos.NitEmpresa);
         configuracion.NombreLegal = datos.NombreLegal;
@@ -55,6 +57,8 @@ public class ConfiguracionFiscalController : ControllerBase
         configuracion.TipoAgenteIva = ConfiguracionFiscalRules.TipoAgenteNormalizado(datos);
         configuracion.CuentaIvaDebitoId = datos.CuentaIvaDebitoId;
         configuracion.CuentaIvaCreditoId = datos.CuentaIvaCreditoId;
+        configuracion.CuentaIsrRetenidoPagarId = datos.CuentaIsrRetenidoPagarId;
+        configuracion.CuentaIvaRetenidoClientesId = datos.CuentaIvaRetenidoClientesId;
         configuracion.ActualizadoEn = DateTimeOffset.UtcNow;
         configuracion.ActualizadoPor = usuarioId;
 
@@ -67,7 +71,27 @@ public class ConfiguracionFiscalController : ControllerBase
     }
 
     private static string Describir(ConfiguracionFiscal c) =>
-        $"régimen ISR {c.RegimenIsr}, agente IVA {c.AgenteRetencionIva} ({c.TipoAgenteIva}), cuenta débito {c.CuentaIvaDebitoId}, cuenta crédito {c.CuentaIvaCreditoId}";
+        $"régimen ISR {c.RegimenIsr}, agente IVA {c.AgenteRetencionIva} ({c.TipoAgenteIva}), cuenta débito {c.CuentaIvaDebitoId}, cuenta crédito {c.CuentaIvaCreditoId}, cuenta ISR retenido por pagar {c.CuentaIsrRetenidoPagarId}, cuenta IVA retenido por clientes {c.CuentaIvaRetenidoClientesId}";
+
+    private async Task<string?> ValidarCuentasAsync(DatosConfiguracionFiscal datos)
+    {
+        var requisitos = new (int? CuentaId, string Tipo, string Naturaleza, string Mensaje)[]
+        {
+            (datos.CuentaIvaDebitoId, "Pasivo", "Acreedora", "La cuenta de IVA débito fiscal debe ser de tipo Pasivo y naturaleza Acreedora."),
+            (datos.CuentaIvaCreditoId, "Activo", "Deudora", "La cuenta de IVA crédito fiscal debe ser de tipo Activo y naturaleza Deudora."),
+            (datos.CuentaIsrRetenidoPagarId, "Pasivo", "Acreedora", "La cuenta de ISR retenido por pagar debe ser de tipo Pasivo y naturaleza Acreedora."),
+            (datos.CuentaIvaRetenidoClientesId, "Activo", "Deudora", "La cuenta de IVA retenido por clientes debe ser de tipo Activo y naturaleza Deudora."),
+        };
+        foreach (var (cuentaId, tipo, naturaleza, mensaje) in requisitos)
+        {
+            var error = await ValidarCuentaAsync(cuentaId, tipo, naturaleza, mensaje);
+            if (error is not null)
+            {
+                return error;
+            }
+        }
+        return null;
+    }
 
     private async Task<string?> ValidarCuentaAsync(int? cuentaId, string tipo, string naturaleza, string mensajeTipo)
     {
@@ -81,7 +105,7 @@ public class ConfiguracionFiscalController : ControllerBase
             return error;
         }
         var cuenta = await _db.CuentasContables.FindAsync(cuentaId.Value);
-        return cuenta!.Tipo == tipo && cuenta.Naturaleza == naturaleza ? null : mensajeTipo;
+        return cuenta is not null && cuenta.Tipo == tipo && cuenta.Naturaleza == naturaleza ? null : mensajeTipo;
     }
 
     private async Task<ConfiguracionFiscalRespuesta> ConstruirRespuestaAsync()
@@ -91,6 +115,7 @@ public class ConfiguracionFiscalController : ControllerBase
         var usuario = c.ActualizadoPor is { } usuarioId ? await _db.Usuarios.FindAsync(usuarioId) : null;
         return new ConfiguracionFiscalRespuesta(
             c.NitEmpresa, c.NombreLegal, c.MonedaFuncionalId, moneda?.Codigo, c.RegimenIsr, c.AgenteRetencionIva,
-            c.TipoAgenteIva, c.CuentaIvaDebitoId, c.CuentaIvaCreditoId, c.ActualizadoEn, usuario?.Nombre);
+            c.TipoAgenteIva, c.CuentaIvaDebitoId, c.CuentaIvaCreditoId, c.CuentaIsrRetenidoPagarId, c.CuentaIvaRetenidoClientesId,
+            c.ActualizadoEn, usuario?.Nombre);
     }
 }

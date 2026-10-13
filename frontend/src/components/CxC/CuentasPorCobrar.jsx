@@ -16,6 +16,7 @@ const CONFIG_CXC = {
   etiquetaIva: "IVA débito",
   dteObligatorio: true,
   tipoBienDefecto: "SERVICIO",
+  retencionIvaCobro: true,
 };
 
 function CuentasPorCobrar() {

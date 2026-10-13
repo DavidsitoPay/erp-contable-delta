@@ -1,54 +1,19 @@
 import { useEffect, useState } from "react";
 import { contrapartesApi } from "../../services/api";
-import { REGIMENES_ISR, REGIMENES_IVA, etiquetaDe } from "../../utils/etiquetasFiscales";
+import { REGIMENES_ISR_CONTRAPARTE, REGIMENES_IVA, TIPOS_AGENTE_IVA_CLIENTE, etiquetaDe } from "../../utils/etiquetasFiscales";
+import { contraparteCompleta, formularioContraparteVacio, payloadContraparte } from "../../utils/formularioContraparte";
 import { mensajeError } from "../../utils/formato";
 import { mensajeNit } from "../../utils/nit";
-import OpcionesSelect from "../OpcionesSelect";
+import CamposFiscalesContraparte from "./CamposFiscalesContraparte";
 
 const ENCABEZADOS = ["Nombre", "NIT", "Dirección", "Régimen IVA", "Residente", "Agente de retención IVA"];
 
-function vacio(tipo) {
-  return {
-    tipo,
-    nombre: "",
-    nit: "",
-    direccion: "",
-    regimenIva: "GENERAL",
-    regimenIsr: "UTILIDADES",
-    esResidente: true,
-    esAgenteRetencionIva: false,
-  };
-}
-
 const siNo = (valor) => (valor ? "Sí" : "No");
-
-function CamposFiscales({ form, onCambio, esProveedor }) {
-  return (
-    <>
-      <select className="select" aria-label="Régimen de IVA" value={form.regimenIva} onChange={(e) => onCambio({ ...form, regimenIva: e.target.value })}>
-        <OpcionesSelect opciones={REGIMENES_IVA} />
-      </select>
-      {esProveedor && (
-        <select className="select" aria-label="Régimen de ISR" value={form.regimenIsr} onChange={(e) => onCambio({ ...form, regimenIsr: e.target.value })}>
-          <OpcionesSelect opciones={REGIMENES_ISR} />
-        </select>
-      )}
-      <label>
-        <input type="checkbox" checked={form.esResidente} onChange={(e) => onCambio({ ...form, esResidente: e.target.checked })} />
-        <span>Residente en Guatemala</span>
-      </label>
-      <label>
-        <input type="checkbox" checked={form.esAgenteRetencionIva} onChange={(e) => onCambio({ ...form, esAgenteRetencionIva: e.target.checked })} />
-        <span>Agente de retención de IVA</span>
-      </label>
-    </>
-  );
-}
 
 function Contrapartes() {
   const [tipo, setTipo] = useState("Cliente");
   const [lista, setLista] = useState([]);
-  const [form, setForm] = useState(vacio("Cliente"));
+  const [form, setForm] = useState(formularioContraparteVacio("Cliente"));
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
 
@@ -63,7 +28,7 @@ function Contrapartes() {
 
   useEffect(() => {
     void cargar(tipo);
-    setForm(vacio(tipo));
+    setForm(formularioContraparteVacio(tipo));
     setError("");
   }, [tipo]);
 
@@ -72,8 +37,8 @@ function Contrapartes() {
     setError("");
     setCargando(true);
     try {
-      await contrapartesApi.crear({ ...form, nit: form.nit.trim().toUpperCase() });
-      setForm(vacio(tipo));
+      await contrapartesApi.crear(payloadContraparte(form));
+      setForm(formularioContraparteVacio(tipo));
       await cargar(tipo);
     } catch (err) {
       setError(mensajeError(err, `No se pudo crear el/la ${tipo.toLowerCase()}.`));
@@ -99,8 +64,8 @@ function Contrapartes() {
         <input className="input" placeholder="Nombre" aria-label="Nombre" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
         <input className="input" placeholder={esProveedor ? "NIT" : "NIT (opcional, CF si no tiene)"} aria-label="NIT" value={form.nit} onChange={(e) => setForm({ ...form, nit: e.target.value })} />
         <input className="input" placeholder="Dirección (opcional)" aria-label="Dirección" value={form.direccion} onChange={(e) => setForm({ ...form, direccion: e.target.value })} />
-        <CamposFiscales form={form} onCambio={setForm} esProveedor={esProveedor} />
-        <button type="submit" disabled={cargando || nitMensaje !== ""} className="btn btn-primary">
+        <CamposFiscalesContraparte form={form} onCambio={setForm} />
+        <button type="submit" disabled={cargando || nitMensaje !== "" || !contraparteCompleta(form)} className="btn btn-primary">
           Agregar {tipo.toLowerCase()}
         </button>
       </form>
@@ -130,8 +95,16 @@ function Contrapartes() {
                     <td>{c.direccion || "—"}</td>
                     <td>{etiquetaDe(REGIMENES_IVA, c.regimenIva)}</td>
                     <td>{siNo(c.esResidente)}</td>
-                    <td>{siNo(c.esAgenteRetencionIva)}</td>
-                    {esProveedor && <td>{etiquetaDe(REGIMENES_ISR, c.regimenIsr)}</td>}
+                    <td>
+                      {siNo(c.esAgenteRetencionIva)}
+                      {c.tipoAgenteIva && <small className="nota-fiscal">{etiquetaDe(TIPOS_AGENTE_IVA_CLIENTE, c.tipoAgenteIva)}</small>}
+                    </td>
+                    {esProveedor && (
+                      <td>
+                        {etiquetaDe(REGIMENES_ISR_CONTRAPARTE, c.regimenIsr)}
+                        {c.isrFundamento && <small className="nota-fiscal">{c.isrFundamento}</small>}
+                      </td>
+                    )}
                   </tr>
                 ))
               )}

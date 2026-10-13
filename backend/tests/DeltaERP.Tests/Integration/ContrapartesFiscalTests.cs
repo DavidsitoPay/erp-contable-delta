@@ -27,6 +27,7 @@ public class ContrapartesFiscalTests
         ["regimenIsr"] = "SIMPLIFICADO",
         ["esResidente"] = esResidente,
         ["esAgenteRetencionIva"] = true,
+        ["tipoAgenteIva"] = "AGENTE_PRIVADO",
     };
 
     private async Task<HttpClient> ClienteAsync() => _pg.CreateApiClient(await _pg.Data.CrearUsuarioAsync());
@@ -59,7 +60,7 @@ public class ContrapartesFiscalTests
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var body = await response.LeerJsonAsync();
         Assert.Equal(JsonValueKind.Null, body.GetProperty("nit").ValueKind);
-        Assert.Equal(("GENERAL", "UTILIDADES", true, false), (
+        Assert.Equal(("GENERAL", "NO_DEFINIDO", true, false), (
             body.GetProperty("regimenIva").GetString(),
             body.GetProperty("regimenIsr").GetString(),
             body.GetProperty("esResidente").GetBoolean(),

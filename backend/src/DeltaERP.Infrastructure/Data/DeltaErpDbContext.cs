@@ -35,6 +35,11 @@ public class DeltaErpDbContext : DbContext
     public DbSet<AplicacionPagoProveedor> AplicacionesPagoProveedor => Set<AplicacionPagoProveedor>();
     public DbSet<SaldoDocumentoCxP> SaldosDocumentoCxP => Set<SaldoDocumentoCxP>();
 
+    public DbSet<ParametroRetencion> ParametrosRetencion => Set<ParametroRetencion>();
+    public DbSet<Retencion> Retenciones => Set<Retencion>();
+    public DbSet<ConstanciaRetencion> ConstanciasRetencion => Set<ConstanciaRetencion>();
+    public DbSet<VwRetencionReporte> ReporteRetenciones => Set<VwRetencionReporte>();
+
     public DbSet<CuentaBancaria> CuentasBancarias => Set<CuentaBancaria>();
     public DbSet<MovimientoTesoreria> MovimientosTesoreria => Set<MovimientoTesoreria>();
     public DbSet<ConciliacionBancaria> ConciliacionesBancarias => Set<ConciliacionBancaria>();
@@ -68,6 +73,9 @@ public class DeltaErpDbContext : DbContext
         modelBuilder.Entity<MovimientoTesoreria>().ToTable("movimientotesoreria");
         modelBuilder.Entity<ConciliacionBancaria>().ToTable("conciliacionbancaria");
         modelBuilder.Entity<DetalleConciliacion>().ToTable("detalleconciliacion");
+        modelBuilder.Entity<ParametroRetencion>().ToTable("parametroretencion");
+        modelBuilder.Entity<Retencion>().ToTable("retencion");
+        modelBuilder.Entity<ConstanciaRetencion>().ToTable("constanciaretencion");
 
         // Vistas sin clave primaria: HasNoKey() evita que EF infiera un Id, y ToView
         // (no ToTable) las deja de solo lectura, sin migraciones de escritura.
@@ -75,6 +83,7 @@ public class DeltaErpDbContext : DbContext
         modelBuilder.Entity<SaldoDocumentoCxC>().HasNoKey().ToView("vw_saldodocumentocxc");
         modelBuilder.Entity<SaldoDocumentoCxP>().HasNoKey().ToView("vw_saldodocumentocxp");
         modelBuilder.Entity<SaldoCuentaBancaria>().HasNoKey().ToView("vw_saldocuentabancaria");
+        modelBuilder.Entity<VwRetencionReporte>().HasNoKey().ToView("vw_retencion_reporte");
         modelBuilder.Entity<ConciliacionResumen>().HasNoKey().ToView("vw_conciliacion_resumen")
             .Property(r => r.Id).HasColumnName("conciliacion_id");
         // Funcion de tabla: solo se consulta con FromSql, nunca se lee como vista.

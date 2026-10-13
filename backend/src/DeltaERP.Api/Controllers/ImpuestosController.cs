@@ -15,7 +15,8 @@ namespace DeltaERP.Api.Controllers;
 [Authorize]
 public class ImpuestosController : ControllerBase
 {
-    private const string MensajeMismaFecha = "Ya existe una versión de ese impuesto con la misma fecha de inicio.";
+    private const string Entidad = "impuesto";
+    private static readonly string MensajeMismaFecha = VigenciaRules.MensajeMismaFecha(Entidad);
 
     private readonly DeltaErpDbContext _db;
     private readonly AuditoriaService _auditoria;
@@ -75,12 +76,11 @@ public class ImpuestosController : ControllerBase
 
         var impuesto = new Impuesto();
         Aplicar(impuesto, datos);
-        var usuarioId = this.UsuarioId();
-        var conflicto = await GuardarAsync(usuarioId, "crear_impuesto", async () =>
+        var conflicto = await this.GuardarAuditadoAsync(_auditoria, "crear_impuesto", Entidad,async () =>
         {
             _db.Impuestos.Add(impuesto);
             await _db.SaveChangesAsync();
-            return $"Impuesto {impuesto.Codigo} (id {impuesto.Id}) creado, tasa {impuesto.Tasa}, vigente desde {ImpuestoRules.Iso(impuesto.VigenteDesde)}";
+            return $"Impuesto {impuesto.Codigo} (id {impuesto.Id}) creado, tasa {impuesto.Tasa}, vigente desde {VigenciaRules.Iso(impuesto.VigenteDesde)}";
         });
         return conflicto ?? CreatedAtAction(nameof(Obtener), new { id = impuesto.Id }, ImpuestoRespuesta.Desde(impuesto, false));
     }
@@ -114,8 +114,7 @@ public class ImpuestosController : ControllerBase
         }
 
         Aplicar(impuesto, datos);
-        var usuarioId = this.UsuarioId();
-        var conflicto = await GuardarAsync(usuarioId, "actualizar_impuesto", async () =>
+        var conflicto = await this.GuardarAuditadoAsync(_auditoria, "actualizar_impuesto", Entidad,async () =>
         {
             await _db.SaveChangesAsync();
             return $"Impuesto {impuesto.Codigo} (id {id}) actualizado, tasa {impuesto.Tasa}, activo {impuesto.Activo}";
@@ -134,8 +133,7 @@ public class ImpuestosController : ControllerBase
         }
 
         impuesto.Activo = false;
-        var usuarioId = this.UsuarioId();
-        await GuardarAsync(usuarioId, "desactivar_impuesto", async () =>
+        await this.GuardarAuditadoAsync(_auditoria, "desactivar_impuesto", Entidad,async () =>
         {
             await _db.SaveChangesAsync();
             return $"Impuesto {impuesto.Codigo} (id {id}) desactivado";
@@ -156,19 +154,6 @@ public class ImpuestosController : ControllerBase
         impuesto.VigenteDesde = datos.VigenteDesde!.Value;
         impuesto.VigenteHasta = datos.VigenteHasta;
         impuesto.Activo = datos.Activo ?? true;
-    }
-
-    private async Task<ObjectResult?> GuardarAsync(int usuarioId, string accion, Func<Task<string>> operacion)
-    {
-        try
-        {
-            await _auditoria.EjecutarAsync(usuarioId, accion, "impuesto", operacion);
-            return null;
-        }
-        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException && ErroresPostgres.TraducirActualizacionAsync(ex) is { } conflicto)
-        {
-            return conflicto;
-        }
     }
 
     private async Task<HashSet<int>> IdsEnUsoAsync()

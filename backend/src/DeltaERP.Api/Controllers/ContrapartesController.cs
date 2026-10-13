@@ -1,4 +1,5 @@
 using DeltaERP.Api.Auth;
+using DeltaERP.Api.Services;
 using DeltaERP.Domain.Entities;
 using DeltaERP.Domain.Rules;
 using DeltaERP.Infrastructure.Data;
@@ -16,10 +17,12 @@ namespace DeltaERP.Api.Controllers;
 public class ContrapartesController : ControllerBase
 {
     private readonly DeltaErpDbContext _db;
+    private readonly AuditoriaService _auditoria;
 
-    public ContrapartesController(DeltaErpDbContext db)
+    public ContrapartesController(DeltaErpDbContext db, AuditoriaService auditoria)
     {
         _db = db;
+        _auditoria = auditoria;
     }
 
     [HttpGet]
@@ -60,6 +63,8 @@ public class ContrapartesController : ControllerBase
 
         contraparte.Id = 0;
         contraparte.Nit = NitRules.Normalizar(contraparte.Nit);
+        contraparte.IsrFundamento = ContraparteRules.FundamentoNormalizado(contraparte);
+        contraparte.TipoAgenteIva = ContraparteRules.TipoAgenteNormalizado(contraparte);
         _db.Contrapartes.Add(contraparte);
         await _db.SaveChangesAsync();
         return CreatedAtAction(nameof(Obtener), new { id = contraparte.Id }, contraparte);
@@ -85,14 +90,24 @@ public class ContrapartesController : ControllerBase
         }
 
         // Tipo no se actualiza: cambiarlo rompería referencias ya creadas en CxC/CxP.
+        var anterior = DescribirFiscal(contraparte);
         contraparte.Nombre = cambios.Nombre;
         contraparte.Nit = NitRules.Normalizar(cambios.Nit);
         contraparte.Direccion = cambios.Direccion;
         contraparte.RegimenIva = cambios.RegimenIva;
         contraparte.RegimenIsr = cambios.RegimenIsr;
+        contraparte.IsrFundamento = ContraparteRules.FundamentoNormalizado(cambios);
         contraparte.EsResidente = cambios.EsResidente;
         contraparte.EsAgenteRetencionIva = cambios.EsAgenteRetencionIva;
-        await _db.SaveChangesAsync();
-        return Ok(contraparte);
+        contraparte.TipoAgenteIva = ContraparteRules.TipoAgenteNormalizado(cambios);
+        var conflicto = await this.GuardarAuditadoAsync(_auditoria, "actualizar_contraparte", "contraparte", async () =>
+        {
+            await _db.SaveChangesAsync();
+            return $"Contraparte {contraparte.Nombre} (id {id}) actualizada. Antes: {anterior}. Después: {DescribirFiscal(contraparte)}";
+        });
+        return conflicto ?? Ok(contraparte);
     }
+
+    private static string DescribirFiscal(Contraparte c) =>
+        $"régimen ISR {c.RegimenIsr} (fundamento {c.IsrFundamento}), residente {c.EsResidente}, agente IVA {c.EsAgenteRetencionIva} ({c.TipoAgenteIva})";
 }

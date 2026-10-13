@@ -19,6 +19,8 @@ import BalanceGeneral from "./components/Reportes/BalanceGeneral";
 import EstadoResultados from "./components/Reportes/EstadoResultados";
 import ConfiguracionFiscal from "./components/Catalogo/ConfiguracionFiscal";
 import Impuestos from "./components/Catalogo/Impuestos";
+import ParametrosRetencion from "./components/Retenciones/ParametrosRetencion";
+import ReporteRetenciones from "./components/Retenciones/ReporteRetenciones";
 import LibroFiscal from "./components/Libros/LibroFiscal";
 import { puedeAdministrarConfiguracionFiscal, puedeGestionarFiscal, puedeGestionarTesoreria } from "./utils/perfiles";
 
@@ -97,10 +99,12 @@ function App() {
         <TabLink to="/catalogo/periodos">Periodos</TabLink>
         {esAdmin && <TabLink to="/catalogo/configuracion-fiscal">Configuración fiscal</TabLink>}
         {gestionaFiscal && <TabLink to="/catalogo/impuestos">Impuestos</TabLink>}
+        {gestionaFiscal && <TabLink to="/catalogo/parametros-retencion">Parámetros de retención</TabLink>}
         <TabLink to="/libros/balance">Balance de saldos</TabLink>
         <TabLink to="/libros/diario">Libro diario</TabLink>
         <TabLink to="/libros/mayor">Libro mayor</TabLink>
         {gestionaFiscal && <TabLink to="/libros/fiscal">Compras y ventas</TabLink>}
+        {gestionaFiscal && <TabLink to="/libros/retenciones">Retenciones</TabLink>}
         <TabLink to="/contrapartes">Clientes y proveedores</TabLink>
         <TabLink to="/cxc">Cuentas por cobrar</TabLink>
         {esAdminOContador && <TabLink to="/cxp">Cuentas por pagar</TabLink>}
@@ -141,6 +145,14 @@ function App() {
               </Restringida>
             }
           />
+          <Route
+            path="/catalogo/parametros-retencion"
+            element={
+              <Restringida permitido={gestionaFiscal} perfil={usuario.perfil} seccion="Parámetros de retención">
+                <ParametrosRetencion />
+              </Restringida>
+            }
+          />
           <Route path="/libros/balance" element={<BalanceSaldos />} />
           <Route path="/libros/diario" element={<LibroDiario />} />
           <Route path="/libros/mayor" element={<LibroMayor />} />
@@ -149,6 +161,14 @@ function App() {
             element={
               <Restringida permitido={gestionaFiscal} perfil={usuario.perfil} seccion="Compras y ventas">
                 <LibroFiscal />
+              </Restringida>
+            }
+          />
+          <Route
+            path="/libros/retenciones"
+            element={
+              <Restringida permitido={gestionaFiscal} perfil={usuario.perfil} seccion="Retenciones">
+                <ReporteRetenciones />
               </Restringida>
             }
           />

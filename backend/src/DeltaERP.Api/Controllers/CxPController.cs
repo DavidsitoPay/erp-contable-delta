@@ -1,4 +1,5 @@
 using DeltaERP.Api.Auth;
+using DeltaERP.Api.Models;
 using DeltaERP.Api.Services;
 using DeltaERP.Domain.Entities;
 using DeltaERP.Domain.Rules;
@@ -20,9 +21,14 @@ public class CxPController : FacturaControllerBase
         "CxP", "Proveedor", DocumentoCxP.TiposDocumentoValidos, "Pasivo", "Acreedora", "Cuentas por pagar", LadoControl.Credito,
         Impuesto.AmbitoCompras, "IVA crédito fiscal", false);
 
-    public CxPController(DeltaErpDbContext db, ValidacionContable validacion, AuditoriaService auditoria, FacturaService facturas, TesoreriaService tesoreria)
+    private readonly RetencionService _retenciones;
+
+    public CxPController(
+        DeltaErpDbContext db, ValidacionContable validacion, AuditoriaService auditoria, FacturaService facturas, TesoreriaService tesoreria,
+        RetencionService retenciones)
         : base(db, validacion, auditoria, facturas, tesoreria)
     {
+        _retenciones = retenciones;
     }
 
     [HttpGet("facturas")]
@@ -50,6 +56,11 @@ public class CxPController : FacturaControllerBase
                 d.DteNumero,
                 d.CalculoLegado,
                 s.SaldoPendiente,
+                MontoRetencionIsr = _db.Retenciones
+                    .Where(r => r.DocumentoCxpId == d.Id && r.Concepto == Retencion.ConceptoIsr)
+                    .Sum(r => (decimal?)r.MontoRetenido) ?? 0m,
+                d.RevisionRetencion,
+                d.RevisionMotivo,
                 ProveedorNombre = c.Nombre,
             }).ToListAsync();
 
@@ -72,6 +83,53 @@ public class CxPController : FacturaControllerBase
     [Authorize(Roles = Roles.GestionCxP)]
     public Task<IActionResult> CrearFactura([FromBody] DocumentoCxP documento) =>
         RegistrarFacturaAsync(documento, Perfil, nameof(ObtenerFactura));
+
+    [HttpPost("facturas/retencion-previa")]
+    [Authorize(Roles = Roles.GestionCxP)]
+    public async Task<IActionResult> RetencionPrevia([FromBody] SolicitudRetencionPrevia solicitud)
+    {
+        var (proveedor, errorProveedor) = await _validacion.ValidarTerceroAsync(solicitud.ProveedorId, Perfil.TipoTercero);
+        if (proveedor is null)
+        {
+            return BadRequest(new { error = errorProveedor });
+        }
+        if (solicitud.MontoBase < 0 || solicitud.MontoTotal < solicitud.MontoBase)
+        {
+            return BadRequest(new { error = "El monto base debe ser mayor o igual a cero y no puede exceder el monto total." });
+        }
+
+        var (vista, error) = await _retenciones.VistaPreviaIsrAsync(proveedor, solicitud.Fecha, solicitud.MontoBase, solicitud.MontoTotal);
+        return error is null ? Ok(vista) : StatusCode(error.Estado, new { error = error.Mensaje });
+    }
+
+    [HttpPost("facturas/{id:int}/revision-retencion")]
+    [Authorize(Roles = Roles.GestionCxP)]
+    public async Task<IActionResult> ResolverRevisionRetencion(int id, [FromBody] SolicitudMotivo solicitud)
+    {
+        var errorMotivo = ConstanciaRetencionService.ValidarMotivo(solicitud.Motivo, "de la resolución");
+        if (errorMotivo is not null)
+        {
+            return BadRequest(new { error = errorMotivo });
+        }
+        var documento = await _db.DocumentosCxP.Include(d => d.Lineas).FirstOrDefaultAsync(d => d.Id == id);
+        if (documento is null)
+        {
+            return NotFound();
+        }
+        if (documento.RevisionRetencion != DocumentoCxP.RevisionPendiente)
+        {
+            return Conflict(new { error = "La factura no tiene una revisión de retención pendiente." });
+        }
+
+        documento.RevisionRetencion = DocumentoCxP.RevisionResuelta;
+        documento.RevisionMotivo = solicitud.Motivo?.Trim();
+        var conflicto = await this.GuardarAuditadoAsync(_auditoria, "resolver_revision_retencion", "documentocxp", async () =>
+        {
+            await _db.SaveChangesAsync();
+            return $"Revisión de retención de la factura {documento.Numero} (id {id}) resuelta: {documento.RevisionMotivo}, calculado Q0, aplicado Q0";
+        });
+        return conflicto ?? Ok(await _validacion.ObtenerDetalleAsync(documento, Perfil));
+    }
 
     [HttpGet("pagos")]
     public async Task<IActionResult> ListarPagos()

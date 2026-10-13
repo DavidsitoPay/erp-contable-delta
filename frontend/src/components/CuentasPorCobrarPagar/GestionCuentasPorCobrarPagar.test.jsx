@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { centrosCostoApi, contrapartesApi, cuentasApi, cuentasBancariasApi, impuestosApi, periodosApi } from "../../services/api";
+import { formatoMoneda } from "../../utils/formato";
 import GestionCuentasPorCobrarPagar from "./GestionCuentasPorCobrarPagar";
 
 vi.mock("../../services/api", () => ({
@@ -58,13 +59,45 @@ function crearConfig() {
   };
 }
 
-async function renderCargado() {
-  render(<GestionCuentasPorCobrarPagar config={crearConfig()} />);
+const facturasCxp = [
+  { ...base, id: 21, numero: "P-1", proveedorId: 5, proveedorNombre: "ACME", montoTotal: 100, saldoPendiente: 90, montoRetencionIsr: 10, revisionRetencion: "PENDIENTE", revisionMotivo: null, estado: "Vigente" },
+  { ...base, id: 22, numero: "P-2", proveedorId: 5, proveedorNombre: "ACME", montoTotal: 50, saldoPendiente: 50, montoRetencionIsr: 0, revisionRetencion: "NINGUNA", revisionMotivo: null, estado: "Vigente" },
+];
+
+function crearConfigCxp() {
+  api = {
+    listarFacturas: vi.fn().mockResolvedValue({ data: facturasCxp }),
+    listarPagos: vi.fn().mockResolvedValue({ data: [] }),
+    crearFactura: vi.fn().mockResolvedValue({ data: {} }),
+    crearPago: vi.fn().mockResolvedValue({ data: {} }),
+    retencionPrevia: vi.fn().mockResolvedValue({ data: null }),
+    resolverRevisionRetencion: vi.fn().mockResolvedValue({ data: {} }),
+  };
+  return {
+    titulo: "Cuentas por pagar",
+    tipoContraparte: "Proveedor",
+    etiquetaContraparte: "Proveedor",
+    campoContraparteId: "proveedorId",
+    campoContraparteNombre: "proveedorNombre",
+    api,
+    filtroCuentaControl: (c) => c.tipo === "Pasivo" && c.naturaleza === "Acreedora",
+    etiquetaCuentaControl: "Cuenta de control (CxP)",
+    etiquetaCuentaLinea: "Cuenta (gasto/activo)",
+    aplicaImpuestoA: "COMPRAS",
+    etiquetaIva: "IVA crédito",
+    dteObligatorio: false,
+    tipoBienDefecto: "BIEN",
+    retencionIsr: true,
+  };
+}
+
+async function renderCargado(config = crearConfig(), primeraFactura = "F-1") {
+  render(<GestionCuentasPorCobrarPagar config={config} />);
   await screen.findByRole("option", { name: "ACME" });
   await screen.findAllByRole("option", { name: "4101 - Ventas" });
   await screen.findByRole("option", { name: "Enero 2025" });
   await screen.findByRole("option", { name: "IVA general 12 %" });
-  await screen.findByText("F-1");
+  await screen.findByText(primeraFactura);
 }
 
 function iniciarSesionComo(perfil) {
@@ -74,6 +107,25 @@ function iniciarSesionComo(perfil) {
 function escribir(etiqueta, valor) {
   fireEvent.change(screen.getByLabelText(etiqueta), { target: { value: valor } });
 }
+
+async function prepararCobro(config) {
+  await renderCargado(config);
+  fireEvent.click(screen.getByRole("button", { name: "Pagos" }));
+  fireEvent.change(await screen.findByLabelText("Cliente"), { target: { value: "5" } });
+  const cuenta = screen.getByLabelText("Cuenta bancaria");
+  await within(cuenta).findByRole("option", { name: "BAC 123" });
+  fireEvent.change(cuenta, { target: { value: "7" } });
+  fireEvent.change(screen.getByLabelText("Método de pago"), { target: { value: "Transferencia" } });
+  fireEvent.change(screen.getByLabelText("Monto a aplicar a F-1"), { target: { value: "100" } });
+}
+
+function configConRetencionIva(sugerencia) {
+  const config = crearConfig();
+  api.retencionIvaSugerida = vi.fn().mockResolvedValue({ data: sugerencia });
+  return { ...config, retencionIvaCobro: true };
+}
+
+const sugerenciaIva = { aplica: true, motivo: null, clienteAgente: true, ivaRetenible: 12, sugerido: 12, yaRetenida: false };
 
 describe("GestionCuentasPorCobrarPagar", () => {
   beforeEach(() => {
@@ -204,5 +256,119 @@ describe("GestionCuentasPorCobrarPagar", () => {
     expect(screen.getByLabelText("Impuesto de la línea")).toBeInTheDocument();
     expect(screen.getByText("Datos del DTE")).toBeInTheDocument();
     expect(impuestosApi.listar).toHaveBeenCalledWith(expect.objectContaining({ aplicaA: "VENTAS" }));
+  });
+
+  it("en cuentas por pagar muestra la retención, filtra las facturas por revisar y las resuelve con motivo", async () => {
+    await renderCargado(crearConfigCxp(), "P-1");
+    expect(screen.getByRole("columnheader", { name: "Retención ISR" })).toBeInTheDocument();
+    expect(screen.getByText("P-2")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Solo facturas por revisar"));
+    expect(screen.queryByText("P-2")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Resolver revisión de P-1" }));
+    fireEvent.change(screen.getByLabelText("Motivo de la revisión de P-1"), { target: { value: " Régimen confirmado " } });
+    fireEvent.click(screen.getByRole("button", { name: "Resolver revisión" }));
+
+    await waitFor(() => expect(api.resolverRevisionRetencion).toHaveBeenCalledWith(21, "Régimen confirmado"));
+    await waitFor(() => expect(api.listarFacturas).toHaveBeenCalledTimes(2));
+  });
+
+  it("al cancelar la resolución cierra el formulario de motivo", async () => {
+    await renderCargado(crearConfigCxp(), "P-1");
+    fireEvent.click(screen.getByRole("button", { name: "Resolver revisión de P-1" }));
+    expect(screen.getByLabelText("Motivo de la revisión de P-1")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(screen.queryByLabelText("Motivo de la revisión de P-1")).toBeNull();
+  });
+
+  it("en cuentas por cobrar no ofrece el filtro de revisión ni la columna de retención", async () => {
+    await renderCargado();
+
+    expect(screen.queryByLabelText("Solo facturas por revisar")).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: "Retención ISR" })).toBeNull();
+  });
+
+  it("en cobros captura el IVA retenido por un cliente agente, lo sugiere y envía la retención con constancia", async () => {
+    contrapartesApi.listar.mockResolvedValue({ data: [{ ...contrapartes[0], esAgenteRetencionIva: true }, contrapartes[1]] });
+    await prepararCobro(configConRetencionIva(sugerenciaIva));
+
+    expect(screen.getByLabelText("El cliente retuvo IVA en F-1")).toBeChecked();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Sugerir IVA retenido para F-1" })).toBeEnabled());
+    expect(api.retencionIvaSugerida).toHaveBeenCalledWith(1);
+    fireEvent.click(screen.getByRole("button", { name: "Sugerir IVA retenido para F-1" }));
+
+    expect(screen.getByLabelText("IVA retenido en F-1")).toHaveValue(12);
+    expect(screen.getByText(/^Neto a recibir en banco: 88[.,]00$/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Número de constancia de F-1"), { target: { value: "A-123" } });
+    fireEvent.change(screen.getByLabelText("Fecha de constancia de F-1"), { target: { value: "2026-10-20" } });
+    fireEvent.click(screen.getByRole("button", { name: "Registrar pago" }));
+
+    await waitFor(() => expect(api.crearPago).toHaveBeenCalledTimes(1));
+    expect(api.crearPago).toHaveBeenCalledWith({
+      clienteId: 5,
+      cuentaBancariaId: 7,
+      fecha: expect.any(String),
+      metodoPago: "Transferencia",
+      referenciaBancaria: null,
+      aplicaciones: [
+        {
+          documentoId: 1,
+          montoAplicado: 100,
+          retencionIva: { monto: 12, confirmaClienteNoAgente: false, constancia: { numero: "A-123", fecha: "2026-10-20" } },
+        },
+      ],
+    });
+  });
+
+  it("un cliente no agente exige confirmar la retención de IVA antes de habilitar el cobro", async () => {
+    await prepararCobro(configConRetencionIva({ ...sugerenciaIva, clienteAgente: false }));
+
+    expect(screen.getByLabelText("El cliente retuvo IVA en F-1")).not.toBeChecked();
+    fireEvent.click(screen.getByLabelText("El cliente retuvo IVA en F-1"));
+    fireEvent.change(screen.getByLabelText("IVA retenido en F-1"), { target: { value: "10" } });
+
+    expect(screen.getByText("Confirme que el cliente retuvo IVA aunque no está registrado como agente de retención.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Registrar pago" })).toBeDisabled();
+
+    fireEvent.click(screen.getByLabelText("Confirmo la retención de IVA en F-1 de un cliente no agente"));
+    expect(screen.getByRole("button", { name: "Registrar pago" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Registrar pago" }));
+
+    await waitFor(() =>
+      expect(api.crearPago).toHaveBeenCalledWith(
+        expect.objectContaining({ aplicaciones: [{ documentoId: 1, montoAplicado: 100, retencionIva: { monto: 10, confirmaClienteNoAgente: true } }] })
+      )
+    );
+  });
+
+  it("no permite retener más del IVA retenible y muestra las advertencias del servidor tras registrar", async () => {
+    contrapartesApi.listar.mockResolvedValue({ data: [{ ...contrapartes[0], esAgenteRetencionIva: true }, contrapartes[1]] });
+    const config = configConRetencionIva(sugerenciaIva);
+    api.crearPago.mockResolvedValue({ data: { advertencias: ["El monto de IVA difiere del sugerido."] } });
+    await prepararCobro(config);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Sugerir IVA retenido para F-1" })).toBeEnabled());
+
+    fireEvent.change(screen.getByLabelText("IVA retenido en F-1"), { target: { value: "20" } });
+    expect(screen.getByText(`El IVA retenido no puede exceder el IVA retenible de la factura (${formatoMoneda.format(12)}).`)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Registrar pago" })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("IVA retenido en F-1"), { target: { value: "10" } });
+    fireEvent.click(screen.getByRole("button", { name: "Registrar pago" }));
+
+    expect(await screen.findByText("El monto de IVA difiere del sugerido.")).toBeInTheDocument();
+  });
+
+  it("si la factura ya tiene IVA retenido no envía retención aunque el cliente sea agente", async () => {
+    contrapartesApi.listar.mockResolvedValue({ data: [{ ...contrapartes[0], esAgenteRetencionIva: true }, contrapartes[1]] });
+    await prepararCobro(configConRetencionIva({ ...sugerenciaIva, yaRetenida: true }));
+
+    expect(await screen.findByText("La factura ya tiene IVA retenido registrado.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Registrar pago" }));
+
+    await waitFor(() => expect(api.crearPago).toHaveBeenCalledTimes(1));
+    expect(api.crearPago.mock.calls[0][0].aplicaciones).toEqual([{ documentoId: 1, montoAplicado: 100 }]);
   });
 });

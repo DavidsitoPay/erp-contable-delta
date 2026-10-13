@@ -50,6 +50,9 @@ public class PermisosApiTests
         ["saldocuentaperiodo"] = "I",
         ["impuesto"] = "SIU",
         ["configuracionfiscal"] = "SU",
+        ["parametroretencion"] = "SIU",
+        ["retencion"] = "SI",
+        ["constanciaretencion"] = "SIU",
     };
 
     private static readonly (char Letra, string Privilegio)[] Privilegios =
@@ -73,6 +76,10 @@ public class PermisosApiTests
     [InlineData("UPDATE movimientotesoreria SET id = id WHERE false")]
     [InlineData("DELETE FROM bitacoraauditoria WHERE false")]
     [InlineData("DELETE FROM asientocontable WHERE false")]
+    [InlineData("UPDATE retencion SET id = id WHERE false")]
+    [InlineData("DELETE FROM retencion WHERE false")]
+    [InlineData("DELETE FROM parametroretencion WHERE false")]
+    [InlineData("DELETE FROM constanciaretencion WHERE false")]
     [InlineData("SELECT count(*) FROM bitacoraauditoria")]
     [InlineData("SELECT count(*) FROM saldocuentaperiodo")]
     [InlineData("INSERT INTO usuario (nombre) VALUES ('x')")]
@@ -87,6 +94,7 @@ public class PermisosApiTests
     [Theory]
     [InlineData("SELECT count(*) FROM vw_balance_saldos")]
     [InlineData("SELECT count(*) FROM vw_saldocuentaperiodo_vigente")]
+    [InlineData("SELECT count(*) FROM vw_retencion_reporte")]
     [InlineData("UPDATE periodocontable SET estado = estado WHERE false")]
     [InlineData("UPDATE documentocxc SET id = id WHERE false")]
     [InlineData("DELETE FROM detalleconciliacion WHERE false")]

@@ -12,6 +12,8 @@ vi.mock("./components/Reportes/EstadoResultados", () => ({ default: () => <p>Rep
 vi.mock("./components/Catalogo/ConfiguracionFiscal", () => ({ default: () => <p>Pantalla configuración fiscal</p> }));
 vi.mock("./components/Catalogo/Impuestos", () => ({ default: () => <p>Catálogo de impuestos</p> }));
 vi.mock("./components/Libros/LibroFiscal", () => ({ default: () => <p>Libro fiscal</p> }));
+vi.mock("./components/Retenciones/ParametrosRetencion", () => ({ default: () => <p>Pantalla parámetros de retención</p> }));
+vi.mock("./components/Retenciones/ReporteRetenciones", () => ({ default: () => <p>Reporte de retenciones</p> }));
 
 function renderApp(perfil, ruta = "/") {
   if (perfil) localStorage.setItem("delta_usuario", JSON.stringify({ nombre: "Ana", perfil }));
@@ -33,7 +35,7 @@ describe("App", () => {
     renderApp("Contador");
 
     expect(await screen.findByText("Conectado a Delta ERP Contable API")).toBeInTheDocument();
-    expect(screen.getAllByRole("link")).toHaveLength(15);
+    expect(screen.getAllByRole("link")).toHaveLength(17);
     expect(screen.getByRole("link", { name: "Registrar asiento" })).toBeInTheDocument();
   });
 
@@ -86,11 +88,11 @@ describe("App", () => {
     await screen.findByText("Conectado a Delta ERP Contable API");
   });
 
-  it("un administrador ve las tres pantallas fiscales y abre la configuración fiscal", async () => {
+  it("un administrador ve las pantallas fiscales y abre la configuración fiscal", async () => {
     renderApp("Administrador del sistema", "/catalogo/configuracion-fiscal");
 
-    expect(screen.getAllByRole("link")).toHaveLength(16);
-    ["Configuración fiscal", "Impuestos", "Compras y ventas"].forEach((nombre) =>
+    expect(screen.getAllByRole("link")).toHaveLength(18);
+    ["Configuración fiscal", "Impuestos", "Parámetros de retención", "Compras y ventas", "Retenciones"].forEach((nombre) =>
       expect(screen.getByRole("link", { name: nombre })).toBeInTheDocument()
     );
     expect(screen.getByText("Pantalla configuración fiscal")).toBeInTheDocument();
@@ -100,11 +102,15 @@ describe("App", () => {
   it.each([
     ["/catalogo/impuestos", "Catálogo de impuestos"],
     ["/libros/fiscal", "Libro fiscal"],
+    ["/catalogo/parametros-retencion", "Pantalla parámetros de retención"],
+    ["/libros/retenciones", "Reporte de retenciones"],
   ])("un contador abre %s", async (ruta, contenido) => {
     renderApp("Contador", ruta);
 
     expect(screen.getByRole("link", { name: "Impuestos" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Compras y ventas" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Parámetros de retención" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Retenciones" })).toBeInTheDocument();
     expect(screen.getByText(contenido)).toBeInTheDocument();
     await screen.findByText("Conectado a Delta ERP Contable API");
   });
@@ -130,13 +136,17 @@ describe("App", () => {
     ["Vendedor", "/catalogo/configuracion-fiscal", "Configuración fiscal"],
     ["Vendedor", "/catalogo/impuestos", "Impuestos"],
     ["Vendedor", "/libros/fiscal", "Compras y ventas"],
+    ["Vendedor", "/catalogo/parametros-retencion", "Parámetros de retención"],
+    ["Vendedor", "/libros/retenciones", "Retenciones"],
     ["Técnico", "/catalogo/configuracion-fiscal", "Configuración fiscal"],
     ["Técnico", "/catalogo/impuestos", "Impuestos"],
     ["Técnico", "/libros/fiscal", "Compras y ventas"],
+    ["Técnico", "/catalogo/parametros-retencion", "Parámetros de retención"],
+    ["Técnico", "/libros/retenciones", "Retenciones"],
   ])("%s no ve las pestañas fiscales y %s queda bloqueada", async (perfil, ruta, seccion) => {
     renderApp(perfil, ruta);
 
-    ["Configuración fiscal", "Impuestos", "Compras y ventas"].forEach((nombre) =>
+    ["Configuración fiscal", "Impuestos", "Compras y ventas", "Parámetros de retención", "Retenciones"].forEach((nombre) =>
       expect(screen.queryByRole("link", { name: nombre })).toBeNull()
     );
     expect(screen.getByText(`No autorizado: tu perfil (${perfil}) no puede acceder a ${seccion}.`)).toBeInTheDocument();

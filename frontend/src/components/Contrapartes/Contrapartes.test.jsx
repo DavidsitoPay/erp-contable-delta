@@ -8,10 +8,11 @@ vi.mock("../../services/api", () => ({ contrapartesApi: { listar: vi.fn(), crear
 const NIT_VALIDO = "1234567-9";
 const clientes = [
   { id: 1, nombre: "ACME", nit: "123456", direccion: "Calle 1", regimenIva: "GENERAL", esResidente: true, esAgenteRetencionIva: false },
-  { id: 2, nombre: "Otra Empresa", nit: "789012", direccion: "Calle 2", regimenIva: "EXENTO", esResidente: false, esAgenteRetencionIva: true },
+  { id: 2, nombre: "Otra Empresa", nit: "789012", direccion: "Calle 2", regimenIva: "EXENTO", esResidente: false, esAgenteRetencionIva: true, tipoAgenteIva: "SECTOR_PUBLICO" },
 ];
 const proveedores = [
   { id: 3, nombre: "Proveedor A", nit: "345678", direccion: "Calle 3", regimenIva: "PEQUENO_CONTRIBUYENTE", regimenIsr: "SIMPLIFICADO", esResidente: true, esAgenteRetencionIva: false },
+  { id: 4, nombre: "Proveedor Exento", nit: "456789", direccion: "Calle 4", regimenIva: "GENERAL", regimenIsr: "EXENTO", isrFundamento: "Resolución SAT 15-2024", esResidente: true, esAgenteRetencionIva: false },
 ];
 
 function escribir(etiqueta, valor) {
@@ -91,6 +92,8 @@ describe("Contrapartes", () => {
       regimenIsr: "UTILIDADES",
       esResidente: true,
       esAgenteRetencionIva: false,
+      isrFundamento: null,
+      tipoAgenteIva: null,
     });
     await waitFor(() => expect(contrapartesApi.listar).toHaveBeenCalledTimes(2));
   });
@@ -104,11 +107,13 @@ describe("Contrapartes", () => {
     escribir("Régimen de IVA", "EXENTO");
     fireEvent.click(screen.getByLabelText("Residente en Guatemala"));
     fireEvent.click(screen.getByLabelText("Agente de retención de IVA"));
+    expect(screen.getByRole("button", { name: "Agregar cliente" })).toBeDisabled();
+    escribir("Tipo de agente de IVA", "SECTOR_PUBLICO");
     fireEvent.click(screen.getByRole("button", { name: "Agregar cliente" }));
 
     await waitFor(() =>
       expect(contrapartesApi.crear).toHaveBeenCalledWith(
-        expect.objectContaining({ nombre: "Cliente exento", nit: "", regimenIva: "EXENTO", esResidente: false, esAgenteRetencionIva: true })
+        expect.objectContaining({ nombre: "Cliente exento", nit: "", regimenIva: "EXENTO", esResidente: false, esAgenteRetencionIva: true, tipoAgenteIva: "SECTOR_PUBLICO" })
       )
     );
   });
@@ -133,6 +138,8 @@ describe("Contrapartes", () => {
         regimenIsr: "SIMPLIFICADO",
         esResidente: true,
         esAgenteRetencionIva: false,
+        isrFundamento: null,
+        tipoAgenteIva: null,
       })
     );
   });
@@ -213,5 +220,59 @@ describe("Contrapartes", () => {
     fireEvent.click(screen.getByRole("button", { name: "Agregar cliente" }));
 
     expect(await screen.findByText("No se pudo crear el/la cliente.")).toBeInTheDocument();
+  });
+
+  it("el proveedor inicia con régimen de ISR No definido, muestra la ayuda y no ofrece agente de IVA", async () => {
+    render(<Contrapartes />);
+    await mostrarProveedores();
+
+    expect(screen.getByLabelText("Régimen de ISR")).toHaveValue("NO_DEFINIDO");
+    expect(screen.getByText(/Sin régimen definido, las facturas se registran sin retención/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Agente de retención de IVA")).toBeNull();
+  });
+
+  it("un proveedor EXENTO exige el fundamento antes de guardar y lo envía recortado", async () => {
+    render(<Contrapartes />);
+    await mostrarProveedores();
+
+    escribir("Nombre", "Exento SA");
+    escribir("NIT", NIT_VALIDO);
+    escribir("Régimen de ISR", "EXENTO");
+    expect(screen.getByRole("button", { name: "Agregar proveedor" })).toBeDisabled();
+
+    escribir("Fundamento o número de resolución", "  Resolución SAT 15-2024 ");
+    expect(screen.getByRole("button", { name: "Agregar proveedor" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Agregar proveedor" }));
+
+    await waitFor(() =>
+      expect(contrapartesApi.crear).toHaveBeenCalledWith(
+        expect.objectContaining({ tipo: "Proveedor", regimenIsr: "EXENTO", isrFundamento: "Resolución SAT 15-2024", tipoAgenteIva: null })
+      )
+    );
+  });
+
+  it("un cliente agente de IVA exige el tipo de agente", async () => {
+    render(<Contrapartes />);
+    await screen.findByText("ACME");
+
+    fireEvent.click(screen.getByLabelText("Agente de retención de IVA"));
+    expect(screen.getByLabelText("Tipo de agente de IVA")).toBeInTheDocument();
+    escribir("Nombre", "Agente SA");
+    expect(screen.getByRole("button", { name: "Agregar cliente" })).toBeDisabled();
+
+    escribir("Tipo de agente de IVA", "AGENTE_PRIVADO");
+    expect(screen.getByRole("button", { name: "Agregar cliente" })).toBeEnabled();
+  });
+
+  it("la lista muestra el tipo de agente del cliente y el fundamento del proveedor", async () => {
+    render(<Contrapartes />);
+    await screen.findByText("ACME");
+    expect(within(screen.getByRole("table")).getByText("Sector público")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Proveedores" }));
+    await screen.findByText("Proveedor Exento");
+    const fila = within(screen.getByText("Proveedor Exento").closest("tr"));
+    expect(fila.getByText("Exento (EXENTO)")).toBeInTheDocument();
+    expect(fila.getByText("Resolución SAT 15-2024")).toBeInTheDocument();
   });
 });

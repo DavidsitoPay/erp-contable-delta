@@ -1,3 +1,5 @@
+import { hastaONulo, sinVigencia } from "./vigencia";
+
 export const FORMULARIO_VACIO = {
   codigo: "",
   nombre: "",
@@ -22,7 +24,7 @@ export function formularioDesdeImpuesto(impuesto, modo) {
     vigenteDesde: impuesto.vigenteDesde,
     vigenteHasta: impuesto.vigenteHasta ?? "",
   };
-  return modo === "version" ? { ...base, vigenteDesde: "", vigenteHasta: "" } : base;
+  return modo === "version" ? sinVigencia(base) : base;
 }
 
 export function payloadCreacion(form) {
@@ -35,7 +37,7 @@ export function payloadCreacion(form) {
     generaCredito: form.generaCredito,
     articuloLegal: form.articuloLegal.trim(),
     vigenteDesde: form.vigenteDesde,
-    vigenteHasta: form.vigenteHasta || null,
+    vigenteHasta: hastaONulo(form),
   };
 }
 
@@ -50,7 +52,7 @@ export function payloadEdicion(form, impuesto) {
     articuloLegal: form.articuloLegal.trim(),
     nota: impuesto.nota ?? null,
     vigenteDesde: campos.vigenteDesde,
-    vigenteHasta: form.vigenteHasta || null,
+    vigenteHasta: hastaONulo(form),
     activo: impuesto.activo,
   };
 }
