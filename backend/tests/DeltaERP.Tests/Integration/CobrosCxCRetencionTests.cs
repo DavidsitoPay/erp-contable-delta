@@ -266,9 +266,9 @@ public class CobrosCxCRetencionTests
         var v = await PrepararVentaAsync();
         var vendedor = _pg.CreateApiClient(v.E.UsuarioId, Roles.Vendedor);
 
-        var (estado, _) = await vendedor.EnviarAsync(RutaPagosCxC, CobroDe(v, 33600m, RetencionIva(900m)));
+        var response = await vendedor.PostAsJsonAsync(RutaPagosCxC, CobroDe(v, 33600m, RetencionIva(900m)));
 
-        Assert.Equal(HttpStatusCode.Forbidden, estado);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]

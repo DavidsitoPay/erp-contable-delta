@@ -163,9 +163,10 @@ public class RetencionService
         {
             advertencias.Add(AvisoRevision(evaluacion));
         }
+        var aplicado = evaluacion.Estado == EstadoRetencionIsr.PendienteRevision ? null : parametro;
         var vista = new VistaPreviaIsr(
-            evaluacion.Estado.ToString(), evaluacion.Motivo, evaluacion.Base, parametro?.TasaBase, parametro?.TramoLimite,
-            parametro?.TasaExcedente, parametro?.UmbralMinimo, evaluacion.Retencion, montoTotal - evaluacion.Retencion, parametro?.Id,
+            evaluacion.Estado.ToString(), evaluacion.Motivo, evaluacion.Base, aplicado?.TasaBase, aplicado?.TramoLimite,
+            aplicado?.TasaExcedente, aplicado?.UmbralMinimo, evaluacion.Retencion, montoTotal - evaluacion.Retencion, aplicado?.Id,
             true, advertencias);
         return (vista, null);
     }
