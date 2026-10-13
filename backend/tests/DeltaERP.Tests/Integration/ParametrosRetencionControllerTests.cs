@@ -15,6 +15,7 @@ public class ParametrosRetencionControllerTests
     private const string Ruta = "/api/retenciones/parametros";
     private const int IdInexistente = 2_000_000_000;
     private const string SqlIdSembrado = "SELECT id FROM parametroretencion WHERE codigo = 'ISR_PROVEEDOR_ROS' AND vigente_desde = DATE '2014-01-01'";
+    private static readonly string[] CodigosIvaCliente = { "IVA_CLIENTE_AGENTE_PRIVADO", "IVA_CLIENTE_SECTOR_PUBLICO" };
 
     private readonly PostgresFixture _pg;
 
@@ -106,7 +107,7 @@ public class ParametrosRetencionControllerTests
         Assert.Equal((5, JsonValueKind.Null, "Referencial, validar con asesor"), (
             fila.GetProperty("diaLimite").GetInt32(), fila.GetProperty("tasaBase").ValueKind, fila.GetProperty("nota").GetString()));
         Assert.Equal(
-            new[] { "IVA_CLIENTE_AGENTE_PRIVADO", "IVA_CLIENTE_SECTOR_PUBLICO" },
+            CodigosIvaCliente,
             iva.EnumerateArray().Select(p => p.GetProperty("codigo").GetString()).Order().ToArray());
         Assert.Empty(futuro.EnumerateArray());
     }

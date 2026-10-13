@@ -15,7 +15,8 @@ namespace DeltaERP.Api.Controllers;
 [Authorize]
 public class ImpuestosController : ControllerBase
 {
-    private static readonly string MensajeMismaFecha = VigenciaRules.MensajeMismaFecha("impuesto");
+    private const string Entidad = "impuesto";
+    private static readonly string MensajeMismaFecha = VigenciaRules.MensajeMismaFecha(Entidad);
 
     private readonly DeltaErpDbContext _db;
     private readonly AuditoriaService _auditoria;
@@ -75,7 +76,7 @@ public class ImpuestosController : ControllerBase
 
         var impuesto = new Impuesto();
         Aplicar(impuesto, datos);
-        var conflicto = await this.GuardarAuditadoAsync(_auditoria, "crear_impuesto", "impuesto", async () =>
+        var conflicto = await this.GuardarAuditadoAsync(_auditoria, "crear_impuesto", Entidad,async () =>
         {
             _db.Impuestos.Add(impuesto);
             await _db.SaveChangesAsync();
@@ -113,7 +114,7 @@ public class ImpuestosController : ControllerBase
         }
 
         Aplicar(impuesto, datos);
-        var conflicto = await this.GuardarAuditadoAsync(_auditoria, "actualizar_impuesto", "impuesto", async () =>
+        var conflicto = await this.GuardarAuditadoAsync(_auditoria, "actualizar_impuesto", Entidad,async () =>
         {
             await _db.SaveChangesAsync();
             return $"Impuesto {impuesto.Codigo} (id {id}) actualizado, tasa {impuesto.Tasa}, activo {impuesto.Activo}";
@@ -132,7 +133,7 @@ public class ImpuestosController : ControllerBase
         }
 
         impuesto.Activo = false;
-        await this.GuardarAuditadoAsync(_auditoria, "desactivar_impuesto", "impuesto", async () =>
+        await this.GuardarAuditadoAsync(_auditoria, "desactivar_impuesto", Entidad,async () =>
         {
             await _db.SaveChangesAsync();
             return $"Impuesto {impuesto.Codigo} (id {id}) desactivado";
