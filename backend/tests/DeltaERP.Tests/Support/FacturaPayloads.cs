@@ -74,6 +74,22 @@ public static class FacturaPayloads
         return (e, pg.CreateApiClient(e.UsuarioId));
     }
 
+    public static Dictionary<string, object?> EnMoneda(this Dictionary<string, object?> payload, string codigo)
+    {
+        payload["monedaCodigo"] = codigo;
+        return payload;
+    }
+
+    public static Dictionary<string, object?> CxcEn(
+        EscenarioMe m, string moneda, DateOnly fecha, decimal precio, int? impuestoId = null, int? clienteId = null) =>
+        Cxc(m.E, $"F-{TestData.Sufijo()}", new[] { Linea(impuestoId ?? m.E.ImpuestoExentoId, m.E.CuentaIngreso, precio: precio) }, clienteId)
+            .EnFecha(fecha).EnMoneda(moneda);
+
+    public static Dictionary<string, object?> CxpEn(
+        EscenarioMe m, string moneda, DateOnly fecha, decimal precio, int? proveedorId = null, int? impuestoId = null) =>
+        Cxp(m.E, $"P-{TestData.Sufijo()}", new[] { Linea(impuestoId ?? m.E.ImpuestoExentoId, m.E.CuentaGasto, precio: precio) }, proveedorId)
+            .EnFecha(fecha).EnMoneda(moneda);
+
     public static Dictionary<string, object?> Dte() => new()
     {
         ["dteUuid"] = Guid.NewGuid(),

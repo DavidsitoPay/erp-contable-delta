@@ -68,7 +68,54 @@ describe("calcularLinea", () => {
   it("sin impuesto seleccionado no calcula IVA", () => {
     const r = calcularLinea({ cantidad: 1, precioUnitario: 100, impuesto: null });
 
-    expect(r).toEqual({ montoLinea: 100, base: 100, iva: 0, ivaAcreditable: false });
+    expect(r).toEqual({ montoLineaOriginal: 100, montoLinea: 100, base: 100, iva: 0, ivaAcreditable: false });
+  });
+
+  it("convierte el monto original a quetzales con el tipo de cambio", () => {
+    const r = calcularLinea({ cantidad: 1, precioUnitario: 1120, impuesto: iva12, tipoCambio: 7.6 });
+
+    expect(r.montoLineaOriginal).toBe(1120);
+    expect(r.montoLinea).toBe(8512);
+    expect(r.iva).toBe(912);
+    expect(r.base).toBe(7600);
+  });
+
+  it("sin tipo de cambio el monto en quetzales es el original", () => {
+    const r = calcularLinea({ cantidad: 1, precioUnitario: 100, impuesto: exento });
+
+    expect(r.montoLineaOriginal).toBe(r.montoLinea);
+  });
+});
+
+describe("calcularResumen con tipo de cambio", () => {
+  it("expone el total original y el total en quetzales", () => {
+    const r = calcularResumen([{ cantidad: 1, precioUnitario: 1120, impuesto: iva12 }], 7.6);
+
+    expect(r.totalOriginal).toBe(1120);
+    expect(r.total).toBe(8512);
+    expect(r.iva).toBe(912);
+    expect(r.base).toBe(7600);
+  });
+
+  it("redondea cada línea antes de sumar", () => {
+    const r = calcularResumen(
+      [
+        { cantidad: 1, precioUnitario: 33.33, impuesto: exento },
+        { cantidad: 1, precioUnitario: 33.33, impuesto: exento },
+      ],
+      7.64157,
+    );
+
+    expect(r.lineas.map((l) => l.montoLinea)).toEqual([254.69, 254.69]);
+    expect(r.total).toBe(509.38);
+    expect(r.totalOriginal).toBe(66.66);
+  });
+
+  it("sin líneas el resumen queda en cero", () => {
+    const r = calcularResumen([]);
+
+    expect(r.total).toBe(0);
+    expect(r.totalOriginal).toBe(0);
   });
 });
 

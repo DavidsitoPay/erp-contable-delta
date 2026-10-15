@@ -36,24 +36,30 @@ public class ValidacionContable
         return await _db.DocumentosCxP.FindAsync(id);
     }
 
-    public async Task<decimal> ObtenerSaldoAsync(PerfilFactura perfil, int id) =>
-        perfil.EsVenta
-            ? await _db.SaldosDocumentoCxC.Where(s => s.DocumentoId == id).Select(s => s.SaldoPendiente).FirstOrDefaultAsync()
-            : await _db.SaldosDocumentoCxP.Where(s => s.DocumentoId == id).Select(s => s.SaldoPendiente).FirstOrDefaultAsync();
+    public async Task<(decimal Saldo, decimal SaldoGtq)> ObtenerSaldosAsync(PerfilFactura perfil, int id)
+    {
+        var saldos = perfil.EsVenta
+            ? await _db.SaldosDocumentoCxC.Where(s => s.DocumentoId == id).Select(s => new { s.SaldoPendiente, s.SaldoPendienteGtq }).FirstOrDefaultAsync()
+            : await _db.SaldosDocumentoCxP.Where(s => s.DocumentoId == id).Select(s => new { s.SaldoPendiente, s.SaldoPendienteGtq }).FirstOrDefaultAsync();
+        return saldos is null ? (0m, 0m) : (saldos.SaldoPendiente, saldos.SaldoPendienteGtq);
+    }
 
     public async Task<FacturaDetalle> ObtenerDetalleAsync(IDocumentoFactura documento, PerfilFactura perfil)
     {
-        var saldo = await ObtenerSaldoAsync(perfil, documento.Id);
-        var referencias = await ObtenerReferenciasAsync(documento, saldo, perfil);
+        var (saldo, saldoGtq) = await ObtenerSaldosAsync(perfil, documento.Id);
+        var referencias = await ObtenerReferenciasAsync(documento, saldo, saldoGtq, perfil);
         return FacturaDetalle.Desde(documento, referencias, perfil.ClaveTercero, documento.TerceroId);
     }
 
-    private async Task<ReferenciasDetalle> ObtenerReferenciasAsync(IDocumentoFactura documento, decimal saldoPendiente, PerfilFactura perfil)
+    private async Task<ReferenciasDetalle> ObtenerReferenciasAsync(
+        IDocumentoFactura documento, decimal saldoPendiente, decimal saldoPendienteGtq, PerfilFactura perfil)
     {
         var origen = documento.DocumentoOrigenId is { } origenId ? await ObtenerDocumentoAsync(perfil.EsVenta, origenId) : null;
         var retencion = perfil.EsVenta ? null : await ObtenerRetencionIsrAsync(documento.Id);
+        var moneda = await _db.Monedas.AsNoTracking().FirstAsync(m => m.Id == documento.MonedaId);
         return new ReferenciasDetalle(
-            saldoPendiente, await ObtenerCuentasAsync(documento.Lineas), await ObtenerImpuestosAsync(documento.Lineas), origen, retencion);
+            saldoPendiente, await ObtenerCuentasAsync(documento.Lineas), await ObtenerImpuestosAsync(documento.Lineas), origen, retencion,
+            saldoPendienteGtq, moneda.Codigo);
     }
 
     public async Task<Retencion?> ObtenerRetencionIsrAsync(int documentoCxpId) =>

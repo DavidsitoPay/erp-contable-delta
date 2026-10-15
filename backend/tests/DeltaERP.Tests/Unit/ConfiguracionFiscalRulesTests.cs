@@ -72,4 +72,43 @@ public class ConfiguracionFiscalRulesTests
 
         Assert.Equal(esperado, ConfiguracionFiscalRules.TipoAgenteNormalizado(datos));
     }
+
+    [Theory]
+    [InlineData(14, 14, null, null)]
+    [InlineData(null, 15, null, 15)]
+    [InlineData(null, null, 10, 17)]
+    [InlineData(12, null, null, null)]
+    public void Validar_CuentasCambiariasDuplicadas_Error(int? difGanancia, int? difPerdida, int? revalGanancia, int? revalPerdida)
+    {
+        var datos = Valida() with
+        {
+            CuentaIsrRetenidoPagarId = 12,
+            CuentaIvaRetenidoClientesId = 13,
+            CuentaDifGananciaRealizadaId = difGanancia,
+            CuentaDifPerdidaRealizadaId = difPerdida,
+            CuentaRevalGananciaId = revalGanancia,
+            CuentaRevalPerdidaId = revalPerdida,
+        };
+
+        Assert.Equal(
+            "Las cuentas de diferencial cambiario y de revaluación deben ser distintas entre sí y de las cuentas de IVA y de retención.",
+            ConfiguracionFiscalRules.Validar(datos));
+    }
+
+    [Fact]
+    public void Validar_CuentasCambiariasDistintasONulas_EsValido()
+    {
+        var datos = Valida() with
+        {
+            CuentaIsrRetenidoPagarId = 12,
+            CuentaIvaRetenidoClientesId = 13,
+            CuentaDifGananciaRealizadaId = 14,
+            CuentaDifPerdidaRealizadaId = 15,
+            CuentaRevalGananciaId = 16,
+            CuentaRevalPerdidaId = 17,
+        };
+
+        Assert.Null(ConfiguracionFiscalRules.Validar(datos));
+        Assert.Null(ConfiguracionFiscalRules.Validar(Valida()));
+    }
 }

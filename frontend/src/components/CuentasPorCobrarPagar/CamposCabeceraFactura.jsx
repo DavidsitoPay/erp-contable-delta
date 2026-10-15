@@ -1,13 +1,15 @@
-import { formatoMoneda } from "../../utils/formato";
+import { monedaDe } from "../../utils/cambio";
+import { formatoImporte } from "../../utils/formato";
+import SelectMoneda from "../SelectMoneda";
 
 const TIPOS_DOCUMENTO = ["Factura", "NotaCredito", "NotaDebito"];
 
 function etiquetaOrigen(documento) {
   const legado = documento.calculoLegado ? " (legado)" : "";
-  return `${documento.numero}${legado} — saldo ${formatoMoneda.format(documento.saldoPendiente)}`;
+  return `${documento.numero}${legado} — saldo ${formatoImporte(documento.saldoPendiente, monedaDe(documento))}`;
 }
 
-function CamposCabeceraFactura({ form, onCambio, config, contrapartes, periodosAbiertos, cuentasControl, origenes, esNotaCredito }) {
+function CamposCabeceraFactura({ form, onCambio, config, contrapartes, periodosAbiertos, cuentasControl, origenes, esNotaCredito, moneda }) {
   const { campoContraparteId, etiquetaContraparte, etiquetaCuentaControl } = config;
   const cambiar = (campo) => (e) => onCambio({ ...form, [campo]: e.target.value });
   const origenVigente = origenes.some((o) => String(o.id) === form.documentoOrigenId) ? form.documentoOrigenId : "";
@@ -18,6 +20,7 @@ function CamposCabeceraFactura({ form, onCambio, config, contrapartes, periodosA
       <select className="select" aria-label="Tipo de documento" value={form.tipoDocumento} onChange={cambiar("tipoDocumento")}>
         {TIPOS_DOCUMENTO.map((t) => <option key={t} value={t}>{t}</option>)}
       </select>
+      <SelectMoneda valor={moneda} onChange={(codigo) => onCambio({ ...form, monedaCodigo: codigo })} deshabilitado={esNotaCredito} />
       <select className="select" aria-label={etiquetaContraparte} value={form[campoContraparteId]} onChange={cambiar(campoContraparteId)} required>
         <option value="">Selecciona {etiquetaContraparte.toLowerCase()}</option>
         {contrapartes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { conciliacionesApi, movimientosTesoreriaApi } from "../../services/api";
+import { formatoImporte } from "../../utils/formato";
 import ConciliacionDetalle from "./ConciliacionDetalle";
 
 vi.mock("../../services/api", () => ({
@@ -229,4 +230,13 @@ describe("ConciliacionDetalle", () => {
     expect(screen.getByText("Cargando conciliación...")).toBeInTheDocument();
     expect(await screen.findByText("No se pudo cargar la conciliación.")).toBeInTheDocument();
   });
+
+  it("muestra los importes en la moneda de la cuenta", async () => {
+    conciliacionesApi.obtener.mockResolvedValue(detalle({ monedaCodigo: "USD" }));
+    await renderDetalle();
+
+    expect(screen.getByText("Moneda de la cuenta: USD")).toBeInTheDocument();
+    expect(screen.getByText(`Diferencia: ${formatoImporte(0, "USD")}`)).toBeInTheDocument();
+  });
+
 });

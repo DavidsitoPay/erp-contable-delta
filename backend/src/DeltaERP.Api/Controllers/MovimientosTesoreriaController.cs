@@ -43,7 +43,10 @@ public class MovimientosTesoreriaController : ControllerBase
                 m.Id, m.CuentaBancariaId, m.Fecha, m.Tipo, m.Monto, m.Descripcion, m.Referencia, m.Origen, m.AsientoId,
                 m.TransferenciaId, m.ReciboPagoId, m.PagoProveedorId,
                 _db.DetallesConciliacion.Any(d => d.MovimientoId == m.Id
-                    && _db.ConciliacionesBancarias.Any(c => c.Id == d.ConciliacionId && c.Estado == ConciliacionBancaria.EstadoConciliado))))
+                    && _db.ConciliacionesBancarias.Any(c => c.Id == d.ConciliacionId && c.Estado == ConciliacionBancaria.EstadoConciliado)),
+                m.MontoGtq,
+                m.TipoCambio,
+                _db.CuentasBancarias.Where(c => c.Id == m.CuentaBancariaId).Select(c => c.MonedaId).FirstOrDefault()))
             .ToListAsync();
         return Ok(movimientos);
     }
@@ -53,7 +56,7 @@ public class MovimientosTesoreriaController : ControllerBase
     {
         var (movimiento, error) = await _tesoreria.RegistrarManualAsync(solicitud, this.UsuarioId());
         return error is not null
-            ? BadRequest(new { error })
+            ? this.Fallo(error)
             : CreatedAtAction(nameof(Listar), new { cuentaBancariaId = movimiento!.CuentaBancariaId }, movimiento);
     }
 
@@ -62,7 +65,7 @@ public class MovimientosTesoreriaController : ControllerBase
     {
         var (resultado, error) = await _tesoreria.RegistrarTransferenciaAsync(solicitud, this.UsuarioId());
         return error is not null
-            ? BadRequest(new { error })
+            ? this.Fallo(error)
             : CreatedAtAction(nameof(Listar), new { cuentaBancariaId = solicitud.CuentaOrigenId }, resultado);
     }
 }

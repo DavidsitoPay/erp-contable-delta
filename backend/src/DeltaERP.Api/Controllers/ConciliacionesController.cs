@@ -29,12 +29,16 @@ public class ConciliacionesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> Listar([FromQuery] int? cuentaBancariaId, [FromQuery] string? estado) =>
-        Ok(await _db.ResumenesConciliacion
+    public async Task<IActionResult> Listar([FromQuery] int? cuentaBancariaId, [FromQuery] string? estado)
+    {
+        var resumenes = await _db.ResumenesConciliacion
             .Where(r => cuentaBancariaId == null || r.CuentaBancariaId == cuentaBancariaId)
             .Where(r => estado == null || r.Estado == estado)
             .OrderByDescending(r => r.Id)
-            .ToListAsync());
+            .ToListAsync();
+        await PonerMonedaAsync(resumenes);
+        return Ok(resumenes);
+    }
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> Obtener(int id)
@@ -250,8 +254,29 @@ public class ConciliacionesController : ControllerBase
         return fallo ?? Ok(await ObtenerResumenAsync(id));
     }
 
-    private Task<ConciliacionResumen?> ObtenerResumenAsync(int id) =>
-        _db.ResumenesConciliacion.FirstOrDefaultAsync(r => r.Id == id);
+    private async Task<ConciliacionResumen?> ObtenerResumenAsync(int id)
+    {
+        var resumen = await _db.ResumenesConciliacion.FirstOrDefaultAsync(r => r.Id == id);
+        if (resumen is not null)
+        {
+            await PonerMonedaAsync([resumen]);
+        }
+        return resumen;
+    }
+
+    private async Task PonerMonedaAsync(IReadOnlyCollection<ConciliacionResumen> resumenes)
+    {
+        var cuentas = resumenes.Select(r => r.CuentaBancariaId).Distinct().ToList();
+        var codigos = await (
+            from c in _db.CuentasBancarias
+            join m in _db.Monedas on c.MonedaId equals m.Id
+            where cuentas.Contains(c.Id)
+            select new { c.Id, m.Codigo }).ToDictionaryAsync(x => x.Id, x => x.Codigo);
+        foreach (var resumen in resumenes)
+        {
+            resumen.MonedaCodigo = codigos.GetValueOrDefault(resumen.CuentaBancariaId);
+        }
+    }
 
     private async Task<(ConciliacionBancaria? Conciliacion, IActionResult? Fallo)> CargarPendienteAsync(int id, string mensajeNoPendiente)
     {

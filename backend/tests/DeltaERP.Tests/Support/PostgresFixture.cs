@@ -24,12 +24,14 @@ public sealed class PostgresFixture : IAsyncLifetime
         "13_fiscal_iva.sql",
         "14_rol_api.sql",
         "15_retenciones.sql",
+        "16_multimoneda.sql",
     };
 
     public NpgsqlDataSource DataSource { get; private set; } = null!;
     public NpgsqlDataSource ApiDataSource { get; private set; } = null!;
     public ApiFactory Factory { get; private set; } = null!;
     public TestData Data { get; private set; } = null!;
+    public FakeBanguatClient Banguat => Factory.Banguat;
 
     public async Task InitializeAsync()
     {

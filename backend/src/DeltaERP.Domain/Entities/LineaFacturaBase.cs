@@ -10,6 +10,7 @@ public abstract class LineaFacturaBase : ILineaFactura
     public string TipoBienServicio { get; set; } = string.Empty;
     public decimal TasaAplicada { get; set; }
     public decimal MontoLinea { get; set; }
+    public decimal MontoLineaOriginal { get; set; }
     public decimal MontoBase { get; set; }
     public decimal MontoIva { get; set; }
     public int? CentroCostoId { get; set; }

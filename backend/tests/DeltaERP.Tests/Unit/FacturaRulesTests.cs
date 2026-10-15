@@ -135,4 +135,31 @@ public class FacturaRulesTests
 
         Assert.Equal(uuid, documento.DteUuid);
     }
+
+    [Fact]
+    public void PrepararNuevo_ConTipoCambio_FijaMonedaTasaYOriginales()
+    {
+        var documento = Documento("Factura", Linea(1m, 1120m));
+        var resumen = MotorFiscal.Calcular([new EntradaLinea(1m, 1120m, new ParametroImpuesto(1, TipoImpuesto.IvaGeneral, 12m, true))], 7.60m);
+        var cambio = new TipoCambioAplicable(2, "USD", 88, 7.60m, "Banguat", false, new DateOnly(2026, 10, 9));
+
+        FacturaRules.PrepararNuevo(documento, resumen, cambio);
+
+        Assert.Equal(
+            (7.60m, 2, 88, "Banguat", false, 1120m, 8512m),
+            (documento.TipoCambioAplicado, documento.MonedaId, documento.TipoCambioId, documento.TipoCambioFuente, documento.TipoCambioArrastrado, documento.MontoTotalOriginal, documento.MontoTotal));
+        Assert.Equal((1120m, 8512m), (documento.Lineas[0].MontoLineaOriginal, documento.Lineas[0].MontoLinea));
+    }
+
+    [Fact]
+    public void PrepararNuevo_SinCambio_DejaTipoCambioUnoYOriginalIgualAlTotal()
+    {
+        var documento = Documento("Factura", Linea(2m, 100m));
+        var resumen = MotorFiscal.Calcular([new EntradaLinea(2m, 100m, new ParametroImpuesto(1, TipoImpuesto.IvaGeneral, 12m, true))]);
+
+        FacturaRules.PrepararNuevo(documento, resumen);
+
+        Assert.Equal((1m, documento.MontoTotal), (documento.TipoCambioAplicado, documento.MontoTotalOriginal));
+        Assert.Equal(documento.Lineas[0].MontoLinea, documento.Lineas[0].MontoLineaOriginal);
+    }
 }

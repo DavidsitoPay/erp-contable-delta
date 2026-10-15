@@ -65,6 +65,24 @@ public static class RetencionPayloads
         aplicaciones,
     };
 
+    public static object AplicacionMe(int documentoId, decimal montoAplicado, decimal? valorEfectivoGtq = null) => new
+    {
+        documentoId,
+        montoAplicado,
+        valorEfectivoGtq,
+    };
+
+    public static object PagoProveedor(int proveedorId, int cuentaBancariaId, string fecha, params object[] aplicaciones) => new
+    {
+        proveedorId,
+        fecha,
+        metodoPago = "Transferencia",
+        cuentaBancariaId,
+        aplicaciones,
+    };
+
+    public static string Dia(this DateOnly fecha) => fecha.ToString("yyyy-MM-dd");
+
     public static async Task<(int FacturaId, int? RetencionId, JsonElement Cuerpo)> RegistrarCompraAsync(
         this HttpClient client, Dictionary<string, object?> payload)
     {

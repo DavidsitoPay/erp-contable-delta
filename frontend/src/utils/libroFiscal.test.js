@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COLUMNAS_CSV, COLUMNAS_TABLA, csvLibro, nombreArchivoCsv } from "./libroFiscal";
+import { COLUMNAS_CSV, COLUMNAS_TABLA, csvLibro, nombreArchivoCsv, valoresMoneda } from "./libroFiscal";
 
 const reporte = {
   filas: [
@@ -34,6 +34,9 @@ describe("libroFiscal", () => {
       "referenciaNumero",
       "referenciaUuid",
       "estado",
+      "moneda",
+      "importeOriginal",
+      "tipoCambio",
     ]);
   });
 
@@ -46,10 +49,22 @@ describe("libroFiscal", () => {
     const lineas = csvLibro(reporte).split("\r\n");
 
     expect(lineas[0]).toBe(
-      "Fecha,Tipo,Serie,Número,NIT,Nombre,Base bienes,Base servicios,Exento / no afecto,IVA,Total,Número interno,Referencia serie,Referencia número,Referencia UUID,Estado"
+      "Fecha,Tipo,Serie,Número,NIT,Nombre,Base bienes,Base servicios,Exento / no afecto,IVA,Total,Número interno,Referencia serie,Referencia número,Referencia UUID,Estado,Moneda,Importe original,Tipo de cambio"
     );
-    expect(lineas[1]).toBe('2026-10-03,NotaCredito,A1,uuid-nc,CF,"Casa, S.A.",0.00,-89.29,0.00,-10.71,-100.00,NC-1,A1,999,uuid-origen,Vigente');
-    expect(lineas[2]).toBe(",,,,,TOTAL,0.00,-89.29,0.00,-10.71,-100.00,,,,,");
+    expect(lineas[1]).toBe('2026-10-03,NotaCredito,A1,uuid-nc,CF,"Casa, S.A.",0.00,-89.29,0.00,-10.71,-100.00,NC-1,A1,999,uuid-origen,Vigente,GTQ,-100.00,1.000000');
+    expect(lineas[2]).toBe(",,,,,TOTAL,0.00,-89.29,0.00,-10.71,-100.00,,,,,,,,");
     expect(lineas).toHaveLength(3);
+  });
+
+  it("csvLibro muestra el importe original y el tipo de cambio de una factura en dólares", () => {
+    const usd = { ...reporte, filas: [{ ...reporte.filas[0], moneda: "USD", importeOriginal: 1120, tipoCambio: 7.6, total: 8512 }] };
+
+    const lineas = csvLibro(usd).split("\r\n");
+
+    expect(lineas[1].endsWith(",Vigente,USD,1120.00,7.600000")).toBe(true);
+  });
+
+  it("valoresMoneda usa GTQ y tipo de cambio 1 cuando la fila no trae moneda", () => {
+    expect(valoresMoneda({ total: 50 })).toEqual({ moneda: "GTQ", importeOriginal: 50, tipoCambio: 1 });
   });
 });

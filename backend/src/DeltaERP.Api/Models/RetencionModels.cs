@@ -81,7 +81,9 @@ public sealed record SugerenciaIvaRespuesta(
 
 public sealed record RetencionCobroRespuesta(int RetencionId, int DocumentoId, decimal Monto, int? ConstanciaId);
 
-public sealed record AplicacionCobroRespuesta(int Id, int ReciboPagoId, int DocumentoId, decimal MontoAplicado);
+public sealed record AplicacionCobroRespuesta(
+    int Id, int ReciboPagoId, int DocumentoId, decimal MontoAplicado,
+    decimal MontoAplicadoGtq, decimal ValorGtq, decimal DiferencialGtq, decimal? TipoCambioPago);
 
 public sealed record ReciboCobroRespuesta(
     int Id,
@@ -94,7 +96,11 @@ public sealed record ReciboCobroRespuesta(
     int? CuentaBancariaId,
     IReadOnlyList<AplicacionCobroRespuesta> Aplicaciones,
     IReadOnlyList<RetencionCobroRespuesta> Retenciones,
-    IReadOnlyList<string> Advertencias);
+    IReadOnlyList<string> Advertencias,
+    string Moneda,
+    decimal MontoTotalGtq,
+    decimal MontoCuenta,
+    DiferencialRealizadoDto DiferencialRealizado);
 
 public sealed record ParametroRetencionRespuesta(
     int Id,

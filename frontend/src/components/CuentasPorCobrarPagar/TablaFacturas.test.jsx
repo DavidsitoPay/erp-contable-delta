@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { formatoImporte, formatoMoneda, formatoQuetzales } from "../../utils/formato";
 import TablaFacturas from "./TablaFacturas";
 
 const facturas = [
@@ -73,5 +74,34 @@ describe("TablaFacturas con retención de ISR", () => {
 
     expect(screen.queryByRole("columnheader", { name: "Retención ISR" })).toBeNull();
     expect(screen.queryByText("Por revisar")).toBeNull();
+  });
+
+  describe("facturas en moneda extranjera", () => {
+    const facturaUsd = { id: 30, numero: "F-USD", clienteNombre: "Exportadora", fecha: "2026-10-12", fechaVencimiento: "2026-11-12", moneda: "USD", montoTotalOriginal: 1120, tipoCambioAplicado: 7.6, tipoCambioFuente: "Banguat", tipoCambioArrastrado: false, montoBase: 7600, montoIva: 912, montoTotal: 8512, saldoPendiente: 720, saldoPendienteGtq: 5472, dteSerie: null, dteNumero: null, calculoLegado: false, estado: "Vigente" };
+
+    it("muestra la moneda, la tasa, el total original, el saldo y su equivalente en libros", () => {
+      render(<TablaFacturas facturas={[facturaUsd]} etiquetaContraparte="Cliente" campoContraparteNombre="clienteNombre" />);
+
+      const fila = within(screen.getByText("F-USD").closest("tr"));
+      expect(fila.getByText("USD")).toBeInTheDocument();
+      expect(fila.getByText("7.600000 (Banguat)")).toBeInTheDocument();
+      expect(fila.getByText(formatoImporte(1120, "USD"))).toBeInTheDocument();
+      expect(fila.getByText(formatoImporte(720, "USD"), { exact: false })).toBeInTheDocument();
+      expect(fila.getByText(`${formatoQuetzales(5472)} en libros`)).toBeInTheDocument();
+      expect(fila.getByText(formatoMoneda.format(8512))).toBeInTheDocument();
+    });
+
+    it("indica el arrastre de la tasa", () => {
+      render(<TablaFacturas facturas={[{ ...facturaUsd, tipoCambioArrastrado: true }]} etiquetaContraparte="Cliente" campoContraparteNombre="clienteNombre" />);
+
+      expect(screen.getByText("7.600000 (Banguat (arrastrado))")).toBeInTheDocument();
+    });
+
+    it("una factura en GTQ no muestra equivalente en libros ni total original", () => {
+      render(<TablaFacturas facturas={facturas} etiquetaContraparte="Cliente" campoContraparteNombre="clienteNombre" />);
+
+      expect(screen.queryByText(/en libros/)).toBeNull();
+      expect(within(screen.getByText("F-1").closest("tr")).getAllByText("GTQ")).toHaveLength(1);
+    });
   });
 });

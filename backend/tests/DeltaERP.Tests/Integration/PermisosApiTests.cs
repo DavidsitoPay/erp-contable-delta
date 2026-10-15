@@ -26,7 +26,7 @@ public class PermisosApiTests
         ["usuario"] = "S",
         ["bitacoraauditoria"] = "I",
         ["moneda"] = "S",
-        ["historialtipocambio"] = "",
+        ["historialtipocambio"] = "SIU",
         ["periodocontable"] = "SIU",
         ["contraparte"] = "SIU",
         ["cuentacontable"] = "SIU",
@@ -53,6 +53,8 @@ public class PermisosApiTests
         ["parametroretencion"] = "SIU",
         ["retencion"] = "SI",
         ["constanciaretencion"] = "SIU",
+        ["revaluacion"] = "SIU",
+        ["revaluacionpartida"] = "SI",
     };
 
     private static readonly (char Letra, string Privilegio)[] Privilegios =
@@ -80,6 +82,10 @@ public class PermisosApiTests
     [InlineData("DELETE FROM retencion WHERE false")]
     [InlineData("DELETE FROM parametroretencion WHERE false")]
     [InlineData("DELETE FROM constanciaretencion WHERE false")]
+    [InlineData("DELETE FROM historialtipocambio WHERE false")]
+    [InlineData("DELETE FROM revaluacion WHERE false")]
+    [InlineData("UPDATE revaluacionpartida SET id = id WHERE false")]
+    [InlineData("DELETE FROM revaluacionpartida WHERE false")]
     [InlineData("SELECT count(*) FROM bitacoraauditoria")]
     [InlineData("SELECT count(*) FROM saldocuentaperiodo")]
     [InlineData("INSERT INTO usuario (nombre) VALUES ('x')")]

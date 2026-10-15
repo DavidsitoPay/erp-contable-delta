@@ -17,3 +17,22 @@ export function formatoFechaHora(valor) {
   return new Date(valor).toLocaleString("es-GT");
 }
 export const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+export function formatoImporte(valor, moneda) {
+  const texto = formatoMoneda.format(valor ?? 0);
+  return !moneda || moneda === "GTQ" ? texto : `${moneda} ${texto}`;
+}
+
+export function formatoQuetzales(valor) {
+  return `Q${formatoMoneda.format(valor ?? 0)}`;
+}
+
+function signoDe(valor) {
+  if (valor > 0) return "+";
+  if (valor < 0) return "-";
+  return "";
+}
+
+export function formatoDiferencial(valor) {
+  return `${signoDe(valor)}${formatoQuetzales(Math.abs(valor))}`;
+}

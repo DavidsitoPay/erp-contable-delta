@@ -7,4 +7,5 @@ public class SaldoCuentaBancaria
     public string Banco { get; set; } = string.Empty;
     public string Numero { get; set; } = string.Empty;
     public decimal Saldo { get; set; }
+    public int MonedaId { get; set; }
 }

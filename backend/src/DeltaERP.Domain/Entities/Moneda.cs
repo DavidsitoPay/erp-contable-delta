@@ -7,4 +7,5 @@ public class Moneda
     public string Nombre { get; set; } = string.Empty;
     public bool EsFuncional { get; set; }
     public bool Activa { get; set; } = true;
+    public short? CodigoBanguat { get; set; }
 }

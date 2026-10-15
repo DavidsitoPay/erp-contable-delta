@@ -146,7 +146,34 @@ Si el proveedor no tiene régimen definido o es no residente, la factura se regi
 - La retención de ISR se reconoce al registrar la factura (no al pagar), con el saldo neto como fuente única; `retencion` es append-only por privilegios y guarda una instantánea (base, tasa, parámetro, cuenta, montos).
 - Los parámetros de retención son una tabla propia (no se reutiliza `impuesto`) con el mismo patrón de vigencia y los mismos códigos de error `55000`.
 - Un tercero sin datos de retención se advierte y se marca para revisión; no se bloquea el registro.
-- Pendiente para I3: retención a no residentes (art. 104), multimoneda con tipo de cambio de Banguat, retención de IVA como agente y a pequeño contribuyente, ajuste automático por nota de crédito posterior y enteramiento.
+- Pendiente para I3b: retención a no residentes (art. 104), ajuste de la retención por nota de crédito posterior y enteramiento.
+- Fuera de alcance: retención de IVA como agente y a pequeño contribuyente, porque Delta no es agente de retención de IVA.
+
+## Fiscal: multimoneda y diferencial cambiario (M10, I3a)
+
+Migración `database/16_multimoneda.sql`. Alcance implementado: documentos de CxC y CxP en USD o EUR con su equivalente en GTQ, tipo de cambio de Banguat con respaldo manual, diferencial cambiario realizado en cobros, pagos y transferencias, cuentas bancarias en USD, revaluación de fin de mes con reversa y reporte de saldos y antigüedad. Los libros y asientos se llevan siempre en GTQ (RN-06).
+
+**Tipo de cambio (RN-25).** `TipoCambioService` consulta `historialtipocambio` primero y solo llama a Banguat si no hay fila activa para la moneda y la fecha. El cliente SOAP vive detrás de `IBanguatClient` (`BanguatSoapClient`, con `BanguatXml` como parser puro): pide una ventana de 10 días hacia atrás en una sola llamada para resolver fines de semana y feriados, aplica un timeout por intento y un reintento ante errores transitorios, y cualquier falla termina en `BanguatNoDisponibleException`. USD toma la referencia diaria; EUR combina la cotización de venta en USD por EUR con la referencia USD/GTQ del mismo día. La configuración está en la sección `Banguat` de `appsettings.json` (`Endpoint`, `TimeoutSegundos`, `Reintentos`, `EsperaReintentoMs`, `VentanaDias`; en la Container App, `Banguat__Endpoint`). Si Banguat no responde, el servicio devuelve `disponible = false` con el último valor guardado como propuesta y el registro de documentos con esa fecha responde `409` hasta que un Contador capture la tasa manual con motivo. No hay proceso programado: la caché se llena bajo demanda. Las pruebas de integración sustituyen `IBanguatClient` por `FakeBanguatClient` y la CI nunca llama a Banguat. `trg_historialtipocambio_inmutable` impide editar o dar de baja una tasa usada.
+
+**Documentos en moneda extranjera (RN-24).** `FacturaFiscalService.PrepararAsync` resuelve el tipo de cambio con `TipoCambioService` (o hereda el de la factura de origen en una nota de crédito) y `MotorFiscal` calcula cada línea en GTQ a partir del importe original; el cliente no envía el tipo de cambio. `FacturaService` guarda moneda, importe original, tipo de cambio, fuente y marca de arrastrado junto con el asiento, que no cambia de forma porque ya recibe importes en GTQ. `vw_saldodocumentocxc/cxp` exponen el saldo en la moneda del documento (`saldo_pendiente`) y en GTQ (`saldo_pendiente_gtq`); `fn_limite_pago_*` y `fn_nota_credito_valida_*` validan el límite en moneda original y exigen que el saldo en GTQ cierre en cero con el original.
+
+**Diferencial realizado (RN-26, RN-27).** `TesoreriaService.PrepararPagoAsync` valida con `PagoMonedaRules`, valora cada aplicación (cuenta USD: monto por la referencia de la fecha del pago; cuenta GTQ: efectivo digitado) y `DiferencialCambiarioRules` calcula el diferencial contra el valor en libros del documento. `AsientoTesoreriaBuilder.ConstruirLiquidacion` debita o acredita el banco por el efectivo, la cuenta de control por el valor en libros y el diferencial a las cuentas de ganancia (crédito) o pérdida (débito) realizada, por lo que cuadra por construcción. Las aplicaciones guardan `monto_aplicado_gtq`, `valor_gtq`, `diferencial_gtq` y la tasa del pago. Las cuentas bancarias declaran su moneda (GTQ o USD, inmutable con movimientos) y sus movimientos guardan `monto_gtq` y `tipo_cambio`. Una transferencia entre cuentas de distinta moneda usa `ConstruirTransferenciaCruzada` y registra la diferencia contra la referencia de la fecha. La conciliación opera en la moneda de la cuenta.
+
+**Revaluación (RN-28).** `SaldoAlCorteService` calcula los saldos de documentos y bancos a una fecha de corte y lo comparten `RevaluacionService` y `ReporteSaldosService`. `RevaluacionService` arma las partidas con `RevaluacionRules`, y en una transacción auditada crea el asiento de cierre (último día del mes, cuentas de diferencial no realizado), su reversa automática (día 1 del mes siguiente), la fila de `revaluacion` y sus `revaluacionpartida`. Anular crea los contra-asientos de ambos y marca la revaluación `Anulada`; `sp_reversar_asiento` y la API rechazan la reversa manual de estos asientos. No toca documentos ni pagos.
+
+**Reporte de saldos y antigüedad.** `GET api/reportes/saldos-antiguedad` (`tipo`, `moneda`, `corte`) agrupa por tramo de vencimiento, totaliza por moneda sin mezclarlas y concilia el total en GTQ con el saldo del mayor, explicando la diferencia con la revaluación vigente. El libro de compras y ventas y el libro diario agregan moneda, importe original, tipo de cambio y la marca de revaluación.
+
+**Endpoints y roles.** `api/monedas` y `GET api/tipos-cambio` (cualquier sesión, incluido el Vendedor); `api/tipos-cambio/historial`, captura manual, sustitución por Banguat y baja con `Roles.GestionTesoreria`; `api/revaluaciones/**` con `Roles.GestionTesoreria`; `api/reportes/saldos-antiguedad` con `Roles.ReportesFiscales`; las cuentas de diferencial en `api/configuracion-fiscal` solo las escribe el Administrador. El Vendedor registra facturas y notas de CxC en moneda extranjera y recibe `403` en el resto. Toda escritura pasa por `AuditoriaService`.
+
+**Frontend.** Rutas `/catalogo/tipos-cambio`, `/revaluaciones` y `/reportes/saldos-moneda` (Administrador y Contador). `SelectMoneda` y `PanelTipoCambio` (con `useTipoCambio`) se comparten entre facturas, cuentas bancarias, transferencias y revaluación; el formulario de factura muestra el total original, la tasa con su fuente y el total en GTQ; el cobro y el pago piden el efectivo en Q con cuenta GTQ y muestran el diferencial estimado; la configuración fiscal suma las cuatro cuentas cambiarias.
+
+**Decisiones.**
+
+- La moneda funcional es GTQ: asientos, libros y saldos de cuentas se llevan en quetzales y el importe original solo se conserva en los documentos, aplicaciones y movimientos.
+- Una sola tasa activa por fecha y moneda; una tasa usada nunca se edita ni se da de baja.
+- Ninguna propuesta de Banguat se convierte sola en dato: la tasa manual exige motivo, usuario y perfil Administrador o Contador.
+- El diferencial realizado se calcula contra el tipo de cambio del documento; la revaluación es no realizada y se revierte sola, de modo que no altera el diferencial ni los saldos de documentos.
+- Fuera de esta versión: cobros con retención de IVA de cliente sobre facturas en moneda extranjera, cuentas bancarias en EUR y pago de documentos en GTQ desde cuentas USD.
 
 ## Relación con el modelo de datos
 
@@ -156,8 +183,9 @@ Si el proveedor no tiene régimen definido o es no residente, la factura se regi
 - Seguridad y auditoría (M8) → `Usuario`, `Perfil`, `BitacoraAuditoria` (poblada por la API, no por trigger).
 - Cierre contable → `PeriodoContable` y `SaldoCuentaPeriodo` (saldos consolidados e inmutables por periodo).
 - Reportes (M7) → sin tablas propias: `fn_reporte_saldos` combina `SaldoCuentaPeriodo` de periodos cerrados con asientos en vivo.
-- Fiscal (M10) → `Impuesto`, `ConfiguracionFiscal` (fila única), `Moneda` (moneda funcional) y los campos fiscales y de DTE de `Contraparte`, `DocumentoCxC`/`DocumentoCxP` y sus líneas.
+- Fiscal (M10) → `Impuesto`, `ConfiguracionFiscal` (fila única), `Moneda` (funcional, USD y EUR) y los campos fiscales y de DTE de `Contraparte`, `DocumentoCxC`/`DocumentoCxP` y sus líneas.
 - Retenciones (M10, I2) → `ParametroRetencion`, `Retencion`, `ConstanciaRetencion`, `vw_retencion_reporte`, las cuentas de retención de `ConfiguracionFiscal` y los campos de retención de `Contraparte` y `DocumentoCxP`.
+- Multimoneda (M10, I3a) → `HistorialTipoCambio`, `Revaluacion`, `RevaluacionPartida`, las cuentas cambiarias de `ConfiguracionFiscal` y las columnas de moneda, importe original y tipo de cambio de documentos, aplicaciones, `CuentaBancaria` y `MovimientoTesoreria`.
 
 Ningún módulo del frontend accede directamente a la base de datos; todo pasa por la
 API.
@@ -276,11 +304,11 @@ de datos:
   (`database/14_rol_api.sql`, `NOLOGIN` y sin contraseña en el repo; `LOGIN` y contraseña se
   asignan por rama con `ALTER ROLE`), por lo que no es miembro de `neon_superuser`.
 - Permisos de `delta_api` (mínimo privilegio): `CONNECT` y `USAGE` en `public`; DML solo en
-  las 28 de 32 tablas que usa la API; sin `UPDATE` en las tablas inmutables
-  (`bitacoraauditoria`, `saldocuentaperiodo`, `movimientotesoreria`, `lineaasiento`, `retencion`, pagos,
+  31 de las 33 tablas; sin `UPDATE` en las tablas inmutables
+  (`bitacoraauditoria`, `saldocuentaperiodo`, `movimientotesoreria`, `lineaasiento`, `retencion`, `revaluacionpartida`, pagos,
   aplicaciones y detalles); `DELETE` solo en `detalleconciliacion`; `bitacoraauditoria` y
   `saldocuentaperiodo` solo con `INSERT` (se escriben vía procedimientos y triggers y se
-  leen por vistas y funciones); `SELECT` en 7 vistas; `USAGE` en 24 secuencias; `EXECUTE`
+  leen por vistas y funciones); `SELECT` en 7 vistas; `USAGE` en 27 secuencias; `EXECUTE`
   solo en 9 rutinas (`fn_reporte_saldos`, `sp_registrar_auditoria`, `sp_cerrar_periodo`,
   `sp_reabrir_periodo`, `sp_reversar_asiento`, `sp_finalizar_conciliacion`,
   `fn_perfil_contador`, `fn_perfil_administrador_sistema`,

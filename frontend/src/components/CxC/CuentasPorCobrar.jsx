@@ -4,6 +4,7 @@ import GestionCuentasPorCobrarPagar from "../CuentasPorCobrarPagar/GestionCuenta
 const CONFIG_CXC = {
   titulo: "Cuentas por cobrar",
   tipoContraparte: "Cliente",
+  esCobro: true,
   etiquetaContraparte: "Cliente",
   campoContraparteId: "clienteId",
   campoContraparteNombre: "clienteNombre",

@@ -20,6 +20,8 @@ public static class ErroresPostgres
         ["ux_retencion_iva_documento"] = "La factura ya tiene IVA retenido registrado.",
         ["ux_constancia_retencion"] = "La retención ya tiene una constancia emitida.",
         ["ux_constancia_numero"] = "Ya existe una constancia emitida con ese número para el mismo tipo y retenedor.",
+        ["ux_revaluacion_vigente"] = "Ya existe una revaluación vigente para ese mes y moneda; anúlela antes de repetirla.",
+        ["ux_historialtipocambio_activa"] = "Ya existe un tipo de cambio activo para esa moneda y fecha.",
     };
 
     // Los procedimientos almacenados señalan perfil no autorizado (P0001), inexistente (P0002)
@@ -56,6 +58,18 @@ public static class ErroresPostgres
         return MensajeRestriccionUnica(ex) is { } mensaje
             ? new ObjectResult(new { error = mensaje }) { StatusCode = StatusCodes.Status409Conflict }
             : null;
+    }
+
+    // 55000 -> 409, 23514 -> 400 y las restricciones únicas conocidas -> 409.
+    public static ErrorValidacion? ComoErrorValidacion(Exception ex)
+    {
+        if (ObtenerPostgres(ex) is { } pg
+            && EstadoHttpPorSqlState.TryGetValue(pg.SqlState, out var estado)
+            && estado is StatusCodes.Status409Conflict or StatusCodes.Status400BadRequest)
+        {
+            return new ErrorValidacion(estado, pg.MessageText);
+        }
+        return MensajeRestriccionUnica(ex) is { } mensaje ? ErrorValidacion.Conflicto(mensaje) : null;
     }
 
     // Conflicto (409) de los triggers (55000) y de los índices únicos de retenciones y constancias.

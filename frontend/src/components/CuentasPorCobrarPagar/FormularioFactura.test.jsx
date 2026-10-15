@@ -1,11 +1,11 @@
 import { configure, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { impuestosApi } from "../../services/api";
+import { impuestosApi, tiposCambioApi } from "../../services/api";
 import { AVISO_DTE } from "../../utils/fiscal";
-import { formatoMoneda } from "../../utils/formato";
+import { formatoImporte, formatoMoneda, formatoQuetzales, hoyIso } from "../../utils/formato";
 import FormularioFactura from "./FormularioFactura";
 
-vi.mock("../../services/api", () => ({ impuestosApi: { listar: vi.fn() } }));
+vi.mock("../../services/api", () => ({ impuestosApi: { listar: vi.fn() }, tiposCambioApi: { consultar: vi.fn() } }));
 
 const UUID = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
 const ERROR_CUENTA_IVA = "Falta configurar la cuenta de IVA débito fiscal en Catálogo > Configuración fiscal. Solicite al Administrador del sistema que la configure antes de registrar facturas con IVA.";
@@ -133,6 +133,8 @@ describe("FormularioFactura", () => {
   beforeEach(() => {
     impuestosApi.listar.mockReset();
     impuestosApi.listar.mockResolvedValue({ data: impuestos });
+    tiposCambioApi.consultar.mockReset();
+    tiposCambioApi.consultar.mockResolvedValue({ data: { disponible: true, tipoCambio: { id: 1, tasa: 7.6, fuente: "Banguat", arrastrado: false, fechaReferencia: "2026-10-12" }, propuesta: null, mensaje: null } });
   });
 
   it("consulta los impuestos vigentes a la fecha y para el ámbito, y recarga al cambiar la fecha", async () => {
@@ -531,5 +533,101 @@ describe("FormularioFactura con retención de ISR", () => {
     fireEvent.click(botonRegistrar());
 
     expect(await screen.findByText("La factura quedó marcada para revisión de retención.")).toBeInTheDocument();
+  });
+
+  describe("moneda del documento", () => {
+    const facturaUsd = { id: 20, numero: "F-USD", tipoDocumento: "Factura", clienteId: 5, estado: "Vigente", saldoPendiente: 100, moneda: "USD", tipoCambioAplicado: 7.6, tipoCambioFuente: "Banguat", tipoCambioArrastrado: false };
+
+    it("en GTQ no consulta tipo de cambio", async () => {
+      await renderFormulario();
+
+      expect(screen.queryByText(/Tipo de cambio USD/)).toBeNull();
+      expect(tiposCambioApi.consultar).not.toHaveBeenCalled();
+    });
+
+    it("en USD consulta la tasa, muestra los totales en moneda y habilita el registro", async () => {
+      const config = configVentas();
+      await renderFormulario({ config });
+      escribir("Moneda", "USD");
+      escribir("Fecha", "2026-10-12");
+      completarCabecera(config);
+      escribir("Precio unitario", "1120");
+      completarDte();
+
+      expect((await screen.findAllByText("Tipo de cambio: 7.600000 (Banguat)")).length).toBeGreaterThan(0);
+      expect(tiposCambioApi.consultar).toHaveBeenCalledWith("USD", "2026-10-12");
+      expect(screen.getByText(`Total original: ${formatoImporte(1120, "USD")}`)).toBeInTheDocument();
+      expect(screen.getByText(`Total en GTQ: ${formatoQuetzales(8512)}`)).toBeInTheDocument();
+      expect(screen.getByRole("columnheader", { name: "Precio unitario (IVA incluido) en USD" })).toBeInTheDocument();
+      await waitFor(() => expect(botonRegistrar()).toBeEnabled());
+    });
+
+    it("sin tasa disponible bloquea el registro y muestra el error", async () => {
+      tiposCambioApi.consultar.mockRejectedValueOnce({ response: { status: 409, data: { error: "No hay tipo de cambio para fechas futuras." } } });
+      const config = configVentas();
+      await renderFormulario({ config });
+      escribir("Moneda", "USD");
+      completarCabecera(config);
+      completarDte();
+
+      expect(await screen.findByText("No hay tipo de cambio para fechas futuras.")).toBeInTheDocument();
+      expect(botonRegistrar()).toBeDisabled();
+    });
+
+    it("con propuesta de Banguat muestra el último valor y mantiene bloqueado el registro", async () => {
+      tiposCambioApi.consultar.mockResolvedValueOnce({ data: { disponible: false, tipoCambio: null, propuesta: { fecha: "2026-10-09", tasa: 7.64036, fuente: "Banguat" }, mensaje: "Banguat no respondió; capture la tasa manual o reintente." } });
+      const config = configVentas();
+      await renderFormulario({ config });
+      escribir("Moneda", "USD");
+      completarCabecera(config);
+      completarDte();
+
+      expect(await screen.findByText("Último valor guardado: 7.640360 del 2026-10-09")).toBeInTheDocument();
+      expect(botonRegistrar()).toBeDisabled();
+    });
+
+    it("envía el código de moneda y el precio en moneda original", async () => {
+      const config = configVentas();
+      await renderFormulario({ config });
+      escribir("Moneda", "USD");
+      completarCabecera(config);
+      escribir("Precio unitario", "1120");
+      completarDte();
+      await screen.findAllByText("Tipo de cambio: 7.600000 (Banguat)");
+      await waitFor(() => expect(botonRegistrar()).toBeEnabled());
+
+      fireEvent.click(botonRegistrar());
+
+      await waitFor(() => expect(config.api.crearFactura).toHaveBeenCalledTimes(1));
+      expect(config.api.crearFactura).toHaveBeenCalledWith(
+        expect.objectContaining({ monedaCodigo: "USD", lineas: [expect.objectContaining({ precioUnitario: 1120 })] })
+      );
+    });
+
+    it("una nota de crédito hereda la moneda y la tasa de su factura de origen sin consultar", async () => {
+      const config = configVentas();
+      await renderFormulario({ config, listaFacturas: [...facturas, facturaUsd] });
+      tiposCambioApi.consultar.mockClear();
+      escribir("Tipo de documento", "NotaCredito");
+      completarCabecera(config);
+      escribir("Documento de origen", "20");
+      escribir("Precio unitario", "112");
+
+      expect(await screen.findByText("Heredado de la factura de origen.")).toBeInTheDocument();
+      expect(screen.getByRole("combobox", { name: "Moneda" })).toBeDisabled();
+      expect(screen.getByRole("combobox", { name: "Moneda" })).toHaveValue("USD");
+      expect(tiposCambioApi.consultar).not.toHaveBeenCalled();
+      expect(screen.getByText("El monto de la nota de crédito excede el saldo pendiente del documento de origen.")).toBeInTheDocument();
+    });
+
+    it("en compras con ISR calcula la retención con los montos ya convertidos a quetzales", async () => {
+      const config = configComprasConRetencion();
+      await renderFormulario({ config });
+      escribir("Moneda", "USD");
+      completarCabecera(config, "6");
+      escribir("Precio unitario", "1000");
+
+      await waitFor(() => expect(config.api.retencionPrevia).toHaveBeenCalledWith(expect.objectContaining({ montoBase: 7600, montoTotal: 7600 })), { timeout: 2000 });
+    });
   });
 });

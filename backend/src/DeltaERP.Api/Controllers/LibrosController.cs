@@ -58,6 +58,7 @@ public class LibrosController : ControllerBase
             _db.DocumentosCxP.Where(d => d.AsientoId != null && idsAsiento.Contains(d.AsientoId.Value)).Select(d => d.AsientoId!.Value));
         var conTesoreria = await IdsComoConjuntoAsync(
             _db.MovimientosTesoreria.Where(m => idsAsiento.Contains(m.AsientoId)).Select(m => m.AsientoId));
+        var conRevaluacion = await _db.AsientosDeRevaluacionAsync(idsAsiento);
         var porId = asientos.ToDictionary(a => a.Id);
         var reversaPorOriginal = asientos.Where(a => a.ReversaDeId != null).ToDictionary(a => a.ReversaDeId!.Value);
 
@@ -65,7 +66,7 @@ public class LibrosController : ControllerBase
         {
             var reversa = reversaPorOriginal.GetValueOrDefault(a.Id);
             var original = a.ReversaDeId is { } idOriginal ? porId.GetValueOrDefault(idOriginal) : null;
-            var vinculos = new VinculosAsiento(conCxC.Contains(a.Id), conCxP.Contains(a.Id), conTesoreria.Contains(a.Id));
+            var vinculos = new VinculosAsiento(conCxC.Contains(a.Id), conCxP.Contains(a.Id), conTesoreria.Contains(a.Id), conRevaluacion.Contains(a.Id));
             return new
             {
                 a.Id,
@@ -78,6 +79,7 @@ public class LibrosController : ControllerBase
                 ReversadoPorId = reversa?.Id,
                 ReversadoPorNumero = reversa?.Numero,
                 Reversible = ReversaAsiento.ObtenerBloqueo(a, periodo, vinculos) is null,
+                EsRevaluacion = conRevaluacion.Contains(a.Id),
                 Lineas = a.Lineas.Select(l =>
                 {
                     cuentas.TryGetValue(l.CuentaId, out var cuenta);

@@ -12,6 +12,9 @@ vi.mock("./components/Reportes/EstadoResultados", () => ({ default: () => <p>Rep
 vi.mock("./components/Catalogo/ConfiguracionFiscal", () => ({ default: () => <p>Pantalla configuración fiscal</p> }));
 vi.mock("./components/Catalogo/Impuestos", () => ({ default: () => <p>Catálogo de impuestos</p> }));
 vi.mock("./components/Libros/LibroFiscal", () => ({ default: () => <p>Libro fiscal</p> }));
+vi.mock("./components/TiposCambio/TiposCambio", () => ({ default: () => <p>Pantalla tipos de cambio</p> }));
+vi.mock("./components/Revaluaciones/Revaluaciones", () => ({ default: () => <p>Pantalla revaluación</p> }));
+vi.mock("./components/Reportes/SaldosMoneda", () => ({ default: () => <p>Reporte saldos en moneda</p> }));
 vi.mock("./components/Retenciones/ParametrosRetencion", () => ({ default: () => <p>Pantalla parámetros de retención</p> }));
 vi.mock("./components/Retenciones/ReporteRetenciones", () => ({ default: () => <p>Reporte de retenciones</p> }));
 
@@ -35,7 +38,7 @@ describe("App", () => {
     renderApp("Contador");
 
     expect(await screen.findByText("Conectado a Delta ERP Contable API")).toBeInTheDocument();
-    expect(screen.getAllByRole("link")).toHaveLength(17);
+    expect(screen.getAllByRole("link")).toHaveLength(20);
     expect(screen.getByRole("link", { name: "Registrar asiento" })).toBeInTheDocument();
   });
 
@@ -91,7 +94,7 @@ describe("App", () => {
   it("un administrador ve las pantallas fiscales y abre la configuración fiscal", async () => {
     renderApp("Administrador del sistema", "/catalogo/configuracion-fiscal");
 
-    expect(screen.getAllByRole("link")).toHaveLength(18);
+    expect(screen.getAllByRole("link")).toHaveLength(21);
     ["Configuración fiscal", "Impuestos", "Parámetros de retención", "Compras y ventas", "Retenciones"].forEach((nombre) =>
       expect(screen.getByRole("link", { name: nombre })).toBeInTheDocument()
     );
@@ -176,5 +179,53 @@ describe("App", () => {
 
     expect(screen.getByRole("button", { name: "Ingresar" })).toBeInTheDocument();
     expect(localStorage.getItem("delta_usuario")).toBeNull();
+  });
+
+  it.each(["Contador", "Administrador del sistema"])("%s ve Tipos de cambio y Revaluación y abre cada pantalla", async (perfil) => {
+    renderApp(perfil, "/catalogo/tipos-cambio");
+
+    expect(screen.getByRole("link", { name: "Tipos de cambio" })).toBeInTheDocument();
+    expect(screen.getByText("Pantalla tipos de cambio")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Revaluación" })).toBeInTheDocument();
+    await screen.findByText("Conectado a Delta ERP Contable API");
+  });
+
+  it.each(["Contador", "Administrador del sistema"])("%s abre la pantalla de revaluación", async (perfil) => {
+    renderApp(perfil, "/revaluaciones");
+
+    expect(screen.getByText("Pantalla revaluación")).toBeInTheDocument();
+    await screen.findByText("Conectado a Delta ERP Contable API");
+  });
+
+  it.each(["Vendedor", "Técnico"])("%s no ve Tipos de cambio ni Revaluación y las rutas quedan bloqueadas", async (perfil) => {
+    renderApp(perfil, "/catalogo/tipos-cambio");
+
+    expect(screen.queryByRole("link", { name: "Tipos de cambio" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Revaluación" })).toBeNull();
+    expect(screen.getByText(`No autorizado: tu perfil (${perfil}) no puede acceder a Tipos de cambio.`)).toBeInTheDocument();
+    await screen.findByText("Conectado a Delta ERP Contable API");
+  });
+
+  it.each(["Vendedor", "Técnico"])("%s no puede abrir la revaluación", async (perfil) => {
+    renderApp(perfil, "/revaluaciones");
+
+    expect(screen.getByText(`No autorizado: tu perfil (${perfil}) no puede acceder a Revaluación.`)).toBeInTheDocument();
+    await screen.findByText("Conectado a Delta ERP Contable API");
+  });
+
+  it.each(["Contador", "Administrador del sistema"])("%s ve Saldos en moneda y abre el reporte", async (perfil) => {
+    renderApp(perfil, "/reportes/saldos-moneda");
+
+    expect(screen.getByRole("link", { name: "Saldos en moneda" })).toBeInTheDocument();
+    expect(screen.getByText("Reporte saldos en moneda")).toBeInTheDocument();
+    await screen.findByText("Conectado a Delta ERP Contable API");
+  });
+
+  it.each(["Vendedor", "Técnico"])("%s no ve Saldos en moneda y la ruta queda bloqueada", async (perfil) => {
+    renderApp(perfil, "/reportes/saldos-moneda");
+
+    expect(screen.queryByRole("link", { name: "Saldos en moneda" })).toBeNull();
+    expect(screen.getByText(`No autorizado: tu perfil (${perfil}) no puede acceder a Saldos en moneda.`)).toBeInTheDocument();
+    await screen.findByText("Conectado a Delta ERP Contable API");
   });
 });

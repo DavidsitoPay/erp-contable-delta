@@ -2,7 +2,7 @@ using DeltaERP.Domain.Entities;
 
 namespace DeltaERP.Api.Services;
 
-public sealed record VinculosAsiento(bool CxC, bool CxP, bool Tesoreria);
+public sealed record VinculosAsiento(bool CxC, bool CxP, bool Tesoreria, bool Revaluacion = false);
 
 public static class ReversaAsiento
 {
@@ -36,6 +36,10 @@ public static class ReversaAsiento
         if (vinculos.Tesoreria)
         {
             return $"El asiento {asiento.Id} está vinculado a un movimiento de tesorería (cobros, pagos, transferencias o apertura); reversarlo desincronizaría los libros contables del banco.";
+        }
+        if (vinculos.Revaluacion)
+        {
+            return "Pertenece a una revaluación; anule la revaluación.";
         }
         return null;
     }

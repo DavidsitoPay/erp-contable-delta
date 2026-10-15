@@ -13,11 +13,13 @@ export function redondear(valor) {
   return (Math.sign(valor) * Math.round(centavos)) / 100;
 }
 
-export function calcularLinea({ cantidad, precioUnitario, impuesto }) {
-  const montoLinea = redondear(cantidad * precioUnitario);
+export function calcularLinea({ cantidad, precioUnitario, impuesto, tipoCambio = 1 }) {
+  const montoLineaOriginal = redondear(cantidad * precioUnitario);
+  const montoLinea = redondear(montoLineaOriginal * tipoCambio);
   const gravado = impuesto?.tipo === "IVA_GENERAL";
   const iva = gravado ? redondear((montoLinea * impuesto.tasa) / (100 + impuesto.tasa)) : 0;
   return {
+    montoLineaOriginal,
     montoLinea,
     base: redondear(montoLinea - iva),
     iva,
@@ -29,12 +31,13 @@ function sumar(valores) {
   return valores.reduce((acumulado, valor) => redondear(acumulado + valor), 0);
 }
 
-export function calcularResumen(entradas) {
-  const lineas = entradas.map(calcularLinea);
+export function calcularResumen(entradas, tipoCambio = 1) {
+  const lineas = entradas.map((entrada) => calcularLinea({ ...entrada, tipoCambio }));
   const iva = sumar(lineas.map((l) => l.iva));
   const ivaAcreditable = sumar(lineas.filter((l) => l.ivaAcreditable).map((l) => l.iva));
   return {
     lineas,
+    totalOriginal: sumar(lineas.map((l) => l.montoLineaOriginal)),
     total: sumar(lineas.map((l) => l.montoLinea)),
     base: sumar(lineas.map((l) => l.base)),
     iva,

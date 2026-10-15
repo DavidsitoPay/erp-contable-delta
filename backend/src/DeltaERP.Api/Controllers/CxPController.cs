@@ -38,6 +38,7 @@ public class CxPController : FacturaControllerBase
             from d in _db.DocumentosCxP
             join s in _db.SaldosDocumentoCxP on d.Id equals s.DocumentoId
             join c in _db.Contrapartes on d.ProveedorId equals c.Id
+            join m in _db.Monedas on d.MonedaId equals m.Id
             orderby d.Fecha descending, d.Numero descending
             select new
             {
@@ -55,7 +56,13 @@ public class CxPController : FacturaControllerBase
                 d.DteSerie,
                 d.DteNumero,
                 d.CalculoLegado,
+                Moneda = m.Codigo,
+                d.MontoTotalOriginal,
+                d.TipoCambioAplicado,
+                d.TipoCambioFuente,
+                d.TipoCambioArrastrado,
                 s.SaldoPendiente,
+                s.SaldoPendienteGtq,
                 MontoRetencionIsr = _db.Retenciones
                     .Where(r => r.DocumentoCxpId == d.Id && r.Concepto == Retencion.ConceptoIsr)
                     .Sum(r => (decimal?)r.MontoRetenido) ?? 0m,
@@ -137,14 +144,24 @@ public class CxPController : FacturaControllerBase
         var pagos = await (
             from p in _db.PagosProveedor
             join c in _db.Contrapartes on p.ProveedorId equals c.Id
+            join m in _db.Monedas on p.MonedaId equals m.Id
             orderby p.Fecha descending, p.Id descending
-            select new { p.Id, p.ProveedorId, ProveedorNombre = c.Nombre, p.Fecha, p.MontoTotal, p.MetodoPago, p.ReferenciaBancaria }
+            select new { p.Id, p.ProveedorId, ProveedorNombre = c.Nombre, p.Fecha, p.MontoTotal, p.MontoTotalGtq, Moneda = m.Codigo, p.MetodoPago, p.ReferenciaBancaria }
             ).ToListAsync();
 
         var ids = pagos.Select(p => p.Id).ToList();
         var aplicaciones = await _db.AplicacionesPagoProveedor
             .Where(a => ids.Contains(a.PagoCabeceraId))
-            .Join(_db.DocumentosCxP, a => a.DocumentoId, d => d.Id, (a, d) => new { a.PagoCabeceraId, d.Numero, a.MontoAplicado })
+            .Join(_db.DocumentosCxP, a => a.DocumentoId, d => d.Id, (a, d) => new
+            {
+                a.PagoCabeceraId,
+                d.Numero,
+                a.MontoAplicado,
+                a.MontoAplicadoGtq,
+                a.ValorGtq,
+                a.DiferencialGtq,
+                TipoCambioPago = _db.TiposCambio.Where(t => t.Id == a.TipoCambioPagoId).Select(t => (decimal?)t.Tasa).FirstOrDefault(),
+            })
             .ToListAsync();
 
         var resultado = pagos.Select(p => new
@@ -154,9 +171,13 @@ public class CxPController : FacturaControllerBase
             p.ProveedorNombre,
             p.Fecha,
             p.MontoTotal,
+            p.MontoTotalGtq,
+            p.Moneda,
             p.MetodoPago,
             p.ReferenciaBancaria,
-            Aplicaciones = aplicaciones.Where(a => a.PagoCabeceraId == p.Id).Select(a => new { a.Numero, a.MontoAplicado }),
+            Aplicaciones = aplicaciones
+                .Where(a => a.PagoCabeceraId == p.Id)
+                .Select(a => new { a.Numero, a.MontoAplicado, a.MontoAplicadoGtq, a.ValorGtq, a.DiferencialGtq, a.TipoCambioPago }),
         });
 
         return Ok(resultado);
@@ -166,7 +187,8 @@ public class CxPController : FacturaControllerBase
     [Authorize(Roles = Roles.RegistroPagos)]
     public async Task<IActionResult> CrearPago([FromBody] PagoProveedorCabecera pago)
     {
-        var aplicaciones = pago.Aplicaciones.Select(a => (a.DocumentoId, Monto: a.MontoAplicado)).ToList();
+        var entradas = AplicacionEntrada.Desde(pago.Aplicaciones);
+        var aplicaciones = entradas.Select(a => (a.DocumentoId, a.Monto)).ToList();
 
         var errorSolicitud = PagoRules.ValidarSolicitud(aplicaciones.Select(a => a.Monto).ToList(), pago.MetodoPago);
         if (errorSolicitud is not null)
@@ -185,7 +207,9 @@ public class CxPController : FacturaControllerBase
             from d in _db.DocumentosCxP
             join s in _db.SaldosDocumentoCxP on d.Id equals s.DocumentoId
             where idsDocumento.Contains(d.Id)
-            select new DocumentoPagable(d.Id, d.Numero, d.ProveedorId, d.Estado, s.SaldoPendiente, d.AsientoId, d.TipoDocumento == TiposDocumento.NotaCredito)
+            select new DocumentoPagable(
+                d.Id, d.Numero, d.ProveedorId, d.Estado, s.SaldoPendiente, d.AsientoId, d.TipoDocumento == TiposDocumento.NotaCredito,
+                d.MonedaId, d.TipoCambioAplicado, s.SaldoPendienteGtq, d.MontoTotalOriginal)
             ).ToListAsync();
 
         var errorAplicaciones = PagoRules.ValidarAplicaciones("proveedor", pago.ProveedorId, aplicaciones, documentos);
@@ -194,31 +218,43 @@ public class CxPController : FacturaControllerBase
             return BadRequest(new { error = errorAplicaciones });
         }
 
-        var (desembolso, errorDesembolso) = await _tesoreria.PrepararPagoAsync(Perfil, pago.CuentaBancariaId, pago.Fecha, documentos, aplicaciones);
+        var (desembolso, errorDesembolso) = await _tesoreria.PrepararPagoAsync(Perfil, pago.CuentaBancariaId, pago.Fecha, documentos, entradas);
         if (desembolso is null)
         {
-            return BadRequest(new { error = errorDesembolso });
+            return this.Fallo(errorDesembolso!);
         }
 
         var usuarioId = this.UsuarioId();
 
         pago.Id = 0;
-        pago.MontoTotal = aplicaciones.Sum(a => a.Monto);
+        pago.MonedaId = desembolso.MonedaDocumentoId;
+        pago.MontoTotal = desembolso.TotalAplicado;
+        pago.MontoTotalGtq = desembolso.TotalValorGtq;
         foreach (var aplicacion in pago.Aplicaciones)
         {
             aplicacion.Id = 0;
         }
+        TesoreriaService.AplicarLiquidacion(pago.Aplicaciones, desembolso);
 
-        await _auditoria.EjecutarAsync(usuarioId, "registrar_pago_cxp", "pagoproveedorcabecera", async () =>
+        var conflicto = await this.GuardarAuditadoAsync(_auditoria, "registrar_pago_cxp", "pagoproveedorcabecera", async () =>
         {
             _db.PagosProveedor.Add(pago);
             await _db.SaveChangesAsync();
             await _tesoreria.RegistrarMovimientoDePagoAsync(
                 desembolso, Perfil, pago.Fecha, $"Pago {pago.Id} - {proveedor.Nombre}", pago.ReferenciaBancaria, pago.Id, usuarioId);
 
-            return $"Pago {pago.Id} (proveedor {proveedor.Nombre}) registrado, monto {pago.MontoTotal}";
+            return $"Pago {pago.Id} (proveedor {proveedor.Nombre}) registrado, monto {pago.MontoTotal}{TesoreriaService.DescribirDiferencial(desembolso)}";
         });
 
-        return CreatedAtAction(nameof(ListarPagos), new { }, pago);
+        var aplicacionesGuardadas = pago.Aplicaciones
+            .Select(a => new AplicacionPagoRespuesta(
+                a.Id, a.PagoCabeceraId, a.DocumentoId, a.MontoAplicado, a.MontoAplicadoGtq, a.ValorGtq, a.DiferencialGtq, desembolso.TipoCambioPago))
+            .ToList();
+        return conflicto ?? CreatedAtAction(
+            nameof(ListarPagos),
+            new { },
+            new PagoProveedorRespuesta(
+                pago.Id, pago.ProveedorId, pago.Fecha, pago.MontoTotal, pago.MetodoPago, pago.ReferenciaBancaria, pago.CuentaBancariaId,
+                aplicacionesGuardadas, desembolso.MonedaDocumentoCodigo, pago.MontoTotalGtq, desembolso.MontoCuenta, desembolso.DiferencialRealizado));
     }
 }

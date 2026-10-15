@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace DeltaERP.Domain.Entities;
 
 // Vista de solo lectura; Id se mapea a conciliacion_id.
@@ -14,4 +16,7 @@ public class ConciliacionResumen
     public decimal SaldoConciliado { get; set; }
     public decimal Diferencia { get; set; }
     public int CantidadMovimientos { get; set; }
+
+    [NotMapped]
+    public string? MonedaCodigo { get; set; }
 }

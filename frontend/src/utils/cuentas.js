@@ -1,3 +1,5 @@
+import { esMonedaExtranjera, monedaDeCuenta } from "./cambio";
+
 export function cuentasHoja(cuentas) {
   const idsConHijos = new Set(cuentas.filter((c) => c.cuentaPadreId).map((c) => c.cuentaPadreId));
   return cuentas.filter((c) => c.activa && !idsConHijos.has(c.id));
@@ -12,7 +14,9 @@ export function indexarPorId(lista) {
 }
 
 export function etiquetaCuenta(cuenta) {
-  return cuenta ? `${cuenta.banco} ${cuenta.numero}` : "";
+  if (!cuenta) return "";
+  const moneda = monedaDeCuenta(cuenta);
+  return esMonedaExtranjera(moneda) ? `${cuenta.banco} ${cuenta.numero} (${moneda})` : `${cuenta.banco} ${cuenta.numero}`;
 }
 
 export function sangriaPorProfundidad(profundidad) {

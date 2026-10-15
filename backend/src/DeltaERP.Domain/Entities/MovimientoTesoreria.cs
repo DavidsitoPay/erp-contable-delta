@@ -22,4 +22,7 @@ public class MovimientoTesoreria
     public Guid? TransferenciaId { get; set; }
     public int? ReciboPagoId { get; set; }
     public int? PagoProveedorId { get; set; }
+    public decimal MontoGtq { get; set; }
+    public decimal TipoCambio { get; set; } = 1m;
+    public int? TipoCambioId { get; set; }
 }

@@ -74,6 +74,62 @@ public class LibroFiscalControllerTests
     }
 
     [Fact]
+    public async Task Ventas_ConFacturaUsd_ExponeMonedaImporteOriginalYTasa()
+    {
+        var m = await _pg.Data.SembrarEscenarioMeAsync();
+        await _pg.Data.SembrarTipoCambioAsync("USD", m.Miercoles, 7.60m);
+        var client = _pg.CreateApiClient(m.E.UsuarioId);
+        var payload = FacturaPayloads.CxcEn(m, "USD", m.Miercoles, 1120m, m.E.ImpuestoIvaId);
+        var numero = (string)payload["numero"]!;
+        await client.RegistrarVentaAsync(payload);
+
+        var libro = await client.GetFromJsonAsync<JsonElement>($"/api/libros/fiscal/ventas?anio={m.Miercoles.Year}&mes={m.Miercoles.Month}");
+
+        var fila = libro.GetProperty("filas").EnumerateArray().Single(f => f.GetProperty("numeroInterno").GetString() == numero);
+        Assert.Equal(("USD", 1120m, 7.6m), (fila.GetProperty("moneda").GetString(), fila.GetProperty("importeOriginal").GetDecimal(), fila.GetProperty("tipoCambio").GetDecimal()));
+        Assert.Equal((8512m, 912m), (fila.GetProperty("total").GetDecimal(), fila.GetProperty("iva").GetDecimal()));
+        var totalesFilas = libro.GetProperty("filas").EnumerateArray().Sum(f => f.GetProperty("total").GetDecimal());
+        Assert.Equal(totalesFilas, Totales(libro.GetProperty("totales")).Total);
+    }
+
+    [Fact]
+    public async Task Ventas_NotaDeCreditoEnUsd_ExponeImporteOriginalNegativo()
+    {
+        var m = await _pg.Data.SembrarEscenarioMeAsync();
+        await _pg.Data.SembrarTipoCambioAsync("USD", m.Miercoles, 7.60m);
+        var client = _pg.CreateApiClient(m.E.UsuarioId);
+        var facturaId = await client.RegistrarVentaAsync(FacturaPayloads.CxcEn(m, "USD", m.Miercoles, 1120m, m.E.ImpuestoIvaId));
+        var nota = FacturaPayloads.CxcEn(m, "USD", m.Miercoles, 1120m, m.E.ImpuestoIvaId)
+            .Con("tipoDocumento", "NotaCredito")
+            .Con("documentoOrigenId", facturaId);
+        var numero = (string)nota["numero"]!;
+        await client.RegistrarVentaAsync(nota);
+
+        var libro = await client.GetFromJsonAsync<JsonElement>($"/api/libros/fiscal/ventas?anio={m.Miercoles.Year}&mes={m.Miercoles.Month}");
+
+        var fila = libro.GetProperty("filas").EnumerateArray().Single(f => f.GetProperty("numeroInterno").GetString() == numero);
+        Assert.Equal(("USD", -1120m, 7.6m), (fila.GetProperty("moneda").GetString(), fila.GetProperty("importeOriginal").GetDecimal(), fila.GetProperty("tipoCambio").GetDecimal()));
+    }
+
+    [Fact]
+    public async Task Ventas_DocumentoLegado_SaleEnQuetzalesConTasaUno()
+    {
+        var (e, client, anio) = await PrepararAsync();
+        var numero = $"F-{TestData.Sufijo()}";
+        await _pg.Data.ScalarAsync<int>(
+            "INSERT INTO documentocxc (numero, tipo_documento, cliente_id, fecha, fecha_vencimiento, monto_total, monto_base, calculo_legado, estado) " +
+            "VALUES ($1, 'Factura', $2, $3, $4, 100, 100, TRUE, 'Vigente') RETURNING id",
+            numero, e.ClienteId, new DateOnly(anio, 6, 20), new DateOnly(anio, 7, 20));
+
+        var libro = await client.GetFromJsonAsync<JsonElement>($"/api/libros/fiscal/ventas?anio={anio}&mes=6");
+
+        var fila = libro.GetProperty("filas").EnumerateArray().Single(f => f.GetProperty("numeroInterno").GetString() == numero);
+        Assert.Equal("GTQ", fila.GetProperty("moneda").GetString());
+        Assert.Equal(fila.GetProperty("total").GetDecimal(), fila.GetProperty("importeOriginal").GetDecimal());
+        Assert.Equal(1m, fila.GetProperty("tipoCambio").GetDecimal());
+    }
+
+    [Fact]
     public async Task Compras_ConCreditoSinCreditoYAnulada_AjustaLasColumnas()
     {
         var (e, client, anio) = await PrepararAsync();

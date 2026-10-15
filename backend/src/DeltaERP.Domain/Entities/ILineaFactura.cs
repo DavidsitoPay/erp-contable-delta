@@ -10,6 +10,7 @@ public interface ILineaFactura
     string TipoBienServicio { get; }
     decimal TasaAplicada { get; set; }
     decimal MontoLinea { get; set; }
+    decimal MontoLineaOriginal { get; set; }
     decimal MontoBase { get; set; }
     decimal MontoIva { get; set; }
     int? CentroCostoId { get; }

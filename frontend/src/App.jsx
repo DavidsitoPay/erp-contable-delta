@@ -22,6 +22,9 @@ import Impuestos from "./components/Catalogo/Impuestos";
 import ParametrosRetencion from "./components/Retenciones/ParametrosRetencion";
 import ReporteRetenciones from "./components/Retenciones/ReporteRetenciones";
 import LibroFiscal from "./components/Libros/LibroFiscal";
+import TiposCambio from "./components/TiposCambio/TiposCambio";
+import Revaluaciones from "./components/Revaluaciones/Revaluaciones";
+import SaldosMoneda from "./components/Reportes/SaldosMoneda";
 import { puedeAdministrarConfiguracionFiscal, puedeGestionarFiscal, puedeGestionarTesoreria } from "./utils/perfiles";
 
 function TabLink({ to, children }) {
@@ -97,6 +100,7 @@ function App() {
         <TabLink to="/catalogo/cuentas">Cuentas contables</TabLink>
         <TabLink to="/catalogo/centros-costo">Centros de costo</TabLink>
         <TabLink to="/catalogo/periodos">Periodos</TabLink>
+        {esAdminOContador && <TabLink to="/catalogo/tipos-cambio">Tipos de cambio</TabLink>}
         {esAdmin && <TabLink to="/catalogo/configuracion-fiscal">Configuración fiscal</TabLink>}
         {gestionaFiscal && <TabLink to="/catalogo/impuestos">Impuestos</TabLink>}
         {gestionaFiscal && <TabLink to="/catalogo/parametros-retencion">Parámetros de retención</TabLink>}
@@ -109,8 +113,10 @@ function App() {
         <TabLink to="/cxc">Cuentas por cobrar</TabLink>
         {esAdminOContador && <TabLink to="/cxp">Cuentas por pagar</TabLink>}
         {esAdminOContador && <TabLink to="/tesoreria">Tesorería</TabLink>}
+        {esAdminOContador && <TabLink to="/revaluaciones">Revaluación</TabLink>}
         {esAdminOContador && <TabLink to="/reportes/balance-general">Balance general</TabLink>}
         {esAdminOContador && <TabLink to="/reportes/estado-resultados">Estado de resultados</TabLink>}
+        {esAdminOContador && <TabLink to="/reportes/saldos-moneda">Saldos en moneda</TabLink>}
       </nav>
 
       <main className="content">
@@ -129,6 +135,30 @@ function App() {
           <Route path="/catalogo/cuentas" element={<CuentasContables />} />
           <Route path="/catalogo/centros-costo" element={<CentrosCosto />} />
           <Route path="/catalogo/periodos" element={<PeriodosContables />} />
+          <Route
+            path="/catalogo/tipos-cambio"
+            element={
+              <Restringida permitido={esAdminOContador} perfil={usuario.perfil} seccion="Tipos de cambio">
+                <TiposCambio />
+              </Restringida>
+            }
+          />
+          <Route
+            path="/reportes/saldos-moneda"
+            element={
+              <Restringida permitido={esAdminOContador} perfil={usuario.perfil} seccion="Saldos en moneda">
+                <SaldosMoneda />
+              </Restringida>
+            }
+          />
+          <Route
+            path="/revaluaciones"
+            element={
+              <Restringida permitido={esAdminOContador} perfil={usuario.perfil} seccion="Revaluación">
+                <Revaluaciones />
+              </Restringida>
+            }
+          />
           <Route
             path="/catalogo/configuracion-fiscal"
             element={

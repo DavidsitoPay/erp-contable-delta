@@ -17,7 +17,10 @@ public sealed record FilaLibroFiscal(
     decimal Total,
     string? ReferenciaSerie,
     string? ReferenciaNumero,
-    Guid? ReferenciaUuid);
+    Guid? ReferenciaUuid,
+    string Moneda,
+    decimal ImporteOriginal,
+    decimal TipoCambio);
 
 public sealed record TotalesLibroFiscal(decimal BaseBienes, decimal BaseServicios, decimal Exento, decimal Iva, decimal Total);
 

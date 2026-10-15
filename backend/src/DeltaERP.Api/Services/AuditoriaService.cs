@@ -25,4 +25,17 @@ public class AuditoriaService
 
         await transaction.CommitAsync();
     }
+
+    public async Task<ErrorValidacion?> EjecutarComoErrorAsync(int usuarioId, string accion, string tabla, Func<Task<string>> operacion)
+    {
+        try
+        {
+            await EjecutarAsync(usuarioId, accion, tabla, operacion);
+            return null;
+        }
+        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException && ErroresPostgres.ComoErrorValidacion(ex) is not null)
+        {
+            return ErroresPostgres.ComoErrorValidacion(ex);
+        }
+    }
 }

@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { movimientosTesoreriaApi } from "../../services/api";
+import { movimientosTesoreriaApi, tiposCambioApi } from "../../services/api";
 import FormularioMovimiento from "./FormularioMovimiento";
 
-vi.mock("../../services/api", () => ({ movimientosTesoreriaApi: { crear: vi.fn(), transferir: vi.fn() } }));
+vi.mock("../../services/api", () => ({ movimientosTesoreriaApi: { crear: vi.fn(), transferir: vi.fn() }, tiposCambioApi: { consultar: vi.fn() } }));
 
 const cuentasBancarias = [
   { id: 7, banco: "BAC", numero: "123", activa: true },
@@ -122,4 +122,101 @@ describe("FormularioMovimiento", () => {
 
     expect(await screen.findByText("No se pudo registrar el movimiento.")).toBeInTheDocument();
   });
+
+  describe("cuentas en dólares", () => {
+    const cuentaUsd = { id: 10, banco: "BAC", numero: "USD-1", activa: true, monedaCodigo: "USD" };
+    const cuentaUsdDos = { id: 11, banco: "BAC", numero: "USD-2", activa: true, monedaCodigo: "USD" };
+    const conTasa = { data: { disponible: true, tipoCambio: { id: 1, tasa: 7.6, fuente: "Banguat", arrastrado: false }, propuesta: null, mensaje: null } };
+    const sinTasa = { data: { disponible: false, tipoCambio: null, propuesta: null, mensaje: "Banguat no respondió; capture la tasa manual o reintente." } };
+
+    it("valora el movimiento con el tipo de cambio y envía el monto sin convertir", async () => {
+      tiposCambioApi.consultar.mockResolvedValue(conTasa);
+      renderFormulario({ cuentasBancarias: [...cuentasBancarias, cuentaUsd] });
+      fireEvent.change(screen.getByLabelText("Cuenta bancaria"), { target: { value: "10" } });
+
+      expect(await screen.findByText("Tipo de cambio: 7.600000 (Banguat)")).toBeInTheDocument();
+      expect(tiposCambioApi.consultar).toHaveBeenCalledWith("USD", expect.any(String));
+
+      llenarComunes();
+      fireEvent.change(screen.getByLabelText("Cuenta de contrapartida"), { target: { value: "5" } });
+      await waitFor(() => expect(screen.getByRole("button", { name: "Registrar" })).toBeEnabled());
+      fireEvent.click(screen.getByRole("button", { name: "Registrar" }));
+
+      await waitFor(() => expect(movimientosTesoreriaApi.crear).toHaveBeenCalledWith(expect.objectContaining({ cuentaBancariaId: 10, monto: 200 })));
+    });
+
+    it("sin tasa disponible bloquea el registro", async () => {
+      tiposCambioApi.consultar.mockResolvedValue(sinTasa);
+      renderFormulario({ cuentasBancarias: [...cuentasBancarias, cuentaUsd] });
+      fireEvent.change(screen.getByLabelText("Cuenta bancaria"), { target: { value: "10" } });
+
+      expect(await screen.findByText("Banguat no respondió; capture la tasa manual o reintente.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Registrar" })).toBeDisabled();
+    });
+
+
+    it("permite la transferencia entre dos cuentas de la misma moneda extranjera", () => {
+      tiposCambioApi.consultar.mockResolvedValue(conTasa);
+      renderFormulario({ cuentasBancarias: [...cuentasBancarias, cuentaUsd, cuentaUsdDos] });
+      fireEvent.change(screen.getByLabelText("Operación"), { target: { value: "Transferencia" } });
+      fireEvent.change(screen.getByLabelText("Cuenta de origen"), { target: { value: "10" } });
+      fireEvent.change(screen.getByLabelText("Cuenta de destino"), { target: { value: "11" } });
+
+      expect(screen.queryByLabelText(/Monto destino en/)).toBeNull();
+    });
+
+    function llenarTransferenciaCruzada(montoDestino) {
+      fireEvent.change(screen.getByLabelText("Operación"), { target: { value: "Transferencia" } });
+      fireEvent.change(screen.getByLabelText("Cuenta de origen"), { target: { value: "7" } });
+      fireEvent.change(screen.getByLabelText("Cuenta de destino"), { target: { value: "10" } });
+      fireEvent.change(screen.getByLabelText("Fecha del movimiento"), { target: { value: "2025-03-01" } });
+      fireEvent.change(screen.getByLabelText("Monto del movimiento"), { target: { value: "7700" } });
+      fireEvent.change(screen.getByLabelText("Descripción del movimiento"), { target: { value: " Comisión " } });
+      if (montoDestino !== undefined) fireEvent.change(screen.getByLabelText("Monto destino en USD"), { target: { value: montoDestino } });
+    }
+
+    it("transfiere entre monedas distintas con el monto destino tecleado", async () => {
+      tiposCambioApi.consultar.mockResolvedValue(conTasa);
+      const onRegistrado = renderFormulario({ cuentasBancarias: [...cuentasBancarias, cuentaUsd] });
+      llenarTransferenciaCruzada("1000");
+
+      expect(await screen.findByText(/Diferencia vs. referencia/)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Registrar" }));
+
+      await waitFor(() =>
+        expect(movimientosTesoreriaApi.transferir).toHaveBeenCalledWith({
+          fecha: "2025-03-01",
+          monto: 7700,
+          descripcion: "Comisión",
+          referencia: null,
+          cuentaOrigenId: 7,
+          cuentaDestinoId: 10,
+          montoDestino: 1000,
+        })
+      );
+      await waitFor(() => expect(onRegistrado).toHaveBeenCalledTimes(1));
+    });
+
+    it("sin monto destino no permite registrar la transferencia cruzada", async () => {
+      tiposCambioApi.consultar.mockResolvedValue(conTasa);
+      renderFormulario({ cuentasBancarias: [...cuentasBancarias, cuentaUsd] });
+      llenarTransferenciaCruzada();
+
+      await screen.findByText("Tipo de cambio: 7.600000 (Banguat)");
+      expect(screen.getByLabelText("Monto destino en USD")).toBeRequired();
+    });
+
+    it("muestra el error del servidor al transferir", async () => {
+      tiposCambioApi.consultar.mockResolvedValue(conTasa);
+      movimientosTesoreriaApi.transferir.mockRejectedValue({ response: { data: { error: "Falta configurar la cuenta de diferencial cambiario." } } });
+      renderFormulario({ cuentasBancarias: [...cuentasBancarias, cuentaUsd] });
+      llenarTransferenciaCruzada("1000");
+      await screen.findByText(/Diferencia vs. referencia/);
+
+      fireEvent.click(screen.getByRole("button", { name: "Registrar" }));
+
+      expect(await screen.findByText("Falta configurar la cuenta de diferencial cambiario.")).toBeInTheDocument();
+    });
+  });
+
 });

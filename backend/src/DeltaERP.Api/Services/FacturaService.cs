@@ -1,3 +1,4 @@
+using System.Globalization;
 using DeltaERP.Domain.Entities;
 using DeltaERP.Domain.Rules;
 using DeltaERP.Infrastructure.Data;
@@ -40,7 +41,7 @@ public class FacturaService
         }
 
         var sigla = perfil.Sigla.ToLowerInvariant();
-        FacturaRules.PrepararNuevo(documento, fiscal.Resumen);
+        FacturaRules.PrepararNuevo(documento, fiscal.Resumen, fiscal.Cambio);
         var asiento = AsientoFacturaBuilder.Construir(
             perfil.Sigla.ToUpperInvariant(), documento, fiscal.Resumen, perfil.LadoControl, usuarioId, fiscal.CuentaIvaId,
             fiscal.Retencion?.ParaAsiento);
@@ -59,13 +60,13 @@ public class FacturaService
 
                 registrada = await _retenciones.RegistrarIsrAsync(documento, fiscal.Retencion, asiento.Id, usuarioId);
 
-                return $"Factura {documento.Numero} (id {documento.Id}) registrada para {perfil.TipoTercero.ToLowerInvariant()} {tercero.Nombre}, monto {asiento.Monto}, base {documento.MontoBase}, IVA {documento.MontoIva}{DescribirRetencion(fiscal.Retencion)}";
+                return $"Factura {documento.Numero} (id {documento.Id}) registrada para {perfil.TipoTercero.ToLowerInvariant()} {tercero.Nombre}, monto {asiento.Monto}, base {documento.MontoBase}, IVA {documento.MontoIva}{DescribirRetencion(fiscal.Retencion)}{DescribirMoneda(fiscal.Cambio, documento)}";
             });
             return new ResultadoRegistro(null, fiscal.Retencion, registrada?.Id, fiscal.Advertencias);
         }
-        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException && ErroresPostgres.MensajeConflicto(ex) is { } conflicto)
+        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException && ErroresPostgres.ComoErrorValidacion(ex) is not null)
         {
-            return ResultadoRegistro.Fallo(ErrorValidacion.Conflicto(conflicto));
+            return ResultadoRegistro.Fallo(ErroresPostgres.ComoErrorValidacion(ex)!);
         }
         catch (DbUpdateException ex) when (MensajeDteDuplicado(ex, documento) is { } duplicado)
         {
@@ -87,6 +88,13 @@ public class FacturaService
             ? detalle
             : $"{detalle}, calculado Q{retencion.MontoCalculado}, aplicado Q{retencion.Monto}, motivo: {motivo}";
     }
+
+    private static string DescribirMoneda(TipoCambioAplicable cambio, IDocumentoFactura documento) =>
+        cambio.TipoCambioId is null
+            ? string.Empty
+            : string.Create(
+                CultureInfo.InvariantCulture,
+                $", moneda {cambio.MonedaCodigo}, original {documento.MontoTotalOriginal:N2}, tipo de cambio {CambioRules.FormatoTasa(cambio.Tasa)} ({cambio.Fuente})");
 
     private static string? MensajeDteDuplicado(DbUpdateException ex, IDocumentoFactura documento) =>
         ex.InnerException is PostgresException { SqlState: "23505" } violacion

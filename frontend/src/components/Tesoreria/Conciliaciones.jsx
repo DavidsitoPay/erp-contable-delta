@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { conciliacionesApi } from "../../services/api";
 import { etiquetaCuenta, indexarPorId } from "../../utils/cuentas";
-import { formatoMoneda, hoyIso, mensajeError, monto } from "../../utils/formato";
+import { monedaDeCuenta } from "../../utils/cambio";
+import { formatoImporte, hoyIso, mensajeError, monto } from "../../utils/formato";
 import { FormularioCatalogo, TablaCatalogo } from "../Catalogo/CatalogoCrud";
 import ConciliacionDetalle from "./ConciliacionDetalle";
 import SelectCuentaBancaria from "./SelectCuentaBancaria";
@@ -67,7 +68,7 @@ function Conciliaciones({ cuentasBancarias, cuentasContables }) {
           <tr key={c.id}>
             <td>{etiquetaCuenta(cuentasPorId[c.cuentaBancariaId])}</td>
             <td>{c.fecha}</td>
-            <td className="numeric">{formatoMoneda.format(c.saldoExtracto)}</td>
+            <td className="numeric">{formatoImporte(c.saldoExtracto, monedaDeCuenta(cuentasPorId[c.cuentaBancariaId]))}</td>
             <td>{c.estado}</td>
             <td>
               <button type="button" className="btn btn-outline btn-sm" aria-label={`Ver detalle de conciliación ${c.id}`} onClick={() => setSeleccionada(c.id)}>

@@ -17,14 +17,22 @@ public static class FacturaRules
         return ValidarLineas(documento.Lineas) ?? ValidarOrigen(documento);
     }
 
-    public static void PrepararNuevo(IDocumentoFactura documento, ResumenFiscal resumen)
+    public static void PrepararNuevo(IDocumentoFactura documento, ResumenFiscal resumen, TipoCambioAplicable? cambio = null)
     {
         documento.Id = 0;
         documento.Estado = "Vigente";
         documento.MontoTotal = resumen.Total;
         documento.MontoBase = resumen.Base;
         documento.MontoIva = resumen.Iva;
-        documento.TipoCambioAplicado = 1m;
+        documento.TipoCambioAplicado = cambio?.Tasa ?? 1m;
+        documento.TipoCambioId = cambio?.TipoCambioId;
+        documento.TipoCambioFuente = cambio?.Fuente;
+        documento.TipoCambioArrastrado = cambio?.Arrastrado ?? false;
+        documento.MontoTotalOriginal = cambio is null ? resumen.Total : resumen.TotalOriginal;
+        if (cambio is not null)
+        {
+            documento.MonedaId = cambio.MonedaId;
+        }
         documento.CalculoLegado = false;
         documento.DteUuid = documento.DteUuid == Guid.Empty ? null : documento.DteUuid;
         documento.DteSerie = LimpiarTexto(documento.DteSerie);
@@ -37,6 +45,7 @@ public static class FacturaRules
             linea.Id = 0;
             linea.TasaAplicada = calculo.TasaAplicada;
             linea.MontoLinea = calculo.MontoLinea;
+            linea.MontoLineaOriginal = cambio is null ? calculo.MontoLinea : calculo.MontoLineaOriginal;
             linea.MontoBase = calculo.Base;
             linea.MontoIva = calculo.Iva;
         }

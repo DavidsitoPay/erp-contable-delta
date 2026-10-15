@@ -33,6 +33,19 @@ public static class TesoreriaRules
         return ValidarMonto(monto) ?? ValidarDescripcion(descripcion);
     }
 
+    public static string? ValidarTransferenciaCruzada(decimal monto, decimal? montoDestino, bool mismaMoneda)
+    {
+        if (mismaMoneda)
+        {
+            return montoDestino is null || montoDestino == monto
+                ? null
+                : "En una transferencia entre cuentas de la misma moneda el monto destino debe ser igual al monto.";
+        }
+        return montoDestino is null
+            ? "El monto destino es obligatorio cuando las cuentas son de distinta moneda."
+            : ValidarMonto(montoDestino.Value);
+    }
+
     public static string? ValidarCuentaBancaria(string? banco, string? numero, string? tipo)
     {
         if (string.IsNullOrWhiteSpace(banco))
@@ -112,6 +125,18 @@ public static class TesoreriaRules
             .OrderBy(g => g.Key)
             .Select(g => (CuentaId: g.Key, Monto: g.Sum()))
             .ToList();
+
+    public static string? ValidarMonedaCuenta(string? codigo)
+    {
+        var normalizado = codigo?.Trim().ToUpperInvariant();
+        if (string.IsNullOrEmpty(normalizado) || normalizado is "GTQ" or "USD")
+        {
+            return null;
+        }
+        return normalizado == "EUR"
+            ? "Las cuentas bancarias en EUR no están disponibles en esta versión."
+            : "La moneda de la cuenta bancaria debe ser GTQ o USD.";
+    }
 
     private static string? ValidarMagnitud(decimal valor, string mensajeDecimales, string mensajeExcede)
     {

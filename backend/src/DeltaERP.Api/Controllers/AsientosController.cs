@@ -112,7 +112,8 @@ public class AsientosController : ControllerBase
         var vinculos = new VinculosAsiento(
             await _db.DocumentosCxC.AnyAsync(d => d.AsientoId == id),
             await _db.DocumentosCxP.AnyAsync(d => d.AsientoId == id),
-            await _db.MovimientosTesoreria.AnyAsync(m => m.AsientoId == id));
+            await _db.MovimientosTesoreria.AnyAsync(m => m.AsientoId == id),
+            await _db.EsAsientoDeRevaluacionAsync(id));
         var bloqueo = ReversaAsiento.ObtenerBloqueo(original, periodo, vinculos);
         if (bloqueo is not null)
         {

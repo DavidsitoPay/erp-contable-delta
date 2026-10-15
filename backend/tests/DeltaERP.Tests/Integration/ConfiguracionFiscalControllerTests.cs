@@ -216,6 +216,136 @@ public class ConfiguracionFiscalControllerTests
         Assert.Contains(fragmento, await response.LeerErrorAsync());
     }
 
+    [Fact]
+    public async Task Actualizar_ConLasCuatroCuentasCambiarias_Persiste()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var usuario = await _pg.Data.CrearUsuarioAsync(Roles.Administrador);
+        var client = _pg.CreateApiClient(usuario, Roles.Administrador);
+        var gananciaRealizada = await _pg.Data.CrearCuentaAsync("Ingreso", "Acreedora");
+        var perdidaRealizada = await _pg.Data.CrearCuentaAsync("Gasto", "Deudora");
+        var gananciaReval = await _pg.Data.CrearCuentaAsync("Ingreso", "Acreedora");
+        var perdidaReval = await _pg.Data.CrearCuentaAsync("Gasto", "Deudora");
+        try
+        {
+            var response = await client.PutAsJsonAsync(
+                Ruta, CuerpoConCambiarias(e.CuentaIvaDebito, e.CuentaIvaCredito, gananciaRealizada, perdidaRealizada, gananciaReval, perdidaReval));
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var body = await client.GetFromJsonAsync<JsonElement>(Ruta);
+            Assert.Equal(
+                (gananciaRealizada, perdidaRealizada, gananciaReval, perdidaReval),
+                (body.GetProperty("cuentaDifGananciaRealizadaId").GetInt32(), body.GetProperty("cuentaDifPerdidaRealizadaId").GetInt32(),
+                    body.GetProperty("cuentaRevalGananciaId").GetInt32(), body.GetProperty("cuentaRevalPerdidaId").GetInt32()));
+            Assert.Contains("cuenta ganancia cambiaria realizada", await _pg.Data.DetalleAuditoriaAsync(usuario, "actualizar_configuracion_fiscal"));
+        }
+        finally
+        {
+            await _pg.Data.RestaurarConfiguracionFiscalAsync();
+        }
+    }
+
+    [Theory]
+    [InlineData(0, "La cuenta de ganancia cambiaria realizada debe ser de tipo Ingreso y naturaleza Acreedora.")]
+    [InlineData(1, "La cuenta de pérdida cambiaria realizada debe ser de tipo Gasto y naturaleza Deudora.")]
+    [InlineData(2, "La cuenta de ganancia por revaluación debe ser de tipo Ingreso y naturaleza Acreedora.")]
+    [InlineData(3, "La cuenta de pérdida por revaluación debe ser de tipo Gasto y naturaleza Deudora.")]
+    public async Task Actualizar_CuentaCambiariaConTipoONaturalezaIncorrecta_Responde400(int ranura, string mensaje)
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var incorrecta = await _pg.Data.CrearCuentaAsync("Activo", "Deudora");
+        var cuentas = new int?[4];
+        cuentas[ranura] = incorrecta;
+        var client = _pg.CreateApiClient(e.UsuarioId, Roles.Administrador);
+
+        var response = await client.PutAsJsonAsync(
+            Ruta, CuerpoConCambiarias(e.CuentaIvaDebito, e.CuentaIvaCredito, cuentas[0], cuentas[1], cuentas[2], cuentas[3]));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(mensaje, await response.LeerErrorAsync());
+    }
+
+    [Fact]
+    public async Task Actualizar_CuentaCambiariaDeMayorOInactiva_Responde400()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var (mayor, _) = await _pg.Data.CrearCuentaConSubcuentasAsync("Ingreso", "Acreedora");
+        var inactiva = await _pg.Data.CrearCuentaInactivaAsync("Ingreso", "Acreedora");
+        var client = _pg.CreateApiClient(e.UsuarioId, Roles.Administrador);
+
+        var deMayor = await client.PutAsJsonAsync(Ruta, CuerpoConCambiarias(e.CuentaIvaDebito, e.CuentaIvaCredito, mayor, null, null, null));
+        Assert.Equal(HttpStatusCode.BadRequest, deMayor.StatusCode);
+        Assert.Contains("son de mayor", await deMayor.LeerErrorAsync());
+
+        var desactivada = await client.PutAsJsonAsync(Ruta, CuerpoConCambiarias(e.CuentaIvaDebito, e.CuentaIvaCredito, inactiva, null, null, null));
+        Assert.Equal(HttpStatusCode.BadRequest, desactivada.StatusCode);
+        Assert.Contains("están inactivas", await desactivada.LeerErrorAsync());
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public async Task Actualizar_CuentasCambiariasDuplicadasOIgualesALaDeIva_Responde400(int caso)
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var gananciaRealizada = await _pg.Data.CrearCuentaAsync("Ingreso", "Acreedora");
+        var cuerpo = caso == 0
+            ? CuerpoConCambiarias(e.CuentaIvaDebito, e.CuentaIvaCredito, gananciaRealizada, null, gananciaRealizada, null)
+            : CuerpoConCambiarias(e.CuentaIvaDebito, e.CuentaIvaCredito, e.CuentaIvaDebito, null, null, null);
+        var client = _pg.CreateApiClient(e.UsuarioId, Roles.Administrador);
+
+        var response = await client.PutAsJsonAsync(Ruta, cuerpo);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(
+            "Las cuentas de diferencial cambiario y de revaluación deben ser distintas entre sí y de las cuentas de IVA y de retención.",
+            await response.LeerErrorAsync());
+    }
+
+    [Fact]
+    public async Task Actualizar_OmitiendoLasCuentasCambiarias_LasConserva()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var client = _pg.CreateApiClient(e.UsuarioId, Roles.Administrador);
+        var gananciaRealizada = await _pg.Data.CrearCuentaAsync("Ingreso", "Acreedora");
+        var perdidaRealizada = await _pg.Data.CrearCuentaAsync("Gasto", "Deudora");
+        var gananciaReval = await _pg.Data.CrearCuentaAsync("Ingreso", "Acreedora");
+        var perdidaReval = await _pg.Data.CrearCuentaAsync("Gasto", "Deudora");
+        try
+        {
+            await _pg.Data.ConfigurarCuentasCambiariasAsync(gananciaRealizada, perdidaRealizada, gananciaReval, perdidaReval);
+
+            var response = await client.PutAsJsonAsync(Ruta, Cuerpo(e.CuentaIvaDebito, e.CuentaIvaCredito));
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var body = await response.LeerJsonAsync();
+            Assert.Equal(
+                (gananciaRealizada, perdidaRealizada, gananciaReval, perdidaReval),
+                (body.GetProperty("cuentaDifGananciaRealizadaId").GetInt32(), body.GetProperty("cuentaDifPerdidaRealizadaId").GetInt32(),
+                    body.GetProperty("cuentaRevalGananciaId").GetInt32(), body.GetProperty("cuentaRevalPerdidaId").GetInt32()));
+        }
+        finally
+        {
+            await _pg.Data.RestaurarConfiguracionFiscalAsync();
+        }
+    }
+
+    private static object CuerpoConCambiarias(
+        int debitoId, int creditoId, int? gananciaRealizadaId, int? perdidaRealizadaId, int? gananciaRevalId, int? perdidaRevalId) => new
+    {
+        nitEmpresa = "7654321-8",
+        nombreLegal = "Delta Actualizada, S.A.",
+        regimenIsr = "UTILIDADES",
+        agenteRetencionIva = false,
+        tipoAgenteIva = (string?)null,
+        cuentaIvaDebitoId = debitoId,
+        cuentaIvaCreditoId = creditoId,
+        cuentaDifGananciaRealizadaId = gananciaRealizadaId,
+        cuentaDifPerdidaRealizadaId = perdidaRealizadaId,
+        cuentaRevalGananciaId = gananciaRevalId,
+        cuentaRevalPerdidaId = perdidaRevalId,
+    };
+
     private static object CuerpoConRetenciones(int debitoId, int creditoId, int? isrId, int? ivaClientesId) => new
     {
         nitEmpresa = "7654321-8",

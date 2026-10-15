@@ -10,6 +10,7 @@ public class CuentaBancaria
     public string Tipo { get; set; } = string.Empty;
     public bool Activa { get; set; } = true;
     public int CuentaContableId { get; set; }
+    public int MonedaId { get; set; }
     public decimal SaldoApertura { get; set; }
     public DateOnly? FechaApertura { get; set; }
 }

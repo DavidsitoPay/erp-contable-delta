@@ -13,7 +13,15 @@ public abstract class DocumentoFacturaBase<TLinea> where TLinea : class, ILineaF
     public decimal MontoTotal { get; set; }
     public decimal MontoBase { get; set; }
     public decimal MontoIva { get; set; }
-    public decimal? TipoCambioAplicado { get; set; }
+    public decimal TipoCambioAplicado { get; set; } = 1m;
+    public int MonedaId { get; set; }
+    public decimal MontoTotalOriginal { get; set; }
+    public int? TipoCambioId { get; set; }
+    public string? TipoCambioFuente { get; set; }
+    public bool TipoCambioArrastrado { get; set; }
+
+    [NotMapped]
+    public string? MonedaCodigo { get; set; }
     public bool CalculoLegado { get; set; }
     [JsonIgnore]
     public Guid? DteUuid { get; set; }

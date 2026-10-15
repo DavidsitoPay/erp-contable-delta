@@ -17,7 +17,8 @@ public record LineaFacturaDetalle(
     int? CentroCostoId,
     int CuentaContableId,
     string? CuentaCodigo,
-    string? CuentaNombre)
+    string? CuentaNombre,
+    decimal MontoLineaOriginal)
 {
     public static List<LineaFacturaDetalle> Desde(
         IEnumerable<ILineaFactura> lineas,
@@ -30,6 +31,6 @@ public record LineaFacturaDetalle(
             return new LineaFacturaDetalle(
                 l.Descripcion, l.Cantidad, l.PrecioUnitario, l.ImpuestoId, impuesto?.Codigo, impuesto?.Nombre,
                 l.TasaAplicada, l.TipoBienServicio, l.MontoLinea, l.MontoBase, l.MontoIva,
-                l.CentroCostoId, l.CuentaContableId, cuenta?.Codigo, cuenta?.Nombre);
+                l.CentroCostoId, l.CuentaContableId, cuenta?.Codigo, cuenta?.Nombre, l.MontoLineaOriginal);
         }).ToList();
 }
