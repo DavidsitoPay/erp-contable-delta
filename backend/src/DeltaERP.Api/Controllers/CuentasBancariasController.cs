@@ -129,7 +129,7 @@ public class CuentasBancariasController : ControllerBase
         orderby c.Banco, c.Numero
         select new CuentaBancariaDto(
             c.Id, c.Banco, c.Numero, c.Tipo, c.Activa, c.CuentaContableId, cc.Codigo, cc.Nombre, c.SaldoApertura, c.FechaApertura, s.Saldo,
-            c.MonedaId, mo.Codigo, b == null ? 0m : b.Saldo);
+            c.MonedaId, mo.Codigo, (decimal?)b.Saldo ?? 0m);
 
     private ConflictObjectResult ConflictoBancoNumero(CuentaBancariaRequest solicitud) =>
         Conflict(new { error = $"Ya existe la cuenta bancaria {solicitud.Banco!.Trim()} {solicitud.Numero!.Trim()}." });

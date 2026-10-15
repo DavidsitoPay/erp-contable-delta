@@ -45,6 +45,10 @@ public static class ErroresPostgres
     // Npgsql trata 55000 como transitorio y NpgsqlExecutionStrategy lo envuelve en InvalidOperationException.
     public static PostgresException? ObtenerPostgres(Exception ex)
     {
+        if (ex is PostgresException directa)
+        {
+            return directa;
+        }
         var actualizacion = ex as DbUpdateException ?? (ex as InvalidOperationException)?.InnerException as DbUpdateException;
         return actualizacion?.InnerException as PostgresException;
     }
