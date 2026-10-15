@@ -113,8 +113,8 @@ public class RevaluacionesControllerTests
         Assert.Equal(100m, await _pg.Data.CreditoAsync(cierreId, a.BancoContableId));
         Assert.Equal(55m, await _pg.Data.CreditoAsync(cierreId, m.CuentaRevalGanancia));
         Assert.Equal(100m, await _pg.Data.DebitoAsync(cierreId, m.CuentaRevalPerdida));
-        Assert.Equal(new DateOnly(a.R.Anio, 10, 31), await _pg.Data.ScalarAsync<DateOnly>("SELECT fecha FROM asientocontable WHERE id = $1", cierreId));
-        Assert.Equal(new DateOnly(a.R.Anio, 11, 1), await _pg.Data.ScalarAsync<DateOnly>("SELECT fecha FROM asientocontable WHERE id = $1", reversaId));
+        Assert.Equal(new DateTime(a.R.Anio, 10, 31), await _pg.Data.ScalarAsync<DateTime>("SELECT fecha FROM asientocontable WHERE id = $1", cierreId));
+        Assert.Equal(new DateTime(a.R.Anio, 11, 1), await _pg.Data.ScalarAsync<DateTime>("SELECT fecha FROM asientocontable WHERE id = $1", reversaId));
         Assert.True(await _pg.Data.AsientoCuadraAsync(cierreId));
         Assert.True(await _pg.Data.AsientoCuadraAsync(reversaId));
 

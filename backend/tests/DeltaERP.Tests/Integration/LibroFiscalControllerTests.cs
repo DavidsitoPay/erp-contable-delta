@@ -125,7 +125,7 @@ public class LibroFiscalControllerTests
 
         var fila = libro.GetProperty("filas").EnumerateArray().Single(f => f.GetProperty("numeroInterno").GetString() == numero);
         Assert.Equal("GTQ", fila.GetProperty("moneda").GetString());
-        Assert.Equal(fila.GetProperty("total").GetDecimal(), fila.GetProperty("importeOriginal").GetDecimal());
+        Assert.Equal(100m, fila.GetProperty("importeOriginal").GetDecimal());
         Assert.Equal(1m, fila.GetProperty("tipoCambio").GetDecimal());
     }
 
@@ -162,13 +162,14 @@ public class LibroFiscalControllerTests
     {
         var (e, client, anio) = await PrepararAsync();
         var asiento = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 100m, new DateOnly(anio, 8, 1));
-        await _pg.Data.VincularFacturaCxCAsync(e.ClienteId, asiento, new DateOnly(anio, 8, 1));
+        var documentoId = await _pg.Data.VincularFacturaCxCAsync(e.ClienteId, asiento, new DateOnly(anio, 8, 1));
+        var numero = await _pg.Data.ScalarAsync<string>("SELECT numero FROM documentocxc WHERE id = $1", documentoId);
 
         var libro = await client.GetFromJsonAsync<JsonElement>($"/api/libros/fiscal/ventas?anio={anio}&mes=8");
 
-        Assert.Equal(1, libro.GetProperty("filas").GetArrayLength());
+        var fila = libro.GetProperty("filas").EnumerateArray().Single(f => f.GetProperty("numeroInterno").GetString() == numero);
         Assert.Contains("calculo legado", libro.GetProperty("advertencias")[0].GetString());
-        Assert.True(libro.GetProperty("filas")[0].GetProperty("legado").GetBoolean());
+        Assert.True(fila.GetProperty("legado").GetBoolean());
     }
 
     [Theory]

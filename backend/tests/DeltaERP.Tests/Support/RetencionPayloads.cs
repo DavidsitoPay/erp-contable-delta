@@ -10,10 +10,10 @@ public static class RetencionPayloads
     public const string RutaPagosCxC = "/api/cxc/pagos";
     public const string RutaPagosCxP = "/api/cxp/pagos";
 
-    private static int _anioAislado = 2014;
+    private static int _anioAislado = 2026;
 
     // Cada prueba de reporte usa un año propio para que sus totales no se mezclen con los de otras pruebas.
-    public static int SiguienteAnio() => Interlocked.Increment(ref _anioAislado);
+    public static int SiguienteAnio() => Interlocked.Decrement(ref _anioAislado);
 
     public static string Numero() => $"R-{TestData.Sufijo()}";
 

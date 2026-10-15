@@ -65,7 +65,8 @@ public static class FacturaPayloads
     public static async Task<(HttpStatusCode Estado, JsonElement Cuerpo)> EnviarAsync(this HttpClient client, string ruta, object payload)
     {
         var response = await client.PostAsJsonAsync(ruta, payload);
-        return (response.StatusCode, await response.LeerJsonAsync());
+        var cuerpo = await response.Content.ReadAsStringAsync();
+        return (response.StatusCode, string.IsNullOrWhiteSpace(cuerpo) ? default : JsonDocument.Parse(cuerpo).RootElement);
     }
 
     public static async Task<(Escenario E, HttpClient Client)> PrepararAsync(this PostgresFixture pg)

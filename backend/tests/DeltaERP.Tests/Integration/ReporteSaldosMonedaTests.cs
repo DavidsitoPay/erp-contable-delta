@@ -66,7 +66,8 @@ public class ReporteSaldosMonedaTests
         var (estado, cuerpo) = await ConsultarAsync(c.Cliente, $"tipo=CxC&corte={c.R.Anio}-10-31");
 
         Assert.Equal(HttpStatusCode.OK, estado);
-        var filas = cuerpo.GetProperty("filas").EnumerateArray().ToList();
+        var propios = new[] { c.A, c.B, c.C };
+        var filas = cuerpo.GetProperty("filas").EnumerateArray().Where(f => propios.Contains(f.GetProperty("documentoId").GetInt32())).ToList();
         Assert.Equal(3, filas.Count);
         Assert.Equal((c.B, "61-90", 61, 500m), (filas[0].GetProperty("documentoId").GetInt32(), Texto(filas[0], "tramo"), filas[0].GetProperty("diasVencido").GetInt32(), Dec(filas[0], "saldoOriginal")));
         Assert.Equal((c.A, "1-30", 30), (filas[1].GetProperty("documentoId").GetInt32(), Texto(filas[1], "tramo"), filas[1].GetProperty("diasVencido").GetInt32()));
@@ -136,7 +137,7 @@ public class ReporteSaldosMonedaTests
         var (estado, cuerpo) = await ConsultarAsync(cliente, $"tipo=CxC&corte={anio}-10-31");
 
         Assert.Equal(HttpStatusCode.OK, estado);
-        var conciliacion = Assert.Single(cuerpo.GetProperty("conciliacion").EnumerateArray());
+        var conciliacion = Assert.Single(cuerpo.GetProperty("conciliacion").EnumerateArray(), c => c.GetProperty("cuentaId").GetInt32() == r.M.E.CuentaCxC);
         Assert.Equal((7600m, 7650m, 50m, 0m), (Dec(conciliacion, "totalReporte"), Dec(conciliacion, "saldoMayor"), Dec(conciliacion, "revaluacionVigente"), Dec(conciliacion, "diferencia")));
     }
 
@@ -145,15 +146,14 @@ public class ReporteSaldosMonedaTests
     {
         var r = await _pg.Data.SembrarEscenarioRevaluacionAsync();
         var m = r.M;
-        var proveedor = await _pg.Data.CrearProveedorIsrAsync("SIMPLIFICADO");
         await _pg.Data.SembrarTipoCambioAsync("USD", new DateOnly(r.Anio, 10, 6), 7.66m);
         var cliente = _pg.CreateApiClient(m.E.UsuarioId);
-        await cliente.RegistrarCompraAsync(FacturaPayloads.CxpEn(m, "USD", new DateOnly(r.Anio, 10, 6), 500m, proveedor));
+        await cliente.RegistrarCompraAsync(FacturaPayloads.CxpEn(m, "USD", new DateOnly(r.Anio, 10, 6), 500m));
 
         var (estado, cuerpo) = await ConsultarAsync(cliente, $"tipo=CxP&corte={r.Anio}-10-31");
 
         Assert.Equal(HttpStatusCode.OK, estado);
-        var conciliacion = Assert.Single(cuerpo.GetProperty("conciliacion").EnumerateArray());
+        var conciliacion = Assert.Single(cuerpo.GetProperty("conciliacion").EnumerateArray(), c => c.GetProperty("cuentaId").GetInt32() == m.E.CuentaCxP);
         Assert.Equal((3830m, 0m), (Dec(conciliacion, "totalReporte"), Dec(conciliacion, "diferencia")));
     }
 

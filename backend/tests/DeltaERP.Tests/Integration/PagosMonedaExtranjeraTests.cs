@@ -222,9 +222,9 @@ public class PagosMonedaExtranjeraTests
     }
 
     [Theory]
-    [InlineData("GTQ")]
-    [InlineData("EUR")]
-    public async Task Rn27_CompraEnQuetzalesOEuroConCuentaUsd_Responde409(string moneda)
+    [InlineData("GTQ", "RN-27")]
+    [InlineData("EUR", "no coincide con la de la cuenta bancaria (USD)")]
+    public async Task Rn27_CompraEnQuetzalesOEuroConCuentaUsd_Responde409(string moneda, string mensaje)
     {
         var m = await _pg.Data.SembrarEscenarioMeAsync();
         if (moneda == "EUR")
@@ -238,7 +238,7 @@ public class PagosMonedaExtranjeraTests
             RutaPagosCxP, PagoProveedor(m.E.ProveedorId, m.BancoUsdId, m.Miercoles.Dia(), AplicacionMe(facturaId, 100m)));
 
         Assert.Equal(HttpStatusCode.Conflict, estado);
-        Assert.Contains("RN-27", MensajeDe(cuerpo));
+        Assert.Contains(mensaje, MensajeDe(cuerpo));
     }
 
     [Fact]

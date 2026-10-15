@@ -353,13 +353,13 @@ public class MultimonedaEsquemaTests
 
         ex = await Assert.ThrowsAsync<PostgresException>(() => _pg.Data.EjecutarAsync(
             "INSERT INTO aplicacionpagoproveedor (pago_cabecera_id, documento_id, monto_aplicado, monto_aplicado_gtq, valor_gtq, diferencial_gtq) " +
-            "VALUES ($1, $2, 100, 764.16, 800, 35.84)",
+            "VALUES ($1, $2, 100, 100, 110, 10)",
             pago, documentoCxp));
         Assert.Equal("ck_aplicacionpagoproveedor_diferencial", ex.ConstraintName);
 
         await _pg.Data.EjecutarAsync(
             "INSERT INTO aplicacionpagoproveedor (pago_cabecera_id, documento_id, monto_aplicado, monto_aplicado_gtq, valor_gtq, diferencial_gtq) " +
-            "VALUES ($1, $2, 100, 764.16, 800, -35.84)",
+            "VALUES ($1, $2, 100, 100, 110, -10)",
             pago, documentoCxp);
     }
 
