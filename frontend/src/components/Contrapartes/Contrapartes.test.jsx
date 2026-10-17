@@ -97,6 +97,7 @@ describe("Contrapartes", () => {
       esAgenteRetencionIva: false,
       isrFundamento: null,
       tipoAgenteIva: null,
+      tipoRentaNrCodigo: null,
     });
     await waitFor(() => expect(contrapartesApi.listar).toHaveBeenCalledTimes(2));
   });
@@ -143,6 +144,7 @@ describe("Contrapartes", () => {
         esAgenteRetencionIva: false,
         isrFundamento: null,
         tipoAgenteIva: null,
+        tipoRentaNrCodigo: null,
       })
     );
   });
