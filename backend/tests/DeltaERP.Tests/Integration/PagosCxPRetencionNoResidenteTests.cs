@@ -336,7 +336,7 @@ public class PagosCxPRetencionNoResidenteTests
     [Fact]
     public async Task Reporte_IncluyeLaRetencionEnElMesDelPagoSinConstanciaYConTotalesPorTipoDeRenta()
     {
-        var c = await CompraAsync();
+        var c = await _pg.CompraNrAsync(inicio: TestData.SiguienteMesAislado());
         var (_, pago) = await Pagar(c, c.M.BancoUsdId, c.M.Jueves, 400m);
         var id = pago.GetProperty("retenciones")[0].GetProperty("retencionId").GetInt32();
 
