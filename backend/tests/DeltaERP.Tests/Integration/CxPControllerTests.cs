@@ -216,7 +216,7 @@ public class CxPControllerTests
 
         var pagos = response.EnumerateArray().ToList();
         Assert.NotEmpty(pagos);
-        var pago = pagos[0];
+        var pago = pagos.First(p => p.GetProperty("proveedorId").GetInt32() == e.ProveedorId);
         Assert.True(pago.GetProperty("proveedorNombre").GetString()!.Length > 0);
         Assert.Equal(50m, pago.GetProperty("montoTotal").GetDecimal());
     }

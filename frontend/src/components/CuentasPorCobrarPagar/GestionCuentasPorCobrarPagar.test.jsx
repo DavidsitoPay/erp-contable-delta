@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { centrosCostoApi, contrapartesApi, cuentasApi, cuentasBancariasApi, impuestosApi, parametrosRetencionApi, periodosApi, tiposCambioApi } from "../../services/api";
+import { ajustesRetencionApi, centrosCostoApi, contrapartesApi, cuentasApi, cuentasBancariasApi, impuestosApi, parametrosRetencionApi, periodosApi, tiposCambioApi } from "../../services/api";
 import { formatoDiferencial, formatoMoneda, formatoQuetzales } from "../../utils/formato";
 import GestionCuentasPorCobrarPagar from "./GestionCuentasPorCobrarPagar";
 
@@ -9,6 +9,7 @@ vi.mock("../../services/api", () => ({
   contrapartesApi: { listar: vi.fn() },
   cuentasApi: { listar: vi.fn() },
   cuentasBancariasApi: { listar: vi.fn() },
+  ajustesRetencionApi: { listar: vi.fn(), resolver: vi.fn() },
   impuestosApi: { listar: vi.fn() },
   parametrosRetencionApi: { listar: vi.fn().mockResolvedValue({ data: [] }) },
   periodosApi: { listar: vi.fn() },
@@ -148,6 +149,16 @@ async function prepararPagoNoResidente(retencionPreviaPago, documentos = factura
   fireEvent.change(screen.getByLabelText("Cuenta bancaria"), { target: { value: "7" } });
   fireEvent.change(screen.getByLabelText("Método de pago"), { target: { value: "Transferencia" } });
   fireEvent.change(screen.getByLabelText("Monto a aplicar a P-1"), { target: { value: "40" } });
+}
+
+async function prepararAjuste() {
+  const config = crearConfigCxp();
+  config.api.listarFacturas = vi.fn().mockResolvedValue({ data: [{ ...facturasCxp[0], ajusteRetencionPendiente: true }] });
+  ajustesRetencionApi.listar.mockResolvedValue({ data: [{ id: 31, retencionId: 40, notaCreditoId: 41, documentoOrigenId: 21, notaCreditoNumero: "NC-9", documentoOrigenNumero: "P-1", montoNc: 10 }] });
+  await renderCargado(config, "P-1");
+  fireEvent.click(screen.getByRole("button", { name: "Resolver ajuste de P-1" }));
+  await screen.findByLabelText("Motivo");
+  return config;
 }
 
 describe("GestionCuentasPorCobrarPagar", () => {
@@ -307,6 +318,25 @@ describe("GestionCuentasPorCobrarPagar", () => {
     expect(screen.queryByLabelText("Motivo de la revisión de P-1")).toBeNull();
   });
 
+  it("en cuentas por pagar resuelve el ajuste de retención desde la fila de la factura origen", async () => {
+    const config = await prepararAjuste();
+
+    fireEvent.change(screen.getByLabelText("Motivo"), { target: { value: " Ajuste confirmado " } });
+    fireEvent.change(screen.getByLabelText("Referencia"), { target: { value: "NC-9" } });
+    fireEvent.click(screen.getByRole("button", { name: "Resolver ajuste" }));
+
+    await waitFor(() => expect(ajustesRetencionApi.resolver).toHaveBeenCalledWith(31, { motivo: "Ajuste confirmado", referencia: "NC-9" }));
+    await waitFor(() => expect(config.api.listarFacturas).toHaveBeenCalledTimes(2));
+  });
+
+  it("al cancelar el ajuste de retención cierra el diálogo", async () => {
+    await prepararAjuste();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(screen.queryByLabelText("Motivo")).toBeNull();
+  });
+
   it("en cuentas por cobrar no ofrece el filtro de revisión ni la columna de retención", async () => {
     await renderCargado();
 
@@ -428,6 +458,16 @@ describe("GestionCuentasPorCobrarPagar", () => {
       referenciaBancaria: null,
       aplicaciones: [{ documentoId: 21, montoAplicado: 40, tipoRentaCodigo: "OTRO" }],
     });
+  });
+
+  it("al cambiar la fecha del pago consulta los tipos de renta vigentes a esa fecha", async () => {
+    await prepararPagoNoResidente(vi.fn().mockResolvedValue({ data: previaNr }));
+
+    fireEvent.change(screen.getByLabelText("Fecha de pago"), { target: { value: "2026-03-15" } });
+
+    await waitFor(() =>
+      expect(parametrosRetencionApi.listar).toHaveBeenLastCalledWith({ concepto: "ISR_NO_RESIDENTE", vigenteEn: "2026-03-15" })
+    );
   });
 
   it("un 409 de la previa muestra el motivo y impide registrar el pago a un proveedor no residente", async () => {

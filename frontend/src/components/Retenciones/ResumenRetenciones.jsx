@@ -1,6 +1,7 @@
 import { CONCEPTOS_RETENCION, SENTIDOS_RETENCION, etiquetaDe } from "../../utils/etiquetasFiscales";
 import { formatoMoneda } from "../../utils/formato";
 import { TablaCatalogo } from "../Catalogo/CatalogoCrud";
+import CeldasSaldoPeriodo from "./CeldasSaldoPeriodo";
 
 const AVISO_COBRO_OTRO_MES = "La diferencia se explica por cobros registrados en un mes distinto al de la factura.";
 const AVISO_SIN_EXPLICACION = "La conciliación tiene diferencias que no se explican por cobros en otro mes; revise los asientos de la cuenta.";
@@ -51,6 +52,19 @@ function ResumenRetenciones({ reporte }) {
                 <td className="numeric">{t.cantidad}</td>
                 <td className="numeric">{formatoMoneda.format(t.base)}</td>
                 <td className="numeric">{formatoMoneda.format(t.monto)}</td>
+              </tr>
+            ))}
+          </TablaCatalogo>
+        </>
+      )}
+
+      {reporte.saldosEnterar?.length > 0 && (
+        <>
+          <h3>Saldo por enterar por período</h3>
+          <TablaCatalogo encabezados={["Período", "Retenido", "Enterado", "Saldo por enterar"]}>
+            {reporte.saldosEnterar.map((s) => (
+              <tr key={s.periodo}>
+                <CeldasSaldoPeriodo fila={s} saldo={s.saldoPorEnterar} />
               </tr>
             ))}
           </TablaCatalogo>

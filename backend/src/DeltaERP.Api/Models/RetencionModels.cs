@@ -176,7 +176,9 @@ public sealed record FilaReporteRetencion(
     decimal? TipoCambio,
     DateOnly? TipoCambioFecha,
     decimal EnteradoGtq,
-    decimal SaldoPorEnterarGtq);
+    decimal SaldoPorEnterarGtq,
+    string? Pais,
+    bool AjustePendiente);
 
 public sealed record TotalReporteRetencion(string Sentido, string Concepto, int Cantidad, decimal Base, decimal Monto, int SinConstancia);
 
@@ -190,10 +192,13 @@ public sealed record ConciliacionReporteRetencion(
     decimal MovimientoContable,
     decimal Diferencia);
 
+public sealed record SaldoEnterarReporte(DateOnly Periodo, decimal Retenido, decimal Enterado, decimal SaldoPorEnterar);
+
 public sealed record ReporteRetencionRespuesta(
     int Anio,
     int Mes,
     IReadOnlyList<FilaReporteRetencion> Filas,
     IReadOnlyList<TotalReporteRetencion> Totales,
     IReadOnlyList<ConciliacionReporteRetencion> Conciliacion,
-    IReadOnlyList<TotalTipoRentaReporte> TotalesTipoRenta);
+    IReadOnlyList<TotalTipoRentaReporte> TotalesTipoRenta,
+    IReadOnlyList<SaldoEnterarReporte> SaldosEnterar);

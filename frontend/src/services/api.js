@@ -168,4 +168,24 @@ export const retencionesApi = {
   anularConstancia: (id, motivo) => api.post(`/retenciones/constancias/${idRuta(id)}/anular`, { motivo }),
 };
 
+export const enteramientosApi = {
+  saldo: (periodo) => api.get("/retenciones/enteramientos/saldo", { params: periodo ? { periodo } : {} }),
+  vistaPrevia: (solicitud) => api.post("/retenciones/enteramientos/vista-previa", solicitud),
+  crear: (enteramiento) => api.post("/retenciones/enteramientos", enteramiento),
+  anular: (id, motivo) => api.post(`/retenciones/enteramientos/${idRuta(id)}/anular`, { motivo }),
+  listar: (filtros = {}) => api.get("/retenciones/enteramientos", { params: filtros }),
+};
+
+export const ajustesRetencionApi = {
+  listar: (estado) => api.get("/retenciones/ajustes", { params: estado ? { estado } : {} }),
+  resolver: (id, resolucion) => api.post(`/retenciones/ajustes/${idRuta(id)}/resolver`, resolucion),
+};
+
+export const feriadosApi = {
+  listar: (anio) => api.get("/feriados", { params: anio ? { anio } : {} }),
+  crear: (feriado) => api.post("/feriados", feriado),
+  actualizar: (fecha, cambios) => api.put(`/feriados/${encodeURIComponent(fecha)}`, cambios),
+  eliminar: (fecha) => api.delete(`/feriados/${encodeURIComponent(fecha)}`),
+};
+
 export default api;

@@ -207,30 +207,46 @@ public class TesoreriaService
 
     public async Task<(MovimientoTesoreria? Movimiento, ErrorValidacion? Error)> RegistrarManualAsync(NuevoMovimientoManual req, int usuarioId)
     {
+        var (asiento, movimiento, cuenta, error) = await PrepararManualAsync(req, usuarioId);
+        if (error is not null)
+        {
+            return (null, error);
+        }
+        await _auditoria.EjecutarAsync(usuarioId, "registrar_movimiento_tesoreria", TablaMovimientos, async () =>
+        {
+            await PersistirAsync(asiento!, movimiento!);
+            return $"Movimiento {movimiento!.Id} ({movimiento.Tipo} {movimiento.Monto}) en cuenta {cuenta!.Banco} {cuenta.Numero}";
+        });
+        return (movimiento, null);
+    }
+
+    public async Task<(AsientoContable? Asiento, MovimientoTesoreria? Movimiento, CuentaBancaria? Cuenta, ErrorValidacion? Error)> PrepararManualAsync(
+        NuevoMovimientoManual req, int usuarioId)
+    {
         var errorDatos = TesoreriaRules.ValidarMovimiento(req.Tipo, req.Monto, req.Descripcion);
         if (errorDatos is not null)
         {
-            return (null, ErrorValidacion.Solicitud(errorDatos));
+            return (null, null, null, ErrorValidacion.Solicitud(errorDatos));
         }
         var (cuenta, errorCuenta) = await ValidarCuentaOperableAsync(req.CuentaBancariaId);
         if (errorCuenta is not null)
         {
-            return (null, ErrorValidacion.Solicitud(errorCuenta));
+            return (null, null, null, ErrorValidacion.Solicitud(errorCuenta));
         }
         var (periodoId, errorPeriodo) = await ResolverPeriodoAbiertoAsync(req.Fecha);
         if (errorPeriodo is not null)
         {
-            return (null, ErrorValidacion.Solicitud(errorPeriodo));
+            return (null, null, null, ErrorValidacion.Solicitud(errorPeriodo));
         }
         var errorContrapartida = await ValidarContrapartidaAsync(req.CuentaContrapartidaId, cuenta!.CuentaContableId);
         if (errorContrapartida is not null)
         {
-            return (null, ErrorValidacion.Solicitud(errorContrapartida));
+            return (null, null, null, ErrorValidacion.Solicitud(errorContrapartida));
         }
         var (valorGtq, cambio, errorCambio) = await ValorarAsync(await MonedaDeCuentaAsync(cuenta), req.Fecha, req.Monto);
         if (errorCambio is not null)
         {
-            return (null, errorCambio);
+            return (null, null, null, errorCambio);
         }
 
         var asiento = AsientoTesoreriaBuilder.Construir(
@@ -239,13 +255,12 @@ public class TesoreriaService
         var movimiento = ConCambio(
             NuevoMovimiento(cuenta.Id, req.Fecha, req.Tipo!, req.Monto, req.Descripcion!.Trim(), req.Referencia, MovimientoTesoreria.OrigenManual),
             valorGtq, cambio);
-        await _auditoria.EjecutarAsync(usuarioId, "registrar_movimiento_tesoreria", TablaMovimientos, async () =>
-        {
-            await InsertarAsientoYMovimientosAsync(asiento, new[] { movimiento });
-            return $"Movimiento {movimiento.Id} ({movimiento.Tipo} {movimiento.Monto}) en cuenta {cuenta.Banco} {cuenta.Numero}";
-        });
-        return (movimiento, null);
+        return (asiento, movimiento, cuenta, null);
     }
+
+    // Sin transacción propia: el llamador ya está dentro de AuditoriaService.EjecutarAsync.
+    public Task PersistirAsync(AsientoContable asiento, MovimientoTesoreria movimiento) =>
+        InsertarAsientoYMovimientosAsync(asiento, new[] { movimiento });
 
     public async Task<(TransferenciaResultado? Resultado, ErrorValidacion? Error)> RegistrarTransferenciaAsync(NuevaTransferencia req, int usuarioId)
     {

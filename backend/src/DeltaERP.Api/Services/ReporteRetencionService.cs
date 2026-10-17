@@ -66,8 +66,12 @@ public class ReporteRetencionService
             .Select(r => ConstruirFila(r, hoy, plazos))
             .Where(f => filtro.EstadoConstancia is null || f.EstadoConstancia == filtro.EstadoConstancia)
             .ToList();
+        var saldos = filas.Any(f => f.Concepto == Retencion.ConceptoIsrNoResidente)
+            ? await _db.SaldosEnterar.AsNoTracking().Where(s => s.Periodo == inicio)
+                .Select(s => new SaldoEnterarReporte(s.Periodo, s.Retenido, s.Enterado, s.Saldo)).ToListAsync()
+            : new List<SaldoEnterarReporte>();
         return new ReporteRetencionRespuesta(
-            filtro.Anio, filtro.Mes, filas, Totalizar(filas), await ConciliarAsync(inicio, filtro, delMes), TotalizarPorTipoRenta(filas));
+            filtro.Anio, filtro.Mes, filas, Totalizar(filas), await ConciliarAsync(inicio, filtro, delMes), TotalizarPorTipoRenta(filas), saldos);
     }
 
     private static FilaReporteRetencion ConstruirFila(VwRetencionReporte r, DateOnly hoy, List<ParametroRetencion> plazos)
@@ -81,7 +85,7 @@ public class ReporteRetencionService
             r.DteNumero, r.DteUuid, r.FechaDocumento, r.FechaOperacion, r.Base, r.Tasa, RetencionRules.TasaEfectiva(r.Base, r.MontoRetenido),
             r.MontoRetenido, r.ConstanciaId, r.ConstanciaNumero, r.ConstanciaFecha, r.Formulario, estado, !mismoMes,
             r.TipoRentaCodigo, r.TipoRentaNombre, r.MonedaCodigo, r.MontoOrigen, r.TipoCambio, r.TipoCambioFecha, r.EnteradoGtq,
-            r.SaldoPorEnterarGtq);
+            r.SaldoPorEnterarGtq, r.Pais, r.AjustePendiente);
     }
 
     private static List<TotalReporteRetencion> Totalizar(List<FilaReporteRetencion> filas) =>

@@ -66,6 +66,7 @@ public sealed class TestData
     private static int _anioRevaluacion = 2014;
     private static int _semanaUnica = -1;
     private static readonly DateOnly LunesInicial = new(2014, 1, 6);
+    private static int _mesAislado = -1;
     private static readonly DateOnly InicioHistorico = new(1900, 1, 1);
     public static readonly DateOnly FechaSinPeriodo = new(1990, 6, 15);
     public const string NitValido = "1234567-9";
@@ -94,6 +95,8 @@ public sealed class TestData
     public static DateOnly SiguienteDiaHabil() => SiguienteSemana().AddDays(2);
 
     public static DateOnly SiguienteSabado() => SiguienteSemana().AddDays(5);
+
+    public static DateOnly SiguienteMesAislado() => new DateOnly(2040, 1, 1).AddMonths(2 * Interlocked.Increment(ref _mesAislado));
 
     // Años descendentes (2013 a 1901): ningún documento en moneda extranjera de otra prueba es anterior al corte de una prueba de revaluación o reporte.
     public static int ReservarAnioRevaluacion()
@@ -163,7 +166,7 @@ public sealed class TestData
 
     public Task<int> CrearProveedorNoResidenteAsync(string? tipoRenta, string regimenIsr = "SIMPLIFICADO", string? fundamento = null) =>
         ScalarAsync<int>(
-            "INSERT INTO contraparte (tipo, nombre, nit, regimen_iva, regimen_isr, isr_fundamento, es_residente, tipo_renta_nr_codigo) VALUES ('Proveedor', $1, $2, 'GENERAL', $3, $4::varchar, FALSE, $5::varchar) RETURNING id",
+            "INSERT INTO contraparte (tipo, nombre, nit, regimen_iva, regimen_isr, isr_fundamento, es_residente, tipo_renta_nr_codigo, pais) VALUES ('Proveedor', $1, $2, 'GENERAL', $3, $4::varchar, FALSE, $5::varchar, 'US') RETURNING id",
             $"Proveedor NR {Sufijo()}", NitValido, regimenIsr, (object?)fundamento ?? DBNull.Value, (object?)tipoRenta ?? DBNull.Value);
 
     public async Task<string> SembrarParametroNrVencidoAsync()
@@ -403,6 +406,9 @@ public sealed class TestData
     public Task CerrarPeriodoDirectoAsync(int periodoId) =>
         EjecutarAsync("UPDATE periodocontable SET estado = 'Cerrado' WHERE id = $1", periodoId);
 
+    public Task ReabrirPeriodoDirectoAsync(int periodoId) =>
+        EjecutarAsync("UPDATE periodocontable SET estado = 'Abierto' WHERE id = $1", periodoId);
+
     public async Task<(int Id, int CuentaContableId)> CrearCuentaBancariaAsync(string tipo = "Monetaria", string moneda = "GTQ")
     {
         var cuentaContableId = await CrearCuentaAsync("Activo", "Deudora");
@@ -474,9 +480,9 @@ public sealed class TestData
             (object?)gananciaRevalId ?? DBNull.Value, (object?)perdidaRevalId ?? DBNull.Value);
 
     // 14 días: la API exige que la fecha del documento pertenezca a su período y una semana puede cruzar de año.
-    public async Task<EscenarioMe> SembrarEscenarioMeAsync()
+    public async Task<EscenarioMe> SembrarEscenarioMeAsync(DateOnly? inicio = null)
     {
-        var lunes = SiguienteSemana();
+        var lunes = inicio ?? SiguienteSemana();
         var periodo = await CrearPeriodoEnRangoAsync(lunes, lunes.AddDays(13));
         return await ArmarEscenarioMeAsync(lunes, periodo);
     }

@@ -26,6 +26,7 @@ public sealed class PostgresFixture : IAsyncLifetime
         "15_retenciones.sql",
         "16_multimoneda.sql",
         "17_retencion_no_residentes.sql",
+        "18_enteramiento_ajuste_feriado.sql",
     };
 
     public NpgsqlDataSource DataSource { get; private set; } = null!;
@@ -111,7 +112,7 @@ public sealed class PostgresFixture : IAsyncLifetime
     private static bool TieneSentencias(string sql) =>
         sql.Split('\n').Any(linea => linea.Trim().Length > 0 && !linea.TrimStart().StartsWith("--", StringComparison.Ordinal));
 
-    private static string LocalizarDirectorioDatabase()
+    public static string LocalizarDirectorioDatabase()
     {
         var directorio = new DirectoryInfo(AppContext.BaseDirectory);
         while (directorio is not null)

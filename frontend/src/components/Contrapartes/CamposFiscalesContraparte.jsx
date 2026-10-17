@@ -1,4 +1,5 @@
 import { REGIMENES_ISR_CONTRAPARTE, REGIMENES_IVA, TIPOS_AGENTE_IVA_CLIENTE } from "../../utils/etiquetasFiscales";
+import { PAISES_ISO } from "../../utils/paises";
 import { requiereFundamento } from "../../utils/formularioContraparte";
 import OpcionesSelect from "../OpcionesSelect";
 
@@ -22,9 +23,17 @@ function CamposFiscalesContraparte({ form, onCambio, tiposRenta = [] }) {
         <input className="input" placeholder="Fundamento o número de resolución" aria-label="Fundamento o número de resolución" maxLength={200} value={form.isrFundamento} onChange={cambiar("isrFundamento")} required />
       )}
       <label>
-        <input type="checkbox" checked={form.esResidente} onChange={(e) => onCambio({ ...form, esResidente: e.target.checked, tipoRentaNrCodigo: "" })} />
+        <input type="checkbox" checked={form.esResidente} onChange={(e) => onCambio({ ...form, esResidente: e.target.checked, tipoRentaNrCodigo: "", pais: "" })} />
         <span>Residente en Guatemala</span>
       </label>
+      {!form.esResidente && (
+        <>
+          <input className="input" list="paises-iso" placeholder="País (ISO-2)" aria-label="País (ISO-2)" maxLength={2} pattern="[A-Za-z]{2}" value={form.pais ?? ""} onChange={(e) => onCambio({ ...form, pais: e.target.value.toUpperCase() })} required />
+          <datalist id="paises-iso">
+            {PAISES_ISO.map((p) => <option key={p.codigo} value={p.codigo}>{p.nombre}</option>)}
+          </datalist>
+        </>
+      )}
       {esProveedor && !form.esResidente && (
         <select className="select" aria-label="Tipo de renta (art. 104)" value={form.tipoRentaNrCodigo} onChange={cambiar("tipoRentaNrCodigo")} required={form.regimenIsr !== "EXENTO"}>
           <option value="">Selecciona tipo de renta</option>

@@ -6,7 +6,7 @@ import { hoyIso, mensajeError } from "../../utils/formato";
 import { mensajeNit } from "../../utils/nit";
 import CamposFiscalesContraparte from "./CamposFiscalesContraparte";
 
-const ENCABEZADOS = ["Nombre", "NIT", "Dirección", "Régimen IVA", "Residente", "Agente de retención IVA"];
+const ENCABEZADOS = ["Nombre", "NIT", "Dirección", "Régimen IVA", "Residente", "País", "Agente de retención IVA"];
 
 const siNo = (valor) => (valor ? "Sí" : "No");
 
@@ -100,6 +100,7 @@ function Contrapartes() {
                     <td>{c.direccion || "—"}</td>
                     <td>{etiquetaDe(REGIMENES_IVA, c.regimenIva)}</td>
                     <td>{siNo(c.esResidente)}</td>
+                    <td>{c.pais ?? "—"}</td>
                     <td>
                       {siNo(c.esAgenteRetencionIva)}
                       {c.tipoAgenteIva && <small className="nota-fiscal">{etiquetaDe(TIPOS_AGENTE_IVA_CLIENTE, c.tipoAgenteIva)}</small>}

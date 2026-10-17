@@ -85,6 +85,7 @@ Además de sus campos previos, tiene datos fiscales:
 | es_agente_retencion_iva | BOOLEAN | No | FALSE por defecto; `ck_contraparte_agente_iva` lo liga a `tipo_agente_iva` |
 | tipo_agente_iva | VARCHAR(20) | Sí | SECTOR_PUBLICO / AGENTE_PRIVADO; solo en clientes agentes de retención de IVA (`ck_contraparte_tipo_agente`) |
 | tipo_renta_nr_codigo | VARCHAR(40) | Sí | Tipo de renta del art. 104 (código de `ParametroRetencion` con concepto ISR_NO_RESIDENTE); solo en proveedores no residentes. Sin FK: la API valida que el código exista y esté vigente hoy (RN-29) |
+| pais | CHAR(2) | Sí | Código ISO alfa-2 en mayúsculas (`ck_contraparte_pais`); la API lo exige en contrapartes no residentes y lo guarda vacío en residentes (RN-35) |
 
 El NIT se guarda normalizado (`cuerpo-DV`, o `CF` en clientes) y se valida en la API (RN-13). El régimen de ISR solo se evalúa en proveedores (RN-18, RN-19): los proveedores que figuraban `UTILIDADES` por defecto pasaron a `NO_DEFINIDO`; en clientes se ignora.
 
@@ -360,9 +361,9 @@ Función de tabla, solo lectura (`STABLE`, sin DML), que alimenta el balance gen
 | total_debito, total_credito | Acumulados de la cuenta propia más todos sus descendientes |
 | saldo | Deudora: débito - crédito; en otro caso crédito - débito |
 
-## 8. Retenciones (M10, I2 e I3b-1)
+## 8. Retenciones (M10, I2, I3b-1 e I3b-2)
 
-Migraciones `15_retenciones.sql` y `17_retencion_no_residentes.sql`. Los parámetros siguen el patrón de vigencia de `Impuesto` (RN-17); `Retencion` solo admite `INSERT`.
+Migraciones `15_retenciones.sql`, `17_retencion_no_residentes.sql` y `18_enteramiento_ajuste_feriado.sql`. Los parámetros siguen el patrón de vigencia de `Impuesto` (RN-17); `Retencion` solo admite `INSERT`.
 
 ### ParametroRetencion
 Una versión es una fila nueva con el mismo `codigo`.
@@ -441,6 +442,63 @@ Datos de la constancia de una retención; el ERP las registra, no las emite (RN-
 
 Únicos parciales sobre las emitidas: `ux_constancia_retencion` (una vigente por retención) y `ux_constancia_numero` (número único por tipo y retenedor). Los estados "pendiente" y "vencida" no se almacenan: la API los deriva de la fecha de la factura y del día límite. Registrar o anular una constancia no toca asientos.
 
+### Enteramiento
+Enteramiento a SAT del ISR retenido a no residentes (RN-32). Monto en GTQ.
+
+| Campo | Tipo | Nulo | Llave | Descripción |
+|---|---|---|---|---|
+| id | SERIAL | No | PK | Identificador único |
+| concepto | VARCHAR(15) | No | | `ISR_NORES` (único valor, `ck_enteramiento_concepto`) |
+| formulario | VARCHAR(10) | No | | `SAT-1352` / `SAT-1331` |
+| periodo | DATE | No | | Primer día del mes enterado (`ck_enteramiento_periodo`) |
+| fecha_pago | DATE | No | | No anterior al período (`ck_enteramiento_fecha_pago`) |
+| boleta | VARCHAR(40) | No | | No vacía; única por formulario entre los vigentes (`ux_enteramiento_boleta`) |
+| monto | DECIMAL(14,2) | No | | Mayor a 0, en GTQ |
+| cuenta_bancaria_id | INT | No | FK -> CuentaBancaria(id) | Cuenta en moneda funcional desde la que se paga |
+| asiento_id | INT | No | FK -> AsientoContable(id) | Asiento del pago |
+| movimiento_tesoreria_id | INT | No | FK -> MovimientoTesoreria(id) | Egreso manual del pago |
+| estado | VARCHAR(10) | No | | `VIGENTE` (defecto) / `ANULADO` |
+| motivo_anulacion | VARCHAR(300) | Sí | | Obligatorio si y solo si está anulado (`ck_enteramiento_anulacion`) |
+| anulado_por / anulado_en | INT / TIMESTAMPTZ | Sí | FK -> Usuario(id) | Quién y cuándo anuló |
+| asiento_reversa_id / movimiento_reversa_id | INT | Sí | FK -> AsientoContable(id) / MovimientoTesoreria(id) | Contra-asiento y contra-movimiento (ingreso) de la anulación |
+| registrado_por | INT | No | FK -> Usuario(id) | Quién lo registró |
+| creado_en | TIMESTAMPTZ | No | | Fecha de registro |
+
+`trg_enteramiento_valida` (BEFORE INSERT) toma un `pg_advisory_xact_lock` por período, exige un banco en moneda funcional y rechaza un monto mayor que lo retenido del período menos lo enterado vigente, o un período sin retenciones (`55000`, `409` en la API). `trg_enteramiento_inmutable` (BEFORE UPDATE OR DELETE) solo admite el paso de `VIGENTE` a `ANULADO` con las columnas de anulación; no hay `DELETE`.
+
+### AjusteRetencion
+Aviso de ajuste de una retención `ISR_NORES` por una nota de crédito registrada después del enteramiento (RN-34).
+
+| Campo | Tipo | Nulo | Llave | Descripción |
+|---|---|---|---|---|
+| id | SERIAL | No | PK | Identificador único |
+| retencion_id | INT | No | FK -> Retencion(id) | Retención afectada |
+| nota_credito_id | INT | No | FK -> DocumentoCxP(id) | Nota de crédito del documento de la retención; única junto con `retencion_id` (`uq_ajuste_retencion_nc`) |
+| monto_nc | DECIMAL(14,2) | No | | Monto total de la nota, mayor a 0 |
+| estado | VARCHAR(10) | No | | `PENDIENTE` (defecto) / `RESUELTO` |
+| creado_por / creado_en | INT / TIMESTAMPTZ | No | FK -> Usuario(id) | Quién y cuándo se generó el aviso |
+| motivo_resolucion | VARCHAR(300) | Sí | | Obligatorio al resolver |
+| referencia_resolucion | VARCHAR(100) | Sí | | Obligatoria al resolver |
+| resuelto_por / resuelto_en | INT / TIMESTAMPTZ | Sí | FK -> Usuario(id) | Quién y cuándo resolvió |
+
+`ck_ajuste_retencion_resolucion` exige las cuatro columnas de resolución con texto si está `RESUELTO` y vacías si está `PENDIENTE`. `trg_ajuste_retencion_valida` (BEFORE INSERT) exige que la nota sea de tipo `NotaCredito` y tenga como origen el documento de la retención (`23514`). `trg_ajuste_retencion_inmutable` solo admite `PENDIENTE` a `RESUELTO` y prohíbe el `DELETE`.
+
+### Feriado
+Calendario de días inhábiles para el plazo del enteramiento (RN-33, RN-36).
+
+| Campo | Tipo | Nulo | Llave | Descripción |
+|---|---|---|---|---|
+| fecha | DATE | No | PK | Un feriado por fecha |
+| nombre | VARCHAR(100) | No | | Descripción |
+| medio_dia | BOOLEAN | No | | FALSE (defecto) = día inhábil; TRUE = día hábil informativo (24 y 31 de diciembre) |
+| creado_por | INT | Sí | FK -> Usuario(id) | Vacío en las filas sembradas |
+| creado_en | TIMESTAMPTZ | No | | Fecha de creación |
+
+La migración siembra 21 filas de 2026 y 2027 con `ON CONFLICT (fecha) DO NOTHING`.
+
+### Siembra del grupo 2 del catálogo
+La migración 18 crea, solo si faltan, las cuentas `2` Pasivo (Acreedora), `2.1` Pasivo corriente (solo si `2` es Pasivo) y `2.1.03` ISR retenido a no residentes por pagar (solo si `2.1` es Pasivo), y asigna `2.1.03` en `ConfiguracionFiscal.cuenta_isr_nr_retenido_pagar_id` si estaba vacío. Es la excepción a que las migraciones no siembran el plan de cuentas.
+
 ## 9. Multimoneda: revaluación (M10, I3a)
 
 ### Revaluacion
@@ -500,6 +558,9 @@ Detalle por documento o cuenta bancaria. Solo admite INSERT.
 | `vw_conciliacion_resumen` | — | Saldo inicial, total marcado, saldo conciliado y diferencia de cada conciliación bancaria (fuente de la matemática de RN-10) |
 | `vw_saldodocumentocxc` | `DocumentoCxC.saldo_pendiente` | Saldo pendiente por documento de CxC: `saldo_pendiente` en la moneda del documento (importe original menos pagos aplicados y notas de crédito vigentes referenciadas) y `saldo_pendiente_gtq` (monto total menos `monto_aplicado_gtq` y notas); expone además `moneda_id` y `monto_total_original`; 0 para notas de crédito |
 | `vw_saldodocumentocxp` | `DocumentoCxP.saldo_pendiente` | Saldo pendiente por documento de CxP: monto total menos pagos aplicados, notas de crédito vigentes referenciadas y la retención de ISR (`Retencion` `ISR_ROS`); `saldo_pendiente` en la moneda del documento (resta `monto_retenido_original`), `saldo_pendiente_gtq` en quetzales (resta `monto_retenido`), más `moneda_id` y `monto_total_original`; 0 para notas de crédito |
-| `vw_retencion_reporte` | — | Una fila por retención con contraparte, documento (tipo, número, DTE), sentido (EFECTUADA si ISR_ROS o ISR_NORES, RECIBIDA si IVA_CLIENTE), `periodo_fiscal` (mes de la factura; mes del pago en ISR_NORES), base, tasa, montos, asiento y los datos de su constancia más relevante (la emitida primero); en ISR_NORES agrega `tipo_renta_codigo` y `tipo_renta_nombre`, `moneda_codigo`, `monto_origen`, `tipo_cambio` y su fecha, y `aplicacion_pago_proveedor_id`. `enterado_gtq` (0) y `saldo_por_enterar_gtq` (la retención efectuada; 0 en IVA_CLIENTE) están reservadas para el enteramiento a SAT, que no está implementado. Fuente del reporte de retenciones (RN-23) |
+| `vw_saldo_enterar` | — | Por período (mes de `fecha_operacion`) de las retenciones `ISR_NORES`: `retenido`, `enterado` (enteramientos `VIGENTE`) y `saldo` (retenido menos enterado). Fuente del saldo por enterar y del vencimiento (RN-32, RN-33) |
+| `vw_retencion_reporte` | — | Una fila por retención con contraparte, documento (tipo, número, DTE), sentido (EFECTUADA si ISR_ROS o ISR_NORES, RECIBIDA si IVA_CLIENTE), `periodo_fiscal` (mes de la factura; mes del pago en ISR_NORES), base, tasa, montos, asiento y los datos de su constancia más relevante (la emitida primero); en ISR_NORES agrega `tipo_renta_codigo` y `tipo_renta_nombre`, `moneda_codigo`, `monto_origen`, `tipo_cambio` y su fecha, y `aplicacion_pago_proveedor_id`. `enterado_gtq` y `saldo_por_enterar_gtq` son los valores del período de la fila en `vw_saldo_enterar` (0 fuera de ISR_NORES): no se suman por fila. Agrega `pais` (de la contraparte) y `ajuste_pendiente` (hay un ajuste `PENDIENTE` de esa retención). Fuente del reporte de retenciones (RN-23) |
+
+**Permisos de `delta_api` sobre enteramiento (migración 18):** `enteramiento` y `ajuste_retencion` con `SELECT`, `INSERT` y `UPDATE` (sin `DELETE`; los triggers de inmutabilidad lo prohíben igual); `feriado` con `SELECT`, `INSERT`, `UPDATE` y `DELETE`; `vw_saldo_enterar` y `vw_retencion_reporte` con `SELECT`; `USAGE` en las secuencias de `enteramiento` y `ajuste_retencion`; las cuatro funciones de trigger nuevas sin `EXECUTE` para `PUBLIC`.
 
 **Permisos de `delta_api` sobre retenciones** (declarados al final de `15_retenciones.sql`): `parametroretencion` y `constanciaretencion` con `SELECT`, `INSERT` y `UPDATE`; `retencion` solo con `SELECT` e `INSERT` (sin `UPDATE` ni `DELETE`: es append-only); `vw_retencion_reporte` con `SELECT`; `USAGE` en las tres secuencias nuevas. Ninguna de las tres tablas admite `DELETE`. `contraparte`, `configuracionfiscal` y `documentocxp` conservan sus privilegios, que cubren las columnas nuevas.

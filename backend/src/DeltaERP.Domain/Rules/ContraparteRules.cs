@@ -9,7 +9,7 @@ public static class ContraparteRules
 
     // tipo es el de la contraparte guardada: el Tipo del cuerpo de una actualización se ignora.
     public static string? ValidarFiscal(Contraparte datos, string tipo) =>
-        ValidarRegimenes(datos) ?? ValidarFundamento(datos) ?? ValidarAgente(datos) ?? ValidarNit(tipo, datos.Nit);
+        ValidarRegimenes(datos) ?? ValidarFundamento(datos) ?? ValidarAgente(datos) ?? ValidarNit(tipo, datos.Nit) ?? ValidarPais(datos);
 
     // RN-29
     public static string? ValidarTipoRentaNr(Contraparte datos, string tipo) =>
@@ -21,6 +21,22 @@ public static class ContraparteRules
         tipo == TipoProveedor && !datos.EsResidente && !string.IsNullOrWhiteSpace(datos.TipoRentaNrCodigo)
             ? datos.TipoRentaNrCodigo.Trim().ToUpperInvariant()
             : null;
+
+    // RN-35
+    public static string? PaisNormalizado(Contraparte datos) => datos.EsResidente ? null : datos.Pais?.Trim().ToUpperInvariant();
+
+    // RN-35
+    public static string? ValidarPais(Contraparte datos)
+    {
+        if (datos.EsResidente)
+        {
+            return null;
+        }
+        var pais = PaisNormalizado(datos);
+        return pais is { Length: 2 } && pais.All(char.IsAsciiLetterUpper)
+            ? null
+            : "El país del no residente es obligatorio (código ISO de dos letras, p. ej. US).";
+    }
 
     public static string? FundamentoNormalizado(Contraparte datos) =>
         RequiereFundamento(datos.RegimenIsr) ? datos.IsrFundamento?.Trim() : null;

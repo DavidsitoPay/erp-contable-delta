@@ -55,6 +55,9 @@ public class PermisosApiTests
         ["constanciaretencion"] = "SIU",
         ["revaluacion"] = "SIU",
         ["revaluacionpartida"] = "SI",
+        ["enteramiento"] = "SIU",
+        ["ajuste_retencion"] = "SIU",
+        ["feriado"] = "SIUD",
     };
 
     private static readonly (char Letra, string Privilegio)[] Privilegios =

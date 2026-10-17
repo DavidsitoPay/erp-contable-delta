@@ -42,6 +42,10 @@ public class DeltaErpDbContext : DbContext
     public DbSet<Retencion> Retenciones => Set<Retencion>();
     public DbSet<ConstanciaRetencion> ConstanciasRetencion => Set<ConstanciaRetencion>();
     public DbSet<VwRetencionReporte> ReporteRetenciones => Set<VwRetencionReporte>();
+    public DbSet<Enteramiento> Enteramientos => Set<Enteramiento>();
+    public DbSet<AjusteRetencion> AjustesRetencion => Set<AjusteRetencion>();
+    public DbSet<Feriado> Feriados => Set<Feriado>();
+    public DbSet<VwSaldoEnterar> SaldosEnterar => Set<VwSaldoEnterar>();
 
     public DbSet<CuentaBancaria> CuentasBancarias => Set<CuentaBancaria>();
     public DbSet<MovimientoTesoreria> MovimientosTesoreria => Set<MovimientoTesoreria>();
@@ -82,6 +86,9 @@ public class DeltaErpDbContext : DbContext
         modelBuilder.Entity<ParametroRetencion>().ToTable("parametroretencion");
         modelBuilder.Entity<Retencion>().ToTable("retencion");
         modelBuilder.Entity<ConstanciaRetencion>().ToTable("constanciaretencion");
+        modelBuilder.Entity<Enteramiento>().ToTable("enteramiento");
+        modelBuilder.Entity<AjusteRetencion>().ToTable("ajuste_retencion");
+        modelBuilder.Entity<Feriado>().ToTable("feriado").HasKey(f => f.Fecha);
 
         // Vistas sin clave primaria: HasNoKey() evita que EF infiera un Id, y ToView
         // (no ToTable) las deja de solo lectura, sin migraciones de escritura.
@@ -90,6 +97,7 @@ public class DeltaErpDbContext : DbContext
         modelBuilder.Entity<SaldoDocumentoCxP>().HasNoKey().ToView("vw_saldodocumentocxp");
         modelBuilder.Entity<SaldoCuentaBancaria>().HasNoKey().ToView("vw_saldocuentabancaria");
         modelBuilder.Entity<VwRetencionReporte>().HasNoKey().ToView("vw_retencion_reporte");
+        modelBuilder.Entity<VwSaldoEnterar>().HasNoKey().ToView("vw_saldo_enterar");
         modelBuilder.Entity<ConciliacionResumen>().HasNoKey().ToView("vw_conciliacion_resumen")
             .Property(r => r.Id).HasColumnName("conciliacion_id");
         // Funcion de tabla: solo se consulta con FromSql, nunca se lee como vista.

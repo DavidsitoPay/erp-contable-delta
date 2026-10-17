@@ -8,6 +8,7 @@ import CamposAnioMes from "../CamposAnioMes";
 import FormularioMotivo from "../FormularioMotivo";
 import OpcionesSelect from "../OpcionesSelect";
 import FormularioConstancia from "./FormularioConstancia";
+import ResolverAjusteDialog from "./ResolverAjusteDialog";
 import ResumenRetenciones from "./ResumenRetenciones";
 import TablaRetenciones from "./TablaRetenciones";
 
@@ -103,6 +104,9 @@ function ReporteRetenciones() {
           onConfirmar={anularConstancia}
           onCancelar={() => setAccion(null)}
         />
+      )}
+      {accion?.tipo === "ajuste" && (
+        <ResolverAjusteDialog retencionId={accion.fila.retencionId} onResuelto={terminarAccion} onCancelar={() => setAccion(null)} />
       )}
 
       {error && <p className="error-chip">{error}</p>}

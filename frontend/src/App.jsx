@@ -21,6 +21,8 @@ import ConfiguracionFiscal from "./components/Catalogo/ConfiguracionFiscal";
 import Impuestos from "./components/Catalogo/Impuestos";
 import ParametrosRetencion from "./components/Retenciones/ParametrosRetencion";
 import ReporteRetenciones from "./components/Retenciones/ReporteRetenciones";
+import Enteramiento from "./components/Retenciones/Enteramiento";
+import Feriados from "./components/Retenciones/Feriados";
 import LibroFiscal from "./components/Libros/LibroFiscal";
 import TiposCambio from "./components/TiposCambio/TiposCambio";
 import Revaluaciones from "./components/Revaluaciones/Revaluaciones";
@@ -109,6 +111,8 @@ function App() {
         <TabLink to="/libros/mayor">Libro mayor</TabLink>
         {gestionaFiscal && <TabLink to="/libros/fiscal">Compras y ventas</TabLink>}
         {gestionaFiscal && <TabLink to="/libros/retenciones">Retenciones</TabLink>}
+        {gestionaFiscal && <TabLink to="/retenciones/enteramiento">Enteramiento ISR</TabLink>}
+        {gestionaFiscal && <TabLink to="/catalogo/feriados">Feriados</TabLink>}
         <TabLink to="/contrapartes">Clientes y proveedores</TabLink>
         <TabLink to="/cxc">Cuentas por cobrar</TabLink>
         {esAdminOContador && <TabLink to="/cxp">Cuentas por pagar</TabLink>}
@@ -199,6 +203,22 @@ function App() {
             element={
               <Restringida permitido={gestionaFiscal} perfil={usuario.perfil} seccion="Retenciones">
                 <ReporteRetenciones />
+              </Restringida>
+            }
+          />
+          <Route
+            path="/retenciones/enteramiento"
+            element={
+              <Restringida permitido={gestionaFiscal} perfil={usuario.perfil} seccion="Enteramiento ISR">
+                <Enteramiento />
+              </Restringida>
+            }
+          />
+          <Route
+            path="/catalogo/feriados"
+            element={
+              <Restringida permitido={gestionaFiscal} perfil={usuario.perfil} seccion="Feriados">
+                <Feriados />
               </Restringida>
             }
           />

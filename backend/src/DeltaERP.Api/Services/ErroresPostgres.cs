@@ -22,6 +22,7 @@ public static class ErroresPostgres
         ["ux_constancia_numero"] = "Ya existe una constancia emitida con ese número para el mismo tipo y retenedor.",
         ["ux_revaluacion_vigente"] = "Ya existe una revaluación vigente para ese mes y moneda; anúlela antes de repetirla.",
         ["ux_historialtipocambio_activa"] = "Ya existe un tipo de cambio activo para esa moneda y fecha.",
+        ["ux_enteramiento_boleta"] = "Ya existe un enteramiento vigente con ese formulario y boleta.",
     };
 
     // Los procedimientos almacenados señalan perfil no autorizado (P0001), inexistente (P0002)

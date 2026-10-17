@@ -25,6 +25,8 @@ builder.Services.AddScoped<ConfiguracionFiscalService>();
 builder.Services.AddScoped<ConstanciaRetencionService>();
 builder.Services.AddScoped<RetencionService>();
 builder.Services.AddScoped<ReporteRetencionService>();
+builder.Services.AddScoped<AjusteRetencionService>();
+builder.Services.AddScoped<EnteramientoService>();
 builder.Services.AddScoped<FacturaFiscalService>();
 builder.Services.AddScoped<FacturaService>();
 builder.Services.AddScoped<LibroFiscalService>();

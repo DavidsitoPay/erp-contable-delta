@@ -1,10 +1,13 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { retencionesApi } from "../../services/api";
+import { ajustesRetencionApi, retencionesApi } from "../../services/api";
 import { descargarCsv } from "../../utils/csv";
 import ReporteRetenciones from "./ReporteRetenciones";
 
-vi.mock("../../services/api", () => ({ retencionesApi: { reporte: vi.fn(), registrarConstancia: vi.fn(), anularConstancia: vi.fn() } }));
+vi.mock("../../services/api", () => ({
+  retencionesApi: { reporte: vi.fn(), registrarConstancia: vi.fn(), anularConstancia: vi.fn() },
+  ajustesRetencionApi: { listar: vi.fn(), resolver: vi.fn() },
+}));
 vi.mock("../../utils/csv", async (importOriginal) => ({ ...(await importOriginal()), descargarCsv: vi.fn() }));
 
 function fila(cambios) {
@@ -165,6 +168,22 @@ describe("ReporteRetenciones", () => {
     expect(retencionesApi.registrarConstancia).not.toHaveBeenCalled();
   });
 
+  it("resuelve el ajuste de retención pendiente con motivo y referencia y vuelve a consultar", async () => {
+    retencionesApi.reporte.mockResolvedValue({ data: { ...reporte, filas: [fila({ ajustePendiente: true })] } });
+    ajustesRetencionApi.listar.mockResolvedValue({ data: [{ id: 31, retencionId: 7, notaCreditoId: 21, notaCreditoNumero: "NC-9", documentoOrigenNumero: "F-001", montoNc: 10 }] });
+    ajustesRetencionApi.resolver.mockResolvedValue({ data: {} });
+    render(<ReporteRetenciones />);
+    await consultar();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Resolver ajuste de F-001" }));
+    fireEvent.change(await screen.findByLabelText("Motivo"), { target: { value: "Confirmado" } });
+    fireEvent.change(screen.getByLabelText("Referencia"), { target: { value: "NC-9" } });
+    fireEvent.click(screen.getByRole("button", { name: "Resolver ajuste" }));
+
+    await waitFor(() => expect(ajustesRetencionApi.resolver).toHaveBeenCalledWith(31, { motivo: "Confirmado", referencia: "NC-9" }));
+    await waitFor(() => expect(retencionesApi.reporte).toHaveBeenCalledTimes(2));
+  });
+
   it("exporta el CSV con el nombre del período consultado y los encabezados fijos", async () => {
     render(<ReporteRetenciones />);
     await consultar("2026", "3");
@@ -177,7 +196,7 @@ describe("ReporteRetenciones", () => {
     const [nombre, contenido] = descargarCsv.mock.calls[0];
     expect(nombre).toBe("retenciones-2026-03.csv");
     expect(contenido.split("\r\n")[0]).toBe(
-      "Sentido,Impuesto,NIT,Nombre,Documento,Serie DTE,Numero DTE,UUID,Fecha documento,Fecha pago o cobro,Base,Tasa,Retencion,Constancia,Fecha constancia,Formulario,Estado constancia,Tipo de renta (codigo),Tipo de renta,Moneda,Monto origen,Tipo de cambio,Fecha tipo de cambio,Enterado,Saldo por enterar"
+      "Sentido,Impuesto,NIT,Nombre,Pais,Documento,Serie DTE,Numero DTE,UUID,Fecha documento,Fecha pago o cobro,Base,Tasa,Retencion,Constancia,Fecha constancia,Formulario,Estado constancia,Tipo de renta (codigo),Tipo de renta,Moneda,Monto origen,Tipo de cambio,Fecha tipo de cambio,Enterado,Saldo por enterar,AjustePendiente"
     );
     expect(contenido.split("\r\n")).toHaveLength(4);
   });

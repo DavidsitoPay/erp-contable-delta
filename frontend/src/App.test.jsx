@@ -17,6 +17,8 @@ vi.mock("./components/Revaluaciones/Revaluaciones", () => ({ default: () => <p>P
 vi.mock("./components/Reportes/SaldosMoneda", () => ({ default: () => <p>Reporte saldos en moneda</p> }));
 vi.mock("./components/Retenciones/ParametrosRetencion", () => ({ default: () => <p>Pantalla parámetros de retención</p> }));
 vi.mock("./components/Retenciones/ReporteRetenciones", () => ({ default: () => <p>Reporte de retenciones</p> }));
+vi.mock("./components/Retenciones/Enteramiento", () => ({ default: () => <p>Pantalla enteramiento ISR</p> }));
+vi.mock("./components/Retenciones/Feriados", () => ({ default: () => <p>Pantalla feriados</p> }));
 
 function renderApp(perfil, ruta = "/") {
   if (perfil) localStorage.setItem("delta_usuario", JSON.stringify({ nombre: "Ana", perfil }));
@@ -38,7 +40,7 @@ describe("App", () => {
     renderApp("Contador");
 
     expect(await screen.findByText("Conectado a Delta ERP Contable API")).toBeInTheDocument();
-    expect(screen.getAllByRole("link")).toHaveLength(20);
+    expect(screen.getAllByRole("link")).toHaveLength(22);
     expect(screen.getByRole("link", { name: "Registrar asiento" })).toBeInTheDocument();
   });
 
@@ -94,7 +96,7 @@ describe("App", () => {
   it("un administrador ve las pantallas fiscales y abre la configuración fiscal", async () => {
     renderApp("Administrador del sistema", "/catalogo/configuracion-fiscal");
 
-    expect(screen.getAllByRole("link")).toHaveLength(21);
+    expect(screen.getAllByRole("link")).toHaveLength(23);
     ["Configuración fiscal", "Impuestos", "Parámetros de retención", "Compras y ventas", "Retenciones"].forEach((nombre) =>
       expect(screen.getByRole("link", { name: nombre })).toBeInTheDocument()
     );
@@ -107,6 +109,8 @@ describe("App", () => {
     ["/libros/fiscal", "Libro fiscal"],
     ["/catalogo/parametros-retencion", "Pantalla parámetros de retención"],
     ["/libros/retenciones", "Reporte de retenciones"],
+    ["/retenciones/enteramiento", "Pantalla enteramiento ISR"],
+    ["/catalogo/feriados", "Pantalla feriados"],
   ])("un contador abre %s", async (ruta, contenido) => {
     renderApp("Contador", ruta);
 
@@ -141,11 +145,15 @@ describe("App", () => {
     ["Vendedor", "/libros/fiscal", "Compras y ventas"],
     ["Vendedor", "/catalogo/parametros-retencion", "Parámetros de retención"],
     ["Vendedor", "/libros/retenciones", "Retenciones"],
+    ["Vendedor", "/retenciones/enteramiento", "Enteramiento ISR"],
+    ["Vendedor", "/catalogo/feriados", "Feriados"],
     ["Técnico", "/catalogo/configuracion-fiscal", "Configuración fiscal"],
     ["Técnico", "/catalogo/impuestos", "Impuestos"],
     ["Técnico", "/libros/fiscal", "Compras y ventas"],
     ["Técnico", "/catalogo/parametros-retencion", "Parámetros de retención"],
     ["Técnico", "/libros/retenciones", "Retenciones"],
+    ["Técnico", "/retenciones/enteramiento", "Enteramiento ISR"],
+    ["Técnico", "/catalogo/feriados", "Feriados"],
   ])("%s no ve las pestañas fiscales y %s queda bloqueada", async (perfil, ruta, seccion) => {
     renderApp(perfil, ruta);
 

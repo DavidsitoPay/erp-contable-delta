@@ -75,6 +75,16 @@ describe("TablaRetenciones", () => {
     expect(onAccion).toHaveBeenNthCalledWith(2, { tipo: "anular", fila: filas[2] });
   });
 
+  it("muestra el país y el ajuste pendiente con su acción", () => {
+    const onAccion = vi.fn();
+    render(<TablaRetenciones filas={[fila({ pais: "US", ajustePendiente: true })]} onAccion={onAccion} />);
+
+    expect(within(screen.getByText("Proveedor Uno").closest("tr")).getByText("US")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Resolver ajuste de F-001" }));
+
+    expect(onAccion).toHaveBeenCalledWith({ tipo: "ajuste", fila: expect.objectContaining({ retencionId: 7 }) });
+  });
+
   it("muestra un mensaje cuando no hay retenciones", () => {
     render(<TablaRetenciones filas={[]} onAccion={vi.fn()} />);
 
@@ -108,6 +118,6 @@ describe("TablaRetenciones", () => {
   it("muestra guiones en tipo de renta, monto de origen y tipo de cambio cuando no aplican", () => {
     render(<TablaRetenciones filas={[filas[0]]} onAccion={vi.fn()} />);
 
-    expect(within(screen.getByText("Proveedor Uno").closest("tr")).getAllByText("—")).toHaveLength(4);
+    expect(within(screen.getByText("Proveedor Uno").closest("tr")).getAllByText("—")).toHaveLength(5);
   });
 });

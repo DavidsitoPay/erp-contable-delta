@@ -80,6 +80,19 @@ describe("CamposFiscalesContraparte", () => {
 
     fireEvent.click(screen.getByLabelText("Residente en Guatemala"));
 
-    expect(onCambio).toHaveBeenCalledWith({ ...form, esResidente: true, tipoRentaNrCodigo: "" });
+    expect(onCambio).toHaveBeenCalledWith({ ...form, esResidente: true, tipoRentaNrCodigo: "", pais: "" });
+  });
+
+  it("pide el país ISO-2 solo a los no residentes y lo escribe en mayúsculas", () => {
+    renderCampos(formularioContraparteVacio("Cliente"));
+    expect(screen.queryByLabelText("País (ISO-2)")).toBeNull();
+  });
+
+  it("el país ISO-2 de un no residente se guarda en mayúsculas", () => {
+    const onCambio = renderCampos({ ...formularioContraparteVacio("Cliente"), esResidente: false });
+
+    fireEvent.change(screen.getByLabelText("País (ISO-2)"), { target: { value: "gt" } });
+
+    expect(onCambio).toHaveBeenCalledWith(expect.objectContaining({ pais: "GT" }));
   });
 });

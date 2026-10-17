@@ -50,4 +50,24 @@ describe("ResumenRetenciones", () => {
 
     expect(screen.queryByText("Totales por tipo de renta")).toBeNull();
   });
+
+  it("muestra el saldo por enterar de cada período", () => {
+    const saldosEnterar = [
+      { periodo: "2026-10-01", retenido: 2200, enterado: 1000, saldoPorEnterar: 1234 },
+      { periodo: "2026-09-01", retenido: 500, enterado: 0, saldoPorEnterar: 500 },
+      { periodo: "2026-08-01", retenido: 987, enterado: 987, saldoPorEnterar: 0 },
+    ];
+    render(<ResumenRetenciones reporte={{ filas: [], totales, conciliacion: conciliacionCuadrada, saldosEnterar }} />);
+
+    expect(screen.getByText("Saldo por enterar por período")).toBeInTheDocument();
+    expect(screen.getByText("2026-10")).toBeInTheDocument();
+    expect(screen.getByText(formatoMoneda.format(1234))).toBeInTheDocument();
+    expect(screen.getAllByText(formatoMoneda.format(987))).toHaveLength(2);
+  });
+
+  it("omite el saldo por enterar cuando el reporte no lo trae", () => {
+    render(<ResumenRetenciones reporte={{ filas: [], totales, conciliacion: conciliacionCuadrada }} />);
+
+    expect(screen.queryByText("Saldo por enterar por período")).toBeNull();
+  });
 });

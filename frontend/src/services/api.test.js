@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => {
 
 vi.mock("axios", () => ({ default: { create: mocks.create, get: mocks.get } }));
 
-import api, { asientosApi, checkHealth, conciliacionesApi, configuracionFiscalApi, contrapartesApi, cuentasApi, cuentasBancariasApi, cxcApi, cxpApi, impuestosApi, librosApi, librosFiscalesApi, login, monedasApi, movimientosTesoreriaApi, parametrosRetencionApi, periodosApi, reportesApi, reportesSaldosApi, retencionesApi, revaluacionesApi, tiposCambioApi } from "./api";
+import api, { ajustesRetencionApi, asientosApi, checkHealth, conciliacionesApi, configuracionFiscalApi, contrapartesApi, cuentasApi, cuentasBancariasApi, cxcApi, cxpApi, enteramientosApi, feriadosApi, impuestosApi, librosApi, librosFiscalesApi, login, monedasApi, movimientosTesoreriaApi, parametrosRetencionApi, periodosApi, reportesApi, reportesSaldosApi, retencionesApi, revaluacionesApi, tiposCambioApi } from "./api";
 
 const interceptor = mocks.instance.interceptors.request.use.mock.calls[0][0];
 const opcionesCreate = mocks.create.mock.calls[0][0];
@@ -257,6 +257,38 @@ describe("retenciones", () => {
     expect(mocks.instance.get).toHaveBeenNthCalledWith(2, "/retenciones/reporte", { params: { anio: 2026, mes: 10, sentido: "EFECTUADA" } });
     expect(mocks.instance.post).toHaveBeenNthCalledWith(1, "/retenciones/7/constancia", { numero: "A-1" });
     expect(mocks.instance.post).toHaveBeenNthCalledWith(2, "/retenciones/constancias/2/anular", { motivo: "Error de captura" });
+  });
+
+  it("enteramientosApi consulta saldo y lista, y registra, previsualiza y anula", () => {
+    enteramientosApi.saldo();
+    enteramientosApi.saldo("2026-10-01");
+    enteramientosApi.vistaPrevia({ periodo: "2026-10-01", monto: 100 });
+    enteramientosApi.crear({ periodo: "2026-10-01", monto: 100 });
+    enteramientosApi.anular("4", "Error de boleta");
+    enteramientosApi.listar({ estado: "VIGENTE" });
+
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(1, "/retenciones/enteramientos/saldo", { params: {} });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(2, "/retenciones/enteramientos/saldo", { params: { periodo: "2026-10-01" } });
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(1, "/retenciones/enteramientos/vista-previa", { periodo: "2026-10-01", monto: 100 });
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(2, "/retenciones/enteramientos", { periodo: "2026-10-01", monto: 100 });
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(3, "/retenciones/enteramientos/4/anular", { motivo: "Error de boleta" });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(3, "/retenciones/enteramientos", { params: { estado: "VIGENTE" } });
+  });
+
+  it("ajustesRetencionApi lista por estado opcional y resuelve con verbo POST", () => {
+    ajustesRetencionApi.listar();
+    ajustesRetencionApi.listar("PENDIENTE");
+    ajustesRetencionApi.resolver("9", { motivo: "Ok", referencia: "R-1" });
+
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(1, "/retenciones/ajustes", { params: {} });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(2, "/retenciones/ajustes", { params: { estado: "PENDIENTE" } });
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(1, "/retenciones/ajustes/9/resolver", { motivo: "Ok", referencia: "R-1" });
+  });
+
+  it("feriadosApi usa la fecha YYYY-MM-DD como identificador de ruta", () => {
+    feriadosApi.eliminar("2026-12-25");
+
+    expect(mocks.instance.delete).toHaveBeenCalledWith("/feriados/2026-12-25");
   });
 });
 
