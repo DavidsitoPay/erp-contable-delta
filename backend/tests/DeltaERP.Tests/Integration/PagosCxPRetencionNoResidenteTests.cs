@@ -15,6 +15,8 @@ public class PagosCxPRetencionNoResidenteTests
 
     private readonly PostgresFixture _pg;
 
+    private static readonly DateOnly LunesMesPasadoAislado = new(2013, 12, 2);
+
     public PagosCxPRetencionNoResidenteTests(PostgresFixture pg)
     {
         _pg = pg;
@@ -336,7 +338,7 @@ public class PagosCxPRetencionNoResidenteTests
     [Fact]
     public async Task Reporte_IncluyeLaRetencionEnElMesDelPagoSinConstanciaYConTotalesPorTipoDeRenta()
     {
-        var c = await _pg.CompraNrAsync(inicio: TestData.SiguienteMesAislado());
+        var c = await _pg.CompraNrAsync(inicio: LunesMesPasadoAislado);
         var (_, pago) = await Pagar(c, c.M.BancoUsdId, c.M.Jueves, 400m);
         var id = pago.GetProperty("retenciones")[0].GetProperty("retencionId").GetInt32();
 

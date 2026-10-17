@@ -20,8 +20,6 @@ public class EnteramientosTests
         _pg = pg;
     }
 
-    private static readonly DateOnly LunesPasadoAislado = new(2013, 12, 2);
-
     // Los periodos son meses: otras pruebas comparten el mes, por eso se compara contra el saldo leido antes.
     private static async Task<decimal> SaldoAsync(Compra c) =>
         (await c.Client.GetFromJsonAsync<JsonElement>($"{RutaEnteramientos}/saldo?periodo={c.Periodo.Dia()}"))[0].GetProperty("saldo").GetDecimal();
@@ -125,7 +123,8 @@ public class EnteramientosTests
     [Fact]
     public async Task Registrar_PeriodoContableCerrado_Responde409()
     {
-        var c = await _pg.CompraNrPagadaAsync(LunesPasadoAislado);
+        _ = TestData.SiguienteSemana();
+        var c = await _pg.CompraNrPagadaAsync(TestData.SiguienteSemana());
         await _pg.Data.CerrarPeriodoDirectoAsync(c.M.E.PeriodoId);
 
         await AssertRechazoAsync(c, c.SolicitudEntero(10m), HttpStatusCode.Conflict, null);
