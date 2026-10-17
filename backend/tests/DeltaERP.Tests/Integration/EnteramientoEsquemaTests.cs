@@ -61,13 +61,14 @@ public class EnteramientoEsquemaTests
     }
 
     private async Task<int> EnterarAsync(
-        Escenario e, decimal monto, string boleta, CuentasMovimiento? cuentas = null, string formulario = "SAT-1352", int diasFechaPago = 0)
+        Escenario e, decimal monto, string boleta, CuentasMovimiento? cuentas = null, string formulario = "SAT-1352", int diasFechaPago = 0,
+        int? cuentaBancariaPagoId = null)
     {
         var (movimiento, asiento) = await MovimientoAsync(e, "Egreso", cuentas);
         return await _pg.Data.ScalarAsync<int>(
             "INSERT INTO enteramiento (formulario, periodo, fecha_pago, boleta, monto, cuenta_bancaria_id, asiento_id, movimiento_tesoreria_id, registrado_por) " +
             "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id",
-            formulario, e.Periodo, e.FechaPago.AddDays(diasFechaPago), boleta, monto, (cuentas ?? e.Cuentas).CuentaBancariaId, asiento, movimiento, e.Usuario);
+            formulario, e.Periodo, e.FechaPago.AddDays(diasFechaPago), boleta, monto, cuentaBancariaPagoId ?? (cuentas ?? e.Cuentas).CuentaBancariaId, asiento, movimiento, e.Usuario);
     }
 
     private async Task AnularAsync(Escenario e, int enteramientoId)
@@ -200,10 +201,10 @@ public class EnteramientoEsquemaTests
     public async Task Enteramiento_DesdeCuentaEnDolares_SeRechaza()
     {
         var e = await SembrarRetencionAsync(100m);
-        var (bancoUsd, cuentaUsd) = await _pg.Data.CrearCuentaBancariaAsync("Monetaria", "USD");
-        var usd = new CuentasMovimiento(bancoUsd, cuentaUsd, e.Cuentas.ContrapartidaId);
+        var (bancoUsd, _) = await _pg.Data.CrearCuentaBancariaAsync("Monetaria", "USD");
 
-        var ex = await Assert.ThrowsAsync<PostgresException>(() => EnterarAsync(e, 10m, $"B-{TestData.Sufijo()}", usd));
+        var ex = await Assert.ThrowsAsync<PostgresException>(
+            () => EnterarAsync(e, 10m, $"B-{TestData.Sufijo()}", cuentaBancariaPagoId: bancoUsd));
 
         Assert.Equal(Estado55000, ex.SqlState);
         Assert.Contains("quetzales", ex.MessageText);

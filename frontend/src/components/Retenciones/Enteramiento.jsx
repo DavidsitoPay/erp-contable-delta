@@ -4,6 +4,7 @@ import { AVISO_CALENDARIO, CLASE_VENCIMIENTO, ESTADOS_ENTERAMIENTO, ESTADOS_VENC
 import { formatoMoneda, mensajeError } from "../../utils/formato";
 import { TablaCatalogo } from "../Catalogo/CatalogoCrud";
 import FormularioMotivo from "../FormularioMotivo";
+import CeldasSaldoPeriodo from "./CeldasSaldoPeriodo";
 import FormularioEnteramiento from "./FormularioEnteramiento";
 
 const fechaDmy = (iso) => {
@@ -46,10 +47,7 @@ function Enteramiento() {
       <TablaCatalogo encabezados={["Período", "Retenido", "Enterado", "Saldo por enterar", "Vence", "Días para vencer", "Estado", ""]}>
         {saldos.map((s) => (
           <tr key={s.periodo}>
-            <td>{s.periodo.slice(0, 7)}</td>
-            <td className="numeric">{formatoMoneda.format(s.retenido)}</td>
-            <td className="numeric">{formatoMoneda.format(s.enterado)}</td>
-            <td className="numeric">{formatoMoneda.format(s.saldo)}</td>
+            <CeldasSaldoPeriodo fila={s} saldo={s.saldo} />
             <td>{fechaDmy(s.fechaVencimiento)}</td>
             <td className="numeric">{s.diasParaVencer}</td>
             <td><span className={CLASE_VENCIMIENTO[s.estadoVencimiento]}>{ESTADOS_VENCIMIENTO[s.estadoVencimiento]}</span></td>
