@@ -86,7 +86,7 @@ Orden seguido, según la dependencia entre módulos:
 5. ✅ **M4 / M5 CxC y CxP** — contrapartes, facturas con asiento automático, notas de crédito, y pagos con límite RN-05 en la API y en el trigger.
 6. ✅ **M6 Tesorería** — cuentas bancarias, movimientos, transferencias y conciliación (RN-10).
 7. ✅ **M7 Reportes** — balance general y estado de resultados.
-8. **M10 Cumplimiento fiscal** — en curso: configuración fiscal, catálogo de impuestos, IVA en facturas, DTE de FEL, notas de crédito, libro fiscal, retenciones ISR/IVA (I2) y multimoneda con diferencial cambiario y revaluación (I3a) implementados; retención a no residentes, ajuste de retención por nota de crédito y enteramiento pendientes (I3b); la retención de IVA como agente está fuera de alcance porque Delta no es agente de retención de IVA.
+8. **M10 Cumplimiento fiscal** — en curso: configuración fiscal, catálogo de impuestos, IVA en facturas, DTE de FEL, notas de crédito, libro fiscal, retenciones ISR/IVA (I2) y multimoneda con diferencial cambiario y revaluación (I3a) implementados; retención a no residentes (I3b-1), ajuste de retención por nota de crédito y enteramiento a SAT (I3b-2) implementados; la retención de IVA como agente está fuera de alcance porque Delta no es agente de retención de IVA.
 9. **M9 Importación** — diseñado, no iniciado.
 
 ### Etapa 4 — Frontend

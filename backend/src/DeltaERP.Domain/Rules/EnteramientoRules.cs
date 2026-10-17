@@ -17,7 +17,7 @@ public static class EnteramientoRules
         monto <= 0m || decimal.Round(monto, 2) != monto ? "El monto debe ser mayor que cero y tener a lo más dos decimales." : null;
 
     // RN-32
-    public static string? ValidarSolicitud(string? formulario, DateOnly periodo, DateOnly fechaPago, string? boleta, decimal monto)
+    public static string? ValidarSolicitud(string? formulario, DateOnly periodo, DateOnly fechaPago, DateOnly hoy, string? boleta, decimal monto)
     {
         var errorPeriodo = ValidarPeriodo(periodo);
         if (errorPeriodo is not null)
@@ -31,6 +31,10 @@ public static class EnteramientoRules
         if (fechaPago < periodo)
         {
             return "La fecha de pago no puede ser anterior al período enterado.";
+        }
+        if (fechaPago > hoy)
+        {
+            return "La fecha de pago no puede ser posterior a hoy.";
         }
         if (string.IsNullOrWhiteSpace(boleta) || boleta.Trim().Length > LongitudMaximaBoleta)
         {

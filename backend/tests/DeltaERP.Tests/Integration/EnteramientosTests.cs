@@ -123,11 +123,20 @@ public class EnteramientosTests
     [Fact]
     public async Task Registrar_PeriodoContableCerrado_Responde409()
     {
-        var c = await _pg.CompraNrPagadaAsync();
-        var (inicio, fin) = TestData.RangoPeriodoUnico();
-        await _pg.Data.CrearPeriodoEnRangoAsync(inicio, fin, "Cerrado");
+        _ = TestData.SiguienteSemana();
+        var c = await _pg.CompraNrPagadaAsync(TestData.SiguienteSemana());
+        await _pg.Data.CerrarPeriodoDirectoAsync(c.M.E.PeriodoId);
 
-        await AssertRechazoAsync(c, c.SolicitudEntero(10m).Con("fechaPago", inicio.AddDays(2).Dia()), HttpStatusCode.Conflict, null);
+        await AssertRechazoAsync(c, c.SolicitudEntero(10m), HttpStatusCode.Conflict, null);
+    }
+
+    [Fact]
+    public async Task Registrar_FechaPagoPosteriorAHoy_Responde400()
+    {
+        var c = await _pg.CompraNrPagadaAsync();
+        var manana = CambioRules.HoyGuatemala(DateTimeOffset.UtcNow).AddDays(1);
+
+        await AssertRechazoAsync(c, c.SolicitudEntero(10m).Con("fechaPago", manana.Dia()), HttpStatusCode.BadRequest, "posterior a hoy");
     }
 
     [Fact]

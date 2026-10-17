@@ -9,3 +9,4 @@ export const cuentasGtq = (cuentas) => cuentas.filter((c) => c.monedaCodigo === 
 export const enteramientoValido = (f) => f.formulario !== "" && f.fechaPago !== "" && f.boleta.trim() !== "" && Number(f.monto) > 0 && f.cuentaBancariaId !== "";
 export const solicitudEnteramiento = (periodo, f) => ({ periodo, monto: Number(f.monto), cuentaBancariaId: Number(f.cuentaBancariaId) });
 export const payloadEnteramiento = (periodo, f) => ({ ...solicitudEnteramiento(periodo, f), formulario: f.formulario, fechaPago: f.fechaPago, boleta: f.boleta.trim() });
+export const hoyGuatemala = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Guatemala" });

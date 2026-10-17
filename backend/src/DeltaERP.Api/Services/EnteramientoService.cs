@@ -93,7 +93,7 @@ public class EnteramientoService
 
     public async Task<(EnteramientoDto? Enteramiento, ErrorValidacion? Error)> RegistrarAsync(SolicitudEnteramiento req, int usuarioId)
     {
-        var errorDatos = EnteramientoRules.ValidarSolicitud(req.Formulario, req.Periodo, req.FechaPago, req.Boleta, req.Monto);
+        var errorDatos = EnteramientoRules.ValidarSolicitud(req.Formulario, req.Periodo, req.FechaPago, Hoy(), req.Boleta, req.Monto);
         if (errorDatos is not null)
         {
             return (null, ErrorValidacion.Solicitud(errorDatos));
