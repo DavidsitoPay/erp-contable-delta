@@ -104,9 +104,8 @@ public class RetencionService
         var monedas = await _db.Monedas.AsNoTracking().ToDictionaryAsync(m => m.Id, m => m.Codigo);
         var cache = new Dictionary<string, ParametroRetencion>();
         var lineas = new List<LineaIsrNr>();
-        for (var i = 0; i < entradas.Count; i++)
+        foreach (var (e, i) in entradas.Select((entrada, indice) => (entrada, indice)))
         {
-            var e = entradas[i];
             if (!facturas.TryGetValue(e.DocumentoId, out var documento))
             {
                 continue;

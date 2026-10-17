@@ -9,7 +9,11 @@ public sealed record SolicitudRetencionPrevia(
     [property: JsonRequired] decimal MontoBase,
     [property: JsonRequired] decimal MontoTotal);
 
-public sealed record SolicitudRetencionPreviaPago(int ProveedorId, DateOnly Fecha, int? CuentaBancariaId, IReadOnlyList<AplicacionRetencionPrevia> Aplicaciones);
+public sealed record SolicitudRetencionPreviaPago(
+    [property: JsonRequired] int ProveedorId,
+    [property: JsonRequired] DateOnly Fecha,
+    int? CuentaBancariaId,
+    IReadOnlyList<AplicacionRetencionPrevia> Aplicaciones);
 
 public sealed record AplicacionRetencionPrevia(int DocumentoId, decimal MontoAplicado, decimal? ValorEfectivoGtq, string? TipoRentaCodigo);
 
