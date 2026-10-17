@@ -20,6 +20,9 @@ public class DeltaErpDbContext : DbContext
 
     public DbSet<Contraparte> Contrapartes => Set<Contraparte>();
     public DbSet<Moneda> Monedas => Set<Moneda>();
+    public DbSet<HistorialTipoCambio> TiposCambio => Set<HistorialTipoCambio>();
+    public DbSet<Revaluacion> Revaluaciones => Set<Revaluacion>();
+    public DbSet<RevaluacionPartida> PartidasRevaluacion => Set<RevaluacionPartida>();
     public DbSet<ConfiguracionFiscal> ConfiguracionesFiscales => Set<ConfiguracionFiscal>();
     public DbSet<Impuesto> Impuestos => Set<Impuesto>();
 
@@ -59,6 +62,9 @@ public class DeltaErpDbContext : DbContext
         modelBuilder.Entity<PeriodoContable>().ToTable("periodocontable");
         modelBuilder.Entity<Contraparte>().ToTable("contraparte");
         modelBuilder.Entity<Moneda>().ToTable("moneda");
+        modelBuilder.Entity<HistorialTipoCambio>().ToTable("historialtipocambio");
+        modelBuilder.Entity<Revaluacion>().ToTable("revaluacion");
+        modelBuilder.Entity<RevaluacionPartida>().ToTable("revaluacionpartida");
         modelBuilder.Entity<ConfiguracionFiscal>().ToTable("configuracionfiscal").Property(c => c.Id).ValueGeneratedNever();
         modelBuilder.Entity<Impuesto>().ToTable("impuesto");
         modelBuilder.Entity<DocumentoCxC>().ToTable("documentocxc");

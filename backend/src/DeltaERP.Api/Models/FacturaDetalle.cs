@@ -10,7 +10,9 @@ public sealed record ReferenciasDetalle(
     IReadOnlyDictionary<int, CuentaContable> Cuentas,
     IReadOnlyDictionary<int, Impuesto> Impuestos,
     IDocumentoFactura? Origen,
-    Retencion? RetencionIsr = null);
+    Retencion? RetencionIsr = null,
+    decimal SaldoPendienteGtq = 0m,
+    string MonedaCodigo = "GTQ");
 
 // Tercero lleva la clave que el frontend espera según el módulo (clienteId o
 // proveedorId); [JsonExtensionData] la emite junto al resto de propiedades.
@@ -38,6 +40,16 @@ public record FacturaDetalle(
     decimal SaldoPendiente,
     List<LineaFacturaDetalle> Lineas)
 {
+    public string Moneda { get; init; } = string.Empty;
+
+    public decimal MontoTotalOriginal { get; init; }
+
+    public string? TipoCambioFuente { get; init; }
+
+    public bool TipoCambioArrastrado { get; init; }
+
+    public decimal SaldoPendienteGtq { get; init; }
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public decimal? MontoRetencionIsr { get; init; }
 
@@ -80,5 +92,10 @@ public record FacturaDetalle(
             LineaFacturaDetalle.Desde(documento.Lineas, referencias.Cuentas, referencias.Impuestos))
         {
             Tercero = { [claveTercero] = terceroId },
+            Moneda = referencias.MonedaCodigo,
+            MontoTotalOriginal = documento.MontoTotalOriginal,
+            TipoCambioFuente = documento.TipoCambioFuente,
+            TipoCambioArrastrado = documento.TipoCambioArrastrado,
+            SaldoPendienteGtq = referencias.SaldoPendienteGtq,
         };
 }

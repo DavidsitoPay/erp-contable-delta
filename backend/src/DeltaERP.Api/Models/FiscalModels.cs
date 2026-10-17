@@ -15,7 +15,11 @@ public sealed record ConfiguracionFiscalRespuesta(
     int? CuentaIsrRetenidoPagarId,
     int? CuentaIvaRetenidoClientesId,
     DateTimeOffset ActualizadoEn,
-    string? ActualizadoPorNombre);
+    string? ActualizadoPorNombre,
+    int? CuentaDifGananciaRealizadaId,
+    int? CuentaDifPerdidaRealizadaId,
+    int? CuentaRevalGananciaId,
+    int? CuentaRevalPerdidaId);
 
 public sealed record ImpuestoRespuesta(
     int Id,

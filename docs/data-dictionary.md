@@ -35,9 +35,31 @@ Se puebla exclusivamente vía `sp_registrar_auditoria`, invocado por la API. Inm
 
 ## 2. Catálogo y Configuración General
 
-### HistorialTipoCambio / PeriodoContable
+### PeriodoContable
 Sin cambios respecto a la versión anterior — ver estructura completa en el documento
 oficial (05/09, sección 2).
+
+### HistorialTipoCambio
+Una fila por tipo de cambio obtenido de Banguat o capturado a mano. Solo una fila activa por moneda y fecha (`ux_historialtipocambio_activa`); `ix_historialtipocambio_moneda_fecha (moneda_id, fecha DESC)`.
+
+| Campo | Tipo | Nulo | Llave | Descripción |
+|---|---|---|---|---|
+| id | SERIAL | No | PK | Identificador único |
+| moneda_id | INT | No | FK -> Moneda(id) | Moneda extranjera (el trigger `trg_historialtipocambio_valida` rechaza GTQ, inexistentes o inactivas) |
+| fecha | DATE | No | | Fecha a la que aplica la tasa |
+| tasa | DECIMAL(12,6) | No | | GTQ por 1 unidad de la moneda; mayor que 0 (`ck_historialtipocambio_tasa`) |
+| fuente | VARCHAR(10) | No | | Banguat / Manual (`ck_historialtipocambio_fuente`) |
+| fecha_referencia | DATE | No | | Fecha de la que proviene el valor; no posterior a `fecha` (`ck_historialtipocambio_referencia`) |
+| arrastrado | BOOLEAN | No | | TRUE si la tasa es el último valor anterior (fin de semana, feriado o EUR sin fila) |
+| cotizacion_venta | DECIMAL(12,6) | Sí | | Solo EUR: USD por EUR, cotización de venta |
+| cotizacion_compra | DECIMAL(12,6) | Sí | | Solo EUR: dato informativo |
+| referencia_usd | DECIMAL(12,6) | Sí | | Solo EUR: referencia USD/GTQ del mismo día; con `cotizacion_venta` exige ambos mayores que 0 (`ck_historialtipocambio_eur`) |
+| motivo | VARCHAR(300) | Sí | | Obligatorio en tasas manuales |
+| usuario_id | INT | Sí | FK -> Usuario(id) | Quién la capturó o la solicitó; obligatorio en tasas manuales (`ck_historialtipocambio_manual`) |
+| activa | BOOLEAN | No | | Por defecto TRUE; FALSE tras una baja lógica |
+| creado_en | TIMESTAMPTZ | No | | Fecha de registro |
+
+Una tasa usada por un documento, aplicación, movimiento o revaluación es inmutable y no se da de baja: `trg_historialtipocambio_inmutable` solo admite pasar `activa` de TRUE a FALSE en una tasa sin uso (RN-25) y responde `55000` en otro caso; `trg_prevenir_eliminacion_historialtipocambio` bloquea el DELETE.
 
 ### Moneda
 | Campo | Tipo | Nulo | Llave | Descripción |
@@ -47,6 +69,9 @@ oficial (05/09, sección 2).
 | nombre | VARCHAR | No | | Nombre |
 | es_funcional | BOOLEAN | No | | Moneda funcional; índice único parcial `ux_moneda_funcional` (solo una). Sembrada: GTQ |
 | activa | BOOLEAN | No | | Por defecto TRUE |
+| codigo_banguat | SMALLINT | Sí | UQ parcial (`ux_moneda_codigo_banguat`) | Código de la moneda en el servicio de Banguat: USD = 2, EUR = 24; nulo en GTQ (`ck_moneda_funcional_sin_banguat`) |
+
+Sembradas: GTQ (funcional), USD y EUR. `trg_prevenir_eliminacion_moneda` bloquea el DELETE.
 
 ### Contraparte
 Además de sus campos previos, tiene datos fiscales:
@@ -98,10 +123,14 @@ Fila única (`CHECK (id = 1)`); `trg_configuracionfiscal_no_eliminable` impide b
 | cuenta_iva_credito_id | INT | Sí | FK -> CuentaContable(id) | IVA crédito fiscal (Activo, Deudora); distinta de la de débito |
 | cuenta_isr_retenido_pagar_id | INT | Sí | FK -> CuentaContable(id) | ISR retenido por pagar (Pasivo, Acreedora) |
 | cuenta_iva_retenido_clientes_id | INT | Sí | FK -> CuentaContable(id) | IVA retenido por clientes (Activo, Deudora) |
+| cuenta_dif_ganancia_realizada_id | INT | Sí | FK -> CuentaContable(id) | Ganancia cambiaria realizada (Ingreso, Acreedora, RN-26) |
+| cuenta_dif_perdida_realizada_id | INT | Sí | FK -> CuentaContable(id) | Pérdida cambiaria realizada (Gasto, Deudora, RN-26) |
+| cuenta_reval_ganancia_id | INT | Sí | FK -> CuentaContable(id) | Ganancia cambiaria no realizada de la revaluación (Ingreso, Acreedora, RN-28) |
+| cuenta_reval_perdida_id | INT | Sí | FK -> CuentaContable(id) | Pérdida cambiaria no realizada de la revaluación (Gasto, Deudora, RN-28) |
 | actualizado_en | TIMESTAMPTZ | No | | Última actualización |
 | actualizado_por | INT | Sí | FK -> Usuario(id) | Quién actualizó |
 
-Las cuentas de IVA y de retención quedan nulas tras la migración; las configura el Administrador. `ck_configuracionfiscal_cuentas_retencion` exige que las cuatro cuentas fiscales sean distintas; tipo, naturaleza, hoja y actividad se validan en la API. Si `agente_retencion_iva` está marcado, el sistema solo avisa que la retención de IVA como agente no se calcula (RN-20).
+Las cuentas de IVA y de retención quedan nulas tras la migración; las configura el Administrador. `ck_configuracionfiscal_cuentas_retencion` exige que las cuatro cuentas fiscales sean distintas y `ck_configuracionfiscal_cuentas_cambiarias` que las cuatro cuentas cambiarias sean distintas entre sí y de las fiscales; tipo, naturaleza, hoja y actividad se validan en la API. Las cuentas cambiarias quedan nulas tras la migración; solo el Administrador las configura, y se exigen cuando el asiento las necesita (`409` si faltan). Si `agente_retencion_iva` está marcado, el sistema solo avisa que la retención de IVA como agente no se calcula (RN-20).
 
 ### CuentaContable
 | Campo | Tipo | Nulo | Llave | Descripción |
@@ -151,7 +180,7 @@ Definido en `database/12_reversa_asientos.sql` (RN-03). Verifica en este orden: 
 | cliente_id | INT | No | FK -> Contraparte(id) | Cliente |
 | fecha | DATE | No | | Fecha de emisión |
 | **fecha_vencimiento** | DATE | No | | **Nuevo** — fecha en que vence el cobro, según condiciones de crédito |
-| monto_total | DECIMAL(14,2) | No | | Total en GTQ con IVA incluido; `CHECK (monto_total = monto_base + monto_iva)` |
+| monto_total | DECIMAL(14,2) | No | | Total en GTQ con IVA incluido (equivalente en GTQ si el documento es en moneda extranjera); `CHECK (monto_total = monto_base + monto_iva)` |
 | monto_base | DECIMAL(14,2) | No | | Suma de la base de las líneas |
 | monto_iva | DECIMAL(14,2) | No | | Suma del IVA de las líneas |
 | calculo_legado | BOOLEAN | No | | TRUE en documentos previos a la configuración fiscal (RN-16); FALSE en los nuevos |
@@ -160,13 +189,18 @@ Definido en `database/12_reversa_asientos.sql` (RN-03). Verifica en este orden: 
 | dte_numero | VARCHAR(20) | Sí | | Número del DTE; serie y número únicos |
 | dte_fecha_certificacion | TIMESTAMPTZ | Sí | | Fecha de certificación; en CxC los cuatro datos DTE son obligatorios salvo en documentos legados |
 | documento_origen_id | INT | Sí | FK -> DocumentoCxC(id) | Factura de origen; solo notas de crédito (obligatorio salvo en legados) |
-| tipo_cambio_aplicado | DECIMAL(12,6) | Sí | | El servidor escribe 1 (moneda funcional) |
+| tipo_cambio_aplicado | DECIMAL(12,6) | No | | Defecto 1; el servidor escribe 1 en GTQ y la tasa de la fecha en moneda extranjera; mayor que 0 (`ck_documentocxc_tipo_cambio`) |
 | estado | VARCHAR(20) | No | | **Vigente / Anulado** (antes: Pendiente/Pagado/Anulado) |
 | asiento_id | INT | Sí | FK -> AsientoContable(id) | Asiento generado |
+| moneda_id | INT | No | FK -> Moneda(id) | Moneda del documento; `ix_documentocxc_moneda` |
+| monto_total_original | DECIMAL(14,2) | No | | Total en la moneda del documento; igual a `monto_total` en GTQ (`ck_documentocxc_original`) |
+| tipo_cambio_id | INT | Sí | FK -> HistorialTipoCambio(id) | Tasa usada; nulo en GTQ |
+| tipo_cambio_fuente | VARCHAR(10) | Sí | | Banguat / Manual (`ck_documentocxc_fuente`); nulo en GTQ |
+| tipo_cambio_arrastrado | BOOLEAN | No | | TRUE si la tasa fue arrastrada de un día anterior |
 
-**Sin columna `saldo_pendiente`.** Se calcula en `vw_saldodocumentocxc`
-(`monto_total − SUM(monto_aplicado) − SUM(monto_total de las notas de crédito vigentes cuyo documento_origen_id es el documento)`; una nota de crédito tiene saldo 0).
-Triggers: `trg_nota_credito_valida_cxc` (RN-14) y `fn_limite_pago_cxc` (RN-05, descuenta las notas de crédito y rechaza pagos sobre una nota de crédito).
+**Sin columna `saldo_pendiente`.** Se calcula en `vw_saldodocumentocxc`: en la moneda del documento
+(`monto_total_original − SUM(monto_aplicado) − SUM(monto_total_original de las notas de crédito vigentes cuyo documento_origen_id es el documento)`) y en GTQ (`saldo_pendiente_gtq`); una nota de crédito tiene saldo 0.
+Triggers: `trg_nota_credito_valida_cxc` (RN-14, hereda moneda y tasa de la factura y valida el límite en moneda original), `fn_limite_pago_cxc` (RN-05 en moneda original, descuenta las notas de crédito, rechaza pagos sobre una nota de crédito y exige que el saldo en GTQ cierre en cero con el saldo original, RN-26), `trg_documento_moneda_valida_cxc` (RN-06, RN-24) y `trg_documento_moneda_inmutable_cxc` (la moneda, la tasa y el importe original no cambian si hay aplicaciones o notas).
 
 ### LineaDocumentoCxC
 Campos fiscales (la columna `porcentaje_impuesto` se renombró a `tasa_aplicada`):
@@ -179,17 +213,29 @@ Campos fiscales (la columna `porcentaje_impuesto` se renombró a `tasa_aplicada`
 | monto_base | DECIMAL(14,2) | No | | Base sin IVA |
 | monto_iva | DECIMAL(14,2) | No | | IVA de la línea |
 | tipo_bien_servicio | VARCHAR(10) | No | | BIEN / SERVICIO |
+| monto_linea_original | DECIMAL(14,2) | No | | Total de la línea en la moneda del documento; igual a `monto_linea` en GTQ |
 
 `trg_linea_impuesto_valido_cxc` rechaza (código `23514`) una línea de documento no legado cuyo impuesto esté inactivo, sea LEGADO, no esté vigente en la fecha del documento, no aplique a VENTAS o tenga una tasa distinta de la del catálogo.
 
 ### ReciboPagoCliente, AplicacionPagoCliente
-Sin cambios estructurales.
+Columnas de multimoneda (RN-26). En un cobro, `valor_gtq` es lo cobrado en GTQ y `monto_aplicado_gtq` el valor en libros de lo aplicado.
+
+| Tabla | Campo | Tipo | Nulo | Descripción |
+|---|---|---|---|---|
+| ReciboPagoCliente | moneda_id | INT | No | FK -> Moneda(id); moneda de los documentos cobrados |
+| ReciboPagoCliente | monto_total_gtq | DECIMAL(14,2) | No | Suma del valor en GTQ de sus aplicaciones |
+| AplicacionPagoCliente | monto_aplicado_gtq | DECIMAL(14,2) | No | Valor en libros (GTQ) de lo aplicado, al tipo de cambio del documento |
+| AplicacionPagoCliente | valor_gtq | DECIMAL(14,2) | No | Valor en GTQ de lo cobrado |
+| AplicacionPagoCliente | diferencial_gtq | DECIMAL(14,2) | No | Defecto 0; `ck_aplicacionpagocliente_diferencial`: `valor_gtq − monto_aplicado_gtq` (positivo = ganancia) |
+| AplicacionPagoCliente | tipo_cambio_pago_id | INT | Sí | FK -> HistorialTipoCambio(id); referencia de la fecha del cobro con cuenta en moneda extranjera |
+
+`monto_aplicado` y `monto_total` quedan en la moneda del documento. En GTQ, `monto_aplicado_gtq = valor_gtq = monto_aplicado` y el diferencial es 0.
 
 ## 5. Cuentas por Pagar (CxP)
 
 ### DocumentoCxP
 Análogo a DocumentoCxC: gana `fecha_vencimiento`, `estado` se simplifica a
-Vigente/Anulado, y **sin columna `saldo_pendiente`** (ver `vw_saldodocumentocxp`). Tiene los mismos campos fiscales, de DTE y de origen. Diferencias: los datos DTE son opcionales, pero se admiten completos (UUID, serie y número) o ninguno (`ck_documentocxp_dte_completo`); la serie y número son únicos por proveedor (`ux_documentocxp_proveedor_dte_serie_numero`); y los triggers son `trg_nota_credito_valida_cxp`, `trg_linea_impuesto_valido_cxp` (ámbito COMPRAS) y `fn_limite_pago_cxp`. `fn_limite_pago_cxp` y `fn_nota_credito_valida_cxp` restan la retención de ISR del documento (RN-18).
+Vigente/Anulado, y **sin columna `saldo_pendiente`** (ver `vw_saldodocumentocxp`). Tiene los mismos campos fiscales, de DTE y de origen. Diferencias: los datos DTE son opcionales, pero se admiten completos (UUID, serie y número) o ninguno (`ck_documentocxp_dte_completo`); la serie y número son únicos por proveedor (`ux_documentocxp_proveedor_dte_serie_numero`); y los triggers son `trg_nota_credito_valida_cxp`, `trg_linea_impuesto_valido_cxp` (ámbito COMPRAS) y `fn_limite_pago_cxp`. `fn_limite_pago_cxp` y `fn_nota_credito_valida_cxp` restan la retención de ISR del documento (RN-18). Tiene las mismas columnas de multimoneda que `DocumentoCxC` (`moneda_id`, `monto_total_original`, `tipo_cambio_id`, `tipo_cambio_fuente`, `tipo_cambio_arrastrado`, y `tipo_cambio_aplicado` NOT NULL con defecto 1) y los triggers `trg_documento_moneda_valida_cxp` y `trg_documento_moneda_inmutable_cxp`; en `vw_saldodocumentocxp` el saldo original resta `retencion.monto_retenido_original` y el saldo en GTQ resta `monto_retenido`.
 
 Columnas de revisión de retención:
 
@@ -201,10 +247,10 @@ Columnas de revisión de retención:
 La retención de ISR no es columna de `documentocxp`: es la fila `ISR_ROS` de `retencion` (a lo sumo una por documento).
 
 ### LineaDocumentoCxP
-Mismos campos fiscales que `LineaDocumentoCxC`.
+Mismos campos fiscales y `monto_linea_original` que `LineaDocumentoCxC`.
 
 ### PagoProveedorCabecera, AplicacionPagoProveedor
-Sin cambios estructurales.
+Mismas columnas de multimoneda que `ReciboPagoCliente` y `AplicacionPagoCliente` (`moneda_id`, `monto_total_gtq`, `monto_aplicado_gtq`, `valor_gtq`, `diferencial_gtq`, `tipo_cambio_pago_id`). En un pago, `valor_gtq` es lo pagado en GTQ y `ck_aplicacionpagoproveedor_diferencial` fija `diferencial_gtq = monto_aplicado_gtq − valor_gtq` (positivo = ganancia).
 
 ## 6. Tesorería
 
@@ -219,6 +265,7 @@ Sin cambios estructurales.
 | cuenta_contable_id | INT | No | FK -> CuentaContable(id) | Cuenta contable de Activo asociada; única (`uq_cuentabancaria_cuenta_contable`) |
 | saldo_apertura | DECIMAL(14,2) | No | | Saldo inicial al crear la cuenta; no negativo |
 | fecha_apertura | DATE | Sí | | Obligatoria si `saldo_apertura > 0` (`ck_cuentabancaria_apertura`) |
+| moneda_id | INT | No | FK -> Moneda(id) | GTQ o USD (RN-27); `ix_cuentabancaria_moneda`; `trg_cuentabancaria_moneda_inmutable` impide cambiarla si la cuenta tiene movimientos. `saldo_apertura` está en esta moneda |
 
 `UNIQUE(banco, numero)` (`uq_cuentabancaria_banco_numero`).
 
@@ -231,7 +278,7 @@ Sin cambios estructurales.
 | cuenta_bancaria_id | INT | No | FK -> CuentaBancaria(id) | Cuenta afectada |
 | fecha | DATE | No | | Fecha del movimiento |
 | tipo | VARCHAR(20) | No | | Ingreso/Egreso (`ck_movimiento_tipo`) |
-| monto | DECIMAL(14,2) | No | | Mayor que 0 (`ck_movimiento_monto`) |
+| monto | DECIMAL(14,2) | No | | Mayor que 0 (`ck_movimiento_monto`); en la moneda de la cuenta |
 | asiento_id | INT | No | FK -> AsientoContable(id) | Asiento que genera el movimiento |
 | descripcion | VARCHAR(255) | No | | Descripción |
 | referencia | VARCHAR(100) | Sí | | Referencia libre |
@@ -239,8 +286,11 @@ Sin cambios estructurales.
 | transferencia_id | UUID | Sí | | Agrupa el egreso y el ingreso de una transferencia |
 | recibo_pago_id | INT | Sí | FK -> ReciboPagoCliente(id) | Cobro de origen (`origen = 'CxC'`) |
 | pago_proveedor_id | INT | Sí | FK -> PagoProveedorCabecera(id) | Pago de origen (`origen = 'CxP'`) |
+| monto_gtq | DECIMAL(14,2) | No | | Valor en GTQ del movimiento; igual a `monto` en cuentas GTQ (`ck_movimiento_monto_gtq`) |
+| tipo_cambio | DECIMAL(12,6) | No | | 1 en cuentas GTQ; mayor que 0 (`ck_movimiento_tipo_cambio`) |
+| tipo_cambio_id | INT | Sí | FK -> HistorialTipoCambio(id) | Referencia de la fecha del movimiento; obligatoria en cuentas en moneda extranjera |
 
-`ck_movimiento_vinculo` exige que los campos de vínculo sean coherentes con `origen`: `Manual` y `Apertura` sin vínculos (la apertura solo es `Ingreso`); `Transferencia` con `transferencia_id`; `CxC` con `recibo_pago_id` y tipo `Ingreso`; `CxP` con `pago_proveedor_id` y tipo `Egreso`. Índices únicos parciales: un movimiento por recibo (`ux_movimiento_recibo_pago`), por pago a proveedor (`ux_movimiento_pago_proveedor`), uno de apertura por cuenta (`ux_movimiento_apertura`) y un movimiento por tipo en cada transferencia (`ux_movimiento_transferencia_tipo`); índice `ix_movimiento_cuenta_fecha (cuenta_bancaria_id, fecha)`. Inmutable: el trigger `trg_movimiento_inmutable` bloquea UPDATE y DELETE.
+`ck_movimiento_vinculo` exige que los campos de vínculo sean coherentes con `origen`: `Manual` y `Apertura` sin vínculos (la apertura solo es `Ingreso`); `Transferencia` con `transferencia_id`; `CxC` con `recibo_pago_id` y tipo `Ingreso`; `CxP` con `pago_proveedor_id` y tipo `Egreso`. Índices únicos parciales: un movimiento por recibo (`ux_movimiento_recibo_pago`), por pago a proveedor (`ux_movimiento_pago_proveedor`), uno de apertura por cuenta (`ux_movimiento_apertura`) y un movimiento por tipo en cada transferencia (`ux_movimiento_transferencia_tipo`); índice `ix_movimiento_cuenta_fecha (cuenta_bancaria_id, fecha)`. Inmutable: el trigger `trg_movimiento_inmutable` bloquea UPDATE y DELETE. `trg_movimiento_moneda_valida` valida la coherencia de `monto_gtq`, `tipo_cambio` y `tipo_cambio_id` con la moneda de la cuenta; `ix_movimiento_tipo_cambio` indexa `tipo_cambio_id`.
 
 ### ConciliacionBancaria
 | Campo | Tipo | Nulo | Llave | Descripción |
@@ -353,7 +403,8 @@ Instantánea de cada retención registrada; una retención con monto 0 no genera
 | base | DECIMAL(14,2) | No | | Mayor que 0: base sin IVA (ISR) o IVA de la factura (IVA) |
 | tasa | DECIMAL(7,4) | No | | Tasa aplicada |
 | monto_calculado | DECIMAL(14,2) | No | | Cálculo del sistema |
-| monto_retenido | DECIMAL(14,2) | No | | Mayor que 0; es el que figura en el asiento |
+| monto_retenido | DECIMAL(14,2) | No | | Mayor que 0; es el que figura en el asiento (GTQ) |
+| monto_retenido_original | DECIMAL(14,2) | No | | Retención en la moneda del documento; mayor que 0 (`ck_retencion_monto_original`); igual a `monto_retenido` en documentos GTQ |
 | motivo_ajuste | VARCHAR(300) | Sí | | Obligatorio en ISR_ROS si `monto_retenido` difiere de `monto_calculado` (`ck_retencion_ajuste`) |
 | asiento_id | INT | No | FK -> AsientoContable(id) | Asiento de la factura (ISR) o del cobro (IVA) |
 | registrado_por | INT | No | FK -> Usuario(id) | Quién la registró |
@@ -382,16 +433,65 @@ Datos de la constancia de una retención; el ERP las registra, no las emite (RN-
 
 Únicos parciales sobre las emitidas: `ux_constancia_retencion` (una vigente por retención) y `ux_constancia_numero` (número único por tipo y retenedor). Los estados "pendiente" y "vencida" no se almacenan: la API los deriva de la fecha de la factura y del día límite. Registrar o anular una constancia no toca asientos.
 
+## 9. Multimoneda: revaluación (M10, I3a)
+
+### Revaluacion
+Una fila por mes y moneda revaluados. Solo una vigente por moneda, año y mes (`ux_revaluacion_vigente`).
+
+| Campo | Tipo | Nulo | Llave | Descripción |
+|---|---|---|---|---|
+| id | SERIAL | No | PK | Identificador único |
+| moneda_id | INT | No | FK -> Moneda(id) | Moneda revaluada |
+| anio | SMALLINT | No | | Año (`ck_revaluacion_mes`) |
+| mes | SMALLINT | No | | Mes 1 a 12 |
+| fecha_cierre | DATE | No | | Último día del mes |
+| tipo_cambio_id | INT | No | FK -> HistorialTipoCambio(id) | Tasa de cierre; `ix_revaluacion_tipo_cambio` |
+| tasa | DECIMAL(12,6) | No | | Fotografía de la tasa de cierre |
+| total_ganancia | DECIMAL(14,2) | No | | Suma de ajustes favorables; `ck_revaluacion_totales`: no negativos y con suma mayor que 0 |
+| total_perdida | DECIMAL(14,2) | No | | Suma de ajustes desfavorables |
+| estado | VARCHAR(10) | No | | Vigente (defecto) / Anulada (`ck_revaluacion_estado`) |
+| asiento_id | INT | No | FK -> AsientoContable(id) | Asiento de cierre (último día del mes) |
+| asiento_reversa_id | INT | No | FK -> AsientoContable(id) | Reversa automática (día 1 del mes siguiente) |
+| motivo_anulacion | VARCHAR(300) | Sí | | Obligatorio al anular |
+| anulada_por | INT | Sí | FK -> Usuario(id) | Quién anuló |
+| anulada_en | TIMESTAMPTZ | Sí | | Fecha de anulación |
+| asiento_anulacion_id | INT | Sí | FK -> AsientoContable(id) | Contra-asiento del cierre |
+| asiento_anulacion_reversa_id | INT | Sí | FK -> AsientoContable(id) | Contra-asiento de la reversa |
+| creado_por | INT | No | FK -> Usuario(id) | Quién la ejecutó |
+| creado_en | TIMESTAMPTZ | No | | Fecha de registro |
+
+`ck_revaluacion_anulacion` exige que una revaluación `Anulada` tenga motivo, usuario y ambos contra-asientos, y que una `Vigente` no los tenga. `trg_revaluacion_inmutable` solo admite el paso de Vigente a Anulada con esos datos; `trg_prevenir_eliminacion_revaluacion` bloquea el DELETE.
+
+### RevaluacionPartida
+Detalle por documento o cuenta bancaria. Solo admite INSERT.
+
+| Campo | Tipo | Nulo | Llave | Descripción |
+|---|---|---|---|---|
+| id | SERIAL | No | PK | Identificador único |
+| revaluacion_id | INT | No | FK -> Revaluacion(id) | Revaluación a la que pertenece; `ix_revaluacionpartida_revaluacion` |
+| tipo | VARCHAR(5) | No | | CxC / CxP / Banco (`ck_revaluacionpartida_tipo`) |
+| documento_cxc_id | INT | Sí | FK -> DocumentoCxC(id) | Solo en tipo CxC |
+| documento_cxp_id | INT | Sí | FK -> DocumentoCxP(id) | Solo en tipo CxP |
+| cuenta_bancaria_id | INT | Sí | FK -> CuentaBancaria(id) | Solo en tipo Banco; `ck_revaluacionpartida_origen` exige exactamente el origen que corresponde al tipo |
+| cuenta_id | INT | No | FK -> CuentaContable(id) | Cuenta contable ajustada |
+| saldo_original | DECIMAL(14,2) | No | | Saldo en la moneda extranjera al cierre |
+| valor_libros_gtq | DECIMAL(14,2) | No | | Valor en libros antes del ajuste |
+| valor_cierre_gtq | DECIMAL(14,2) | No | | Saldo original por la tasa de cierre |
+| ajuste_gtq | DECIMAL(14,2) | No | | `valor_cierre_gtq − valor_libros_gtq` (`ck_revaluacionpartida_ajuste`) |
+
+### Compatibilidad
+`trg_00_multimoneda_completar` (BEFORE INSERT) completa con GTQ, tipo de cambio 1 y el importe original igual al de GTQ las columnas nuevas que un INSERT no menciona, en documentos, líneas, recibos, pagos, aplicaciones, cuentas bancarias, movimientos y retenciones. Los registros anteriores a la migración 16 quedan en GTQ con tipo de cambio 1 y saldos sin cambio. `sp_reversar_asiento` rechaza (`409`) los asientos de revaluación: solo se anulan desde la revaluación (RN-28).
+
 ## Vistas (reemplazan las columnas de saldo eliminadas)
 
 | Vista | Reemplaza a | Descripción |
 |---|---|---|
 | `vw_balance_saldos` | `CuentaContable.saldo` (nunca existió como columna) | Saldo en tiempo real por cuenta contable, sobre asientos `Confirmado` y `Anulado` (se excluye `Borrador`). `total_debito`, `total_credito` y `saldo` están acumulados: cuenta propia más todos sus descendientes. Además expone `nivel` (1 = raíz), `cuenta_padre_id`, `es_hoja`, `activa` y los valores sin jerarquía `debito_propio` y `credito_propio` |
 | `vw_saldocuentaperiodo_vigente` | — | Filas de `SaldoCuentaPeriodo` del cierre vigente de cada periodo (`cierre_numero = PeriodoContable.cierres`); vacía si ese cierre no tuvo movimientos |
-| `vw_saldocuentabancaria` | `CuentaBancaria.saldo` | Saldo en tiempo real por cuenta bancaria: suma firmada de sus movimientos (Ingreso +, Egreso -); el saldo de apertura entra por su movimiento de apertura, no se suma aparte |
+| `vw_saldocuentabancaria` | `CuentaBancaria.saldo` | Saldo en tiempo real por cuenta bancaria: suma firmada de sus movimientos (Ingreso +, Egreso -); el saldo de apertura entra por su movimiento de apertura, no se suma aparte. `saldo` está en la moneda de la cuenta (`moneda_id` se expone al final) |
 | `vw_conciliacion_resumen` | — | Saldo inicial, total marcado, saldo conciliado y diferencia de cada conciliación bancaria (fuente de la matemática de RN-10) |
-| `vw_saldodocumentocxc` | `DocumentoCxC.saldo_pendiente` | Saldo pendiente por documento de CxC: monto total menos pagos aplicados y notas de crédito vigentes referenciadas; 0 para notas de crédito |
-| `vw_saldodocumentocxp` | `DocumentoCxP.saldo_pendiente` | Saldo pendiente por documento de CxP: monto total menos pagos aplicados, notas de crédito vigentes referenciadas y la retención de ISR (`Retencion` `ISR_ROS`); 0 para notas de crédito |
+| `vw_saldodocumentocxc` | `DocumentoCxC.saldo_pendiente` | Saldo pendiente por documento de CxC: `saldo_pendiente` en la moneda del documento (importe original menos pagos aplicados y notas de crédito vigentes referenciadas) y `saldo_pendiente_gtq` (monto total menos `monto_aplicado_gtq` y notas); expone además `moneda_id` y `monto_total_original`; 0 para notas de crédito |
+| `vw_saldodocumentocxp` | `DocumentoCxP.saldo_pendiente` | Saldo pendiente por documento de CxP: monto total menos pagos aplicados, notas de crédito vigentes referenciadas y la retención de ISR (`Retencion` `ISR_ROS`); `saldo_pendiente` en la moneda del documento (resta `monto_retenido_original`), `saldo_pendiente_gtq` en quetzales (resta `monto_retenido`), más `moneda_id` y `monto_total_original`; 0 para notas de crédito |
 | `vw_retencion_reporte` | — | Una fila por retención con contraparte, documento (tipo, número, DTE), sentido (EFECTUADA si ISR_ROS, RECIBIDA si IVA_CLIENTE), `periodo_fiscal` (mes de la factura), base, tasa, montos, asiento y los datos de su constancia más relevante (la emitida primero); fuente del reporte de retenciones (RN-23) |
 
 **Permisos de `delta_api` sobre retenciones** (declarados al final de `15_retenciones.sql`): `parametroretencion` y `constanciaretencion` con `SELECT`, `INSERT` y `UPDATE`; `retencion` solo con `SELECT` e `INSERT` (sin `UPDATE` ni `DELETE`: es append-only); `vw_retencion_reporte` con `SELECT`; `USAGE` en las tres secuencias nuevas. Ninguna de las tres tablas admite `DELETE`. `contraparte`, `configuracionfiscal` y `documentocxp` conservan sus privilegios, que cubren las columnas nuevas.

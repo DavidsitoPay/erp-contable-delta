@@ -111,6 +111,30 @@ export const reportesApi = {
   estadoResultados: (periodoId) => api.get("/reportes/estado-resultados", { params: { periodoId } }),
 };
 
+export const monedasApi = {
+  listar: () => api.get("/monedas"),
+};
+
+export const tiposCambioApi = {
+  consultar: (moneda, fecha) => api.get("/tipos-cambio", { params: { moneda, fecha } }),
+  historial: (filtros = {}) => api.get("/tipos-cambio/historial", { params: filtros }),
+  capturarManual: (cuerpo) => api.post("/tipos-cambio/manual", cuerpo),
+  sustituirPorBanguat: (cuerpo) => api.post("/tipos-cambio/sustituir-por-banguat", cuerpo),
+  darDeBaja: (id, motivo) => api.post(`/tipos-cambio/${idRuta(id)}/baja`, { motivo }),
+};
+
+export const revaluacionesApi = {
+  vistaPrevia: (cuerpo) => api.post("/revaluaciones/vista-previa", cuerpo),
+  ejecutar: (cuerpo) => api.post("/revaluaciones", cuerpo),
+  listar: (filtros = {}) => api.get("/revaluaciones", { params: filtros }),
+  obtener: (id) => api.get(`/revaluaciones/${idRuta(id)}`),
+  anular: (id, motivo) => api.post(`/revaluaciones/${idRuta(id)}/anular`, { motivo }),
+};
+
+export const reportesSaldosApi = {
+  saldosAntiguedad: (filtros = {}) => api.get("/reportes/saldos-antiguedad", { params: filtros }),
+};
+
 export const configuracionFiscalApi = {
   obtener: () => api.get("/configuracion-fiscal"),
   actualizar: (configuracion) => api.put("/configuracion-fiscal", configuracion),

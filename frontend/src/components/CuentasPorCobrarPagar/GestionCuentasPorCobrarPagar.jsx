@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { centrosCostoApi, contrapartesApi, cuentasApi, cuentasBancariasApi, periodosApi } from "../../services/api";
+import { esMonedaExtranjera, monedaDe } from "../../utils/cambio";
 import { cuentasHoja } from "../../utils/cuentas";
 import { hoyIso, monto } from "../../utils/formato";
 import { perfilActual, puedeGestionarTesoreria } from "../../utils/perfiles";
@@ -7,10 +8,13 @@ import { aplicacionesConRetencion, hayErrorRetencionIva, resumenCobro } from "..
 import FormularioMotivo from "../FormularioMotivo";
 import SelectCuentaBancaria from "../Tesoreria/SelectCuentaBancaria";
 import FormularioFactura from "./FormularioFactura";
+import PanelLiquidacion from "./PanelLiquidacion";
 import ResumenCobro from "./ResumenCobro";
+import ResumenLiquidacion from "./ResumenLiquidacion";
 import TablaAplicaciones from "./TablaAplicaciones";
 import TablaFacturas from "./TablaFacturas";
 import TablaPagos from "./TablaPagos";
+import { useLiquidacionPago } from "./useLiquidacionPago";
 import { useRetencionesCobro } from "./useRetencionesCobro";
 
 // config aísla las diferencias de terminología/cuenta de control entre CxC y
@@ -86,13 +90,17 @@ function GestionCuentasPorCobrarPagar({ config }) {
 
   function actualizarMontoAplicado(documentoId, valor) {
     setMontosAplicados((prev) => ({ ...prev, [documentoId]: valor }));
-    if (conRetencionIva && monto(valor) > 0) void retencionesCobro.solicitarSugerencia(documentoId);
+    const factura = facturasDeLaContraparte.find((f) => f.id === documentoId);
+    if (conRetencionIva && monto(valor) > 0 && !esMonedaExtranjera(monedaDe(factura))) {
+      void retencionesCobro.solicitarSugerencia(documentoId);
+    }
   }
 
   function seleccionarContraparte(valor) {
     setPagoContraparteId(valor);
     setMontosAplicados({});
     retencionesCobro.reiniciar();
+    liquidacion.reiniciar();
   }
 
   const aplicacionesBase = facturasDeLaContraparte
@@ -108,6 +116,14 @@ function GestionCuentasPorCobrarPagar({ config }) {
     : null;
 
   const resumenPago = resumenCobro(aplicacionesConMonto);
+  const cuentaPago = cuentasBancarias.find((c) => String(c.id) === pagoCuentaBancariaId);
+  const liquidacion = useLiquidacionPago({
+    cuenta: cuentaPago,
+    fecha: pagoFecha,
+    facturas: facturasDeLaContraparte,
+    montosAplicados,
+    esCobro: Boolean(config.esCobro),
+  });
 
   const puedeEnviarPago =
     !enviandoPago &&
@@ -116,7 +132,8 @@ function GestionCuentasPorCobrarPagar({ config }) {
     pagoMetodo.trim() !== "" &&
     aplicacionesConMonto.length > 0 &&
     resumenPago.neto > 0 &&
-    !retencionInvalida;
+    !retencionInvalida &&
+    liquidacion.listo;
 
   async function resolverRevision(motivo) {
     await api.resolverRevisionRetencion(revisionDe.id, motivo);
@@ -136,13 +153,14 @@ function GestionCuentasPorCobrarPagar({ config }) {
         fecha: pagoFecha,
         metodoPago: pagoMetodo.trim(),
         referenciaBancaria: pagoReferencia || null,
-        aplicaciones: aplicacionesConMonto,
+        aplicaciones: liquidacion.conEfectivo(aplicacionesConMonto),
       });
       setAdvertenciasPago(data?.advertencias ?? []);
       setPagoMetodo("");
       setPagoReferencia("");
       setMontosAplicados({});
       retencionesCobro.reiniciar();
+      liquidacion.reiniciar();
       await Promise.all([cargarFacturas(), cargarPagos()]);
     } catch (err) {
       setErrorPago(err.response?.data?.error || "No se pudo registrar el pago.");
@@ -218,16 +236,20 @@ function GestionCuentasPorCobrarPagar({ config }) {
                 <input className="input" placeholder="Referencia bancaria (opcional)" aria-label="Referencia bancaria" value={pagoReferencia} onChange={(e) => setPagoReferencia(e.target.value)} />
               </div>
 
+              <PanelLiquidacion liquidacion={liquidacion} fecha={pagoFecha} />
+
               {pagoContraparteId !== "" && (
                 <TablaAplicaciones
                   facturas={facturasDeLaContraparte}
                   montosAplicados={montosAplicados}
                   onMonto={actualizarMontoAplicado}
                   retencionIva={retencionIva}
+                  liquidacion={liquidacion.tabla}
                 />
               )}
 
               {conRetencionIva && aplicacionesConMonto.length > 0 && <ResumenCobro resumen={resumenPago} />}
+              <ResumenLiquidacion resumen={liquidacion.resumen} moneda={liquidacion.moneda} />
 
               {errorPago && <p className="error-chip">{errorPago}</p>}
               {advertenciasPago.map((texto) => (

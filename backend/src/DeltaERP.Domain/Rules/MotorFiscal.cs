@@ -27,9 +27,11 @@ public sealed record ParametroImpuesto(int Id, TipoImpuesto Tipo, decimal Tasa, 
 
 public sealed record EntradaLinea(decimal Cantidad, decimal PrecioUnitario, ParametroImpuesto Impuesto, string TipoBienServicio = Rules.TipoBienServicio.Servicio);
 
-public sealed record ResultadoLinea(decimal MontoLinea, decimal Base, decimal Iva, decimal TasaAplicada, bool IvaAcreditable, string TipoBienServicio);
+public sealed record ResultadoLinea(
+    decimal MontoLinea, decimal Base, decimal Iva, decimal TasaAplicada, bool IvaAcreditable, string TipoBienServicio, decimal MontoLineaOriginal = 0m);
 
-public sealed record ResumenFiscal(IReadOnlyList<ResultadoLinea> Lineas, decimal Total, decimal Base, decimal Iva, decimal IvaAcreditable);
+public sealed record ResumenFiscal(
+    IReadOnlyList<ResultadoLinea> Lineas, decimal Total, decimal Base, decimal Iva, decimal IvaAcreditable, decimal TotalOriginal = 0m);
 
 public sealed record ImportesLibro(decimal BaseBienes, decimal BaseServicios, decimal Exento, decimal Iva);
 
@@ -51,7 +53,7 @@ public static class MotorFiscal
             ? Redondear(total * impuesto.Tasa / (100m + impuesto.Tasa)) // Dto. 27-92 art. 10
             : 0m;
         var acreditable = iva > 0 && impuesto.GeneraCredito;
-        return new ResultadoLinea(total, total - iva, iva, impuesto.Tasa, acreditable, linea.TipoBienServicio);
+        return new ResultadoLinea(total, total - iva, iva, impuesto.Tasa, acreditable, linea.TipoBienServicio, totalOriginal);
     }
 
     public static ResumenFiscal Calcular(IEnumerable<EntradaLinea> lineas, decimal tipoCambio = 1m)
@@ -62,7 +64,8 @@ public static class MotorFiscal
             resultados.Sum(r => r.MontoLinea),
             resultados.Sum(r => r.Base),
             resultados.Sum(r => r.Iva),
-            resultados.Where(r => r.IvaAcreditable).Sum(r => r.Iva));
+            resultados.Where(r => r.IvaAcreditable).Sum(r => r.Iva),
+            resultados.Sum(r => r.MontoLineaOriginal));
     }
 
     public static bool IvaVaAlLibro(ParametroImpuesto impuesto, bool esVenta) =>

@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { movimientosTesoreriaApi } from "../../services/api";
+import { monedaDeCuenta } from "../../utils/cambio";
 import { cuentasHoja } from "../../utils/cuentas";
 import { hoyIso, mensajeError, monto } from "../../utils/formato";
 import { FormularioCatalogo } from "../Catalogo/CatalogoCrud";
+import PanelTipoCambio from "../TiposCambio/PanelTipoCambio";
+import { useTipoCambio } from "../TiposCambio/useTipoCambio";
 import SelectCuentaBancaria from "./SelectCuentaBancaria";
+import TransferenciaMoneda from "./TransferenciaMoneda";
 
 const OPERACIONES = ["Ingreso", "Egreso", "Transferencia"];
 
@@ -17,10 +21,11 @@ function estadoInicial({ cuentaBancariaId = "", fecha = hoyIso() }) {
     descripcion: "",
     referencia: "",
     contrapartidaId: "",
+    montoDestino: "",
   };
 }
 
-function construirSolicitud(form) {
+function construirSolicitud(form, monedasDistintas) {
   const comunes = {
     fecha: form.fecha,
     monto: monto(form.monto),
@@ -28,7 +33,12 @@ function construirSolicitud(form) {
     referencia: form.referencia || null,
   };
   if (form.operacion === "Transferencia") {
-    return { ...comunes, cuentaOrigenId: Number(form.cuentaBancariaId), cuentaDestinoId: Number(form.cuentaDestinoId) };
+    return {
+      ...comunes,
+      cuentaOrigenId: Number(form.cuentaBancariaId),
+      cuentaDestinoId: Number(form.cuentaDestinoId),
+      ...(monedasDistintas ? { montoDestino: monto(form.montoDestino) } : {}),
+    };
   }
   return {
     ...comunes,
@@ -45,6 +55,11 @@ function FormularioMovimiento({ cuentasBancarias, cuentasContables, inicial = {}
 
   const esTransferencia = form.operacion === "Transferencia";
   const contrapartidas = cuentasHoja(cuentasContables);
+  const cuentaOrigen = cuentasBancarias.find((c) => String(c.id) === form.cuentaBancariaId);
+  const cuentaDestino = cuentasBancarias.find((c) => String(c.id) === form.cuentaDestinoId);
+  const monedaOrigen = monedaDeCuenta(cuentaOrigen);
+  const monedasDistintas = esTransferencia && cuentaDestino !== undefined && monedaDeCuenta(cuentaDestino) !== monedaOrigen;
+  const cambio = useTipoCambio({ moneda: monedasDistintas ? "USD" : monedaOrigen, fecha: form.fecha });
 
   function cambiar(campo, valor) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
@@ -55,7 +70,7 @@ function FormularioMovimiento({ cuentasBancarias, cuentasContables, inicial = {}
     setError("");
     setCargando(true);
     try {
-      const solicitud = construirSolicitud(form);
+      const solicitud = construirSolicitud(form, monedasDistintas);
       await (esTransferencia ? movimientosTesoreriaApi.transferir(solicitud) : movimientosTesoreriaApi.crear(solicitud));
       setForm(estadoInicial(inicial));
       await onRegistrado();
@@ -67,7 +82,8 @@ function FormularioMovimiento({ cuentasBancarias, cuentasContables, inicial = {}
   }
 
   return (
-    <FormularioCatalogo onSubmit={handleSubmit} cargando={cargando} error={error} etiquetaBoton="Registrar">
+    <>
+    <FormularioCatalogo onSubmit={handleSubmit} cargando={cargando || cambio.bloqueado} error={error} etiquetaBoton="Registrar">
       <select className="select" aria-label="Operación" value={form.operacion} onChange={(e) => cambiar("operacion", e.target.value)}>
         {OPERACIONES.map((o) => <option key={o} value={o}>{o}</option>)}
       </select>
@@ -85,6 +101,17 @@ function FormularioMovimiento({ cuentasBancarias, cuentasContables, inicial = {}
           cuentasBancarias={cuentasBancarias}
         />
       )}
+      {monedasDistintas && (
+        <TransferenciaMoneda
+          origen={cuentaOrigen}
+          destino={cuentaDestino}
+          fecha={form.fecha}
+          montoOrigen={form.monto}
+          montoDestino={form.montoDestino}
+          onMontoDestino={(valor) => cambiar("montoDestino", valor)}
+          cambio={cambio}
+        />
+      )}
       <input type="date" className="input" aria-label="Fecha del movimiento" value={form.fecha} onChange={(e) => cambiar("fecha", e.target.value)} required />
       <input type="number" className="input input-money" aria-label="Monto del movimiento" min="0.01" step="0.01" placeholder="0.00" value={form.monto} onChange={(e) => cambiar("monto", e.target.value)} required />
       <input className="input" placeholder="Descripción" aria-label="Descripción del movimiento" value={form.descripcion} onChange={(e) => cambiar("descripcion", e.target.value)} required />
@@ -96,6 +123,8 @@ function FormularioMovimiento({ cuentasBancarias, cuentasContables, inicial = {}
         </select>
       )}
     </FormularioCatalogo>
+    {!monedasDistintas && <PanelTipoCambio estado={cambio} moneda={monedaOrigen} fecha={form.fecha} titulo={`Valoración en Q (${monedaOrigen})`} />}
+    </>
   );
 }
 

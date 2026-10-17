@@ -20,6 +20,7 @@ public class Retencion
     public decimal Tasa { get; set; }
     public decimal MontoCalculado { get; set; }
     public decimal MontoRetenido { get; set; }
+    public decimal MontoRetenidoOriginal { get; set; }
     public string? MotivoAjuste { get; set; }
     public int AsientoId { get; set; }
     public int RegistradoPor { get; set; }

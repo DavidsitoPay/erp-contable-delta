@@ -46,7 +46,7 @@ public class CuentasBancariasController : ControllerBase
             var (cuenta, error) = await _tesoreria.CrearCuentaAsync(solicitud, this.UsuarioId());
             if (error is not null)
             {
-                return BadRequest(new { error });
+                return this.Fallo(error);
             }
 
             var cuentaId = cuenta!.Id;
@@ -76,10 +76,20 @@ public class CuentasBancariasController : ControllerBase
         {
             return BadRequest(new { error });
         }
+        var errorMoneda = TesoreriaRules.ValidarMonedaCuenta(cambios.MonedaCodigo);
+        if (errorMoneda is not null)
+        {
+            return BadRequest(new { error = errorMoneda });
+        }
 
         cuenta.Banco = cambios.Banco!.Trim();
         cuenta.Numero = cambios.Numero!.Trim();
         cuenta.Tipo = cambios.Tipo!;
+        if (!string.IsNullOrWhiteSpace(cambios.MonedaCodigo))
+        {
+            var codigo = cambios.MonedaCodigo.Trim().ToUpperInvariant();
+            cuenta.MonedaId = (await _db.Monedas.FirstAsync(m => m.Codigo == codigo)).Id;
+        }
         try
         {
             await _db.SaveChangesAsync();
@@ -87,6 +97,10 @@ public class CuentasBancariasController : ControllerBase
         catch (DbUpdateException ex) when (ErroresPostgres.EsViolacionUnica(ex, UniqueBancoNumero))
         {
             return ConflictoBancoNumero(cambios);
+        }
+        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException && ErroresPostgres.TraducirActualizacionAsync(ex) is not null)
+        {
+            return ErroresPostgres.TraducirActualizacionAsync(ex)!;
         }
         return Ok(await Proyectar(_db.CuentasBancarias.Where(c => c.Id == id)).FirstAsync());
     }
@@ -109,9 +123,13 @@ public class CuentasBancariasController : ControllerBase
         from c in cuentas
         join cc in _db.CuentasContables on c.CuentaContableId equals cc.Id
         join s in _db.SaldosCuentaBancaria on c.Id equals s.CuentaBancariaId
+        join mo in _db.Monedas on c.MonedaId equals mo.Id
+        join b in _db.BalanceSaldos on c.CuentaContableId equals b.CuentaId into balances
+        from b in balances.DefaultIfEmpty()
         orderby c.Banco, c.Numero
         select new CuentaBancariaDto(
-            c.Id, c.Banco, c.Numero, c.Tipo, c.Activa, c.CuentaContableId, cc.Codigo, cc.Nombre, c.SaldoApertura, c.FechaApertura, s.Saldo);
+            c.Id, c.Banco, c.Numero, c.Tipo, c.Activa, c.CuentaContableId, cc.Codigo, cc.Nombre, c.SaldoApertura, c.FechaApertura, s.Saldo,
+            c.MonedaId, mo.Codigo, (decimal?)b.Saldo ?? 0m);
 
     private ConflictObjectResult ConflictoBancoNumero(CuentaBancariaRequest solicitud) =>
         Conflict(new { error = $"Ya existe la cuenta bancaria {solicitud.Banco!.Trim()} {solicitud.Numero!.Trim()}." });

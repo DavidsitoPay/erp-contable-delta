@@ -35,6 +35,15 @@ public class FiscalEsquemaTests
     [InlineData(typeof(ParametroRetencion))]
     [InlineData(typeof(Retencion))]
     [InlineData(typeof(ConstanciaRetencion))]
+    [InlineData(typeof(ReciboPagoCliente))]
+    [InlineData(typeof(AplicacionPagoCliente))]
+    [InlineData(typeof(PagoProveedorCabecera))]
+    [InlineData(typeof(AplicacionPagoProveedor))]
+    [InlineData(typeof(CuentaBancaria))]
+    [InlineData(typeof(MovimientoTesoreria))]
+    [InlineData(typeof(HistorialTipoCambio))]
+    [InlineData(typeof(Revaluacion))]
+    [InlineData(typeof(RevaluacionPartida))]
     public async Task ColumnasMapeadas_ExistenEnLaBaseReal(Type tipo)
     {
         using var scope = _pg.Factory.Services.CreateScope();

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { librosFiscalesApi } from "../../services/api";
+import { formatoTasa } from "../../utils/cambio";
 import { descargarCsv } from "../../utils/csv";
 import { AVISO_DTE } from "../../utils/fiscal";
 import { formatoMoneda, mensajeError } from "../../utils/formato";
-import { COLUMNAS_TABLA, csvLibro, nombreArchivoCsv } from "../../utils/libroFiscal";
+import { COLUMNAS_MONEDA, COLUMNAS_TABLA, csvLibro, nombreArchivoCsv, valoresMoneda } from "../../utils/libroFiscal";
+import { BotonesConsulta, EstadoConsulta } from "../AccionesConsulta";
 import CamposAnioMes from "../CamposAnioMes";
 
 const COLUMNAS_ETIQUETA = COLUMNAS_TABLA.filter((c) => !c.numerica).length;
@@ -26,6 +28,17 @@ function celdaDe(columna, fila) {
   return <td key={columna.clave}>{fila[columna.clave] ?? "—"}</td>;
 }
 
+function CeldasMoneda({ fila }) {
+  const { moneda, importeOriginal, tipoCambio } = valoresMoneda(fila);
+  return (
+    <>
+      <td>{moneda}</td>
+      <td className="numeric">{formatoMoneda.format(importeOriginal)}</td>
+      <td className="numeric">{formatoTasa(tipoCambio)}</td>
+    </>
+  );
+}
+
 function TablaLibroFiscal({ reporte }) {
   const numericas = COLUMNAS_TABLA.filter((c) => c.numerica);
   return (
@@ -37,14 +50,17 @@ function TablaLibroFiscal({ reporte }) {
               {COLUMNAS_TABLA.map((c) => (
                 <th key={c.clave} className={c.numerica ? "numeric" : undefined}>{c.titulo}</th>
               ))}
+              {COLUMNAS_MONEDA.map((c) => (
+                <th key={c.clave} className={c.clave === "tipoCambio" || c.clave === "importeOriginal" ? "numeric" : undefined}>{c.titulo}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {reporte.filas.length === 0 ? (
-              <tr><td colSpan={COLUMNAS_TABLA.length}>No hay documentos en el mes seleccionado.</td></tr>
+              <tr><td colSpan={COLUMNAS_TABLA.length + COLUMNAS_MONEDA.length}>No hay documentos en el mes seleccionado.</td></tr>
             ) : (
               reporte.filas.map((fila) => (
-                <tr key={`${fila.tipoDocumento}-${fila.numeroInterno}`}>{COLUMNAS_TABLA.map((c) => celdaDe(c, fila))}</tr>
+                <tr key={`${fila.tipoDocumento}-${fila.numeroInterno}`}>{COLUMNAS_TABLA.map((c) => celdaDe(c, fila))}<CeldasMoneda fila={fila} /></tr>
               ))
             )}
           </tbody>
@@ -54,6 +70,7 @@ function TablaLibroFiscal({ reporte }) {
               {numericas.map((c) => (
                 <td key={c.clave} className="numeric">{formatoMoneda.format(reporte.totales[c.clave])}</td>
               ))}
+              <td colSpan={COLUMNAS_MONEDA.length}></td>
             </tr>
           </tfoot>
         </table>
@@ -114,14 +131,10 @@ function LibroFiscal() {
 
       <form className="catalog-form no-print" onSubmit={handleConsultar}>
         <CamposAnioMes anio={anio} mes={mes} onAnio={setAnio} onMes={setMes} />
-        <button type="submit" className="btn btn-primary" disabled={cargando}>Consultar</button>
-        {reporte && (
-          <button type="button" className="btn btn-outline" onClick={handleExportar}>Exportar CSV</button>
-        )}
+        <BotonesConsulta cargando={cargando} mostrarExportar={Boolean(reporte)} onExportar={handleExportar} />
       </form>
 
-      {error && <p className="error-chip">{error}</p>}
-      {cargando && <p>Cargando...</p>}
+      <EstadoConsulta error={error} cargando={cargando} />
       {reporte && !cargando && (
         <>
           <p>{`Contribuyente: ${reporte.contribuyente?.nombre ?? "—"} (NIT ${reporte.contribuyente?.nit ?? "—"})`}</p>

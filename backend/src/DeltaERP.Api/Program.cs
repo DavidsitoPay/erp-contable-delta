@@ -5,6 +5,7 @@ using DeltaERP.Infrastructure.Data;
 using EFCore.NamingConventions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,6 +29,17 @@ builder.Services.AddScoped<FacturaFiscalService>();
 builder.Services.AddScoped<FacturaService>();
 builder.Services.AddScoped<LibroFiscalService>();
 builder.Services.AddScoped<TesoreriaService>();
+builder.Services.Configure<BanguatOptions>(builder.Configuration.GetSection(BanguatOptions.SectionName));
+builder.Services.AddHttpClient<IBanguatClient, BanguatSoapClient>((sp, cliente) =>
+{
+    var opciones = sp.GetRequiredService<IOptions<BanguatOptions>>().Value;
+    cliente.BaseAddress = new Uri(opciones.Endpoint);
+    cliente.Timeout = TimeSpan.FromSeconds(opciones.TimeoutSegundos);
+});
+builder.Services.AddScoped<TipoCambioService>();
+builder.Services.AddScoped<SaldoAlCorteService>();
+builder.Services.AddScoped<RevaluacionService>();
+builder.Services.AddScoped<ReporteSaldosService>();
 builder.Services.AddSingleton(TimeProvider.System);
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()

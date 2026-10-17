@@ -84,4 +84,44 @@ public class ErroresPostgresTests
         Assert.Null(ErroresPostgres.TraducirActualizacionAsync(
             new InvalidOperationException("x", new DbUpdateException("x", Pg("23505")))));
     }
+
+    [Theory]
+    [InlineData("55000", 409)]
+    [InlineData("23514", 400)]
+    public void ComoErrorValidacion_SqlStateDeNegocio_DevuelveEstadoYMensaje(string sqlState, int estadoEsperado)
+    {
+        var resultado = ErroresPostgres.ComoErrorValidacion(Pg(sqlState));
+
+        Assert.NotNull(resultado);
+        Assert.Equal(estadoEsperado, resultado.Estado);
+        Assert.Equal("mensaje de prueba", resultado.Mensaje);
+    }
+
+    [Fact]
+    public void ComoErrorValidacion_Con55000EnvueltoEnInvalidOperation_DevuelveConflicto()
+    {
+        var resultado = ErroresPostgres.ComoErrorValidacion(
+            new InvalidOperationException("x", new DbUpdateException("x", Pg("55000"))));
+
+        Assert.NotNull(resultado);
+        Assert.Equal(409, resultado.Estado);
+    }
+
+    [Fact]
+    public void ComoErrorValidacion_UnicaConocida_DevuelveConflictoConElMensaje()
+    {
+        var resultado = ErroresPostgres.ComoErrorValidacion(
+            new DbUpdateException("x", Pg("23505", "ux_revaluacion_vigente")));
+
+        Assert.NotNull(resultado);
+        Assert.Equal(409, resultado.Estado);
+        Assert.Contains("revaluación vigente", resultado.Mensaje);
+    }
+
+    [Fact]
+    public void ComoErrorValidacion_SinTraduccion_DevuelveNull()
+    {
+        Assert.Null(ErroresPostgres.ComoErrorValidacion(Pg("P0001")));
+        Assert.Null(ErroresPostgres.ComoErrorValidacion(new DbUpdateException("x", Pg("23505", "uq_desconocida"))));
+    }
 }

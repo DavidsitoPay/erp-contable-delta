@@ -1,6 +1,8 @@
 namespace DeltaERP.Domain.Rules;
 
-public sealed record DocumentoPagable(int Id, string Numero, int TerceroId, string Estado, decimal SaldoPendiente, int? AsientoId = null, bool EsNotaCredito = false);
+public sealed record DocumentoPagable(
+    int Id, string Numero, int TerceroId, string Estado, decimal SaldoPendiente, int? AsientoId = null, bool EsNotaCredito = false,
+    int MonedaId = 0, decimal TipoCambio = 1m, decimal SaldoPendienteGtq = 0m, decimal MontoTotalOriginal = 0m);
 
 public static class PagoRules
 {

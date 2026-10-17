@@ -13,7 +13,13 @@ public interface IDocumentoFactura
     decimal MontoTotal { get; set; }
     decimal MontoBase { get; set; }
     decimal MontoIva { get; set; }
-    decimal? TipoCambioAplicado { get; set; }
+    decimal TipoCambioAplicado { get; set; }
+    int MonedaId { get; set; }
+    decimal MontoTotalOriginal { get; set; }
+    int? TipoCambioId { get; set; }
+    string? TipoCambioFuente { get; set; }
+    bool TipoCambioArrastrado { get; set; }
+    string? MonedaCodigo { get; }
     bool CalculoLegado { get; set; }
     Guid? DteUuid { get; set; }
     string? DteUuidTexto { get; set; }

@@ -15,7 +15,10 @@ public record CuentaBancariaDto(
     string CuentaContableNombre,
     decimal SaldoApertura,
     DateOnly? FechaApertura,
-    decimal Saldo);
+    decimal Saldo,
+    int MonedaId,
+    string MonedaCodigo,
+    decimal SaldoLibrosGtq);
 
 public record MovimientoDto(
     int Id,
@@ -30,7 +33,10 @@ public record MovimientoDto(
     Guid? TransferenciaId,
     int? ReciboPagoId,
     int? PagoProveedorId,
-    bool Conciliado);
+    bool Conciliado,
+    decimal MontoGtq,
+    decimal TipoCambio,
+    int MonedaId);
 
 public record NuevaConciliacion(
     [property: JsonRequired] int CuentaBancariaId,
@@ -66,6 +72,8 @@ public class CuentaBancariaRequest
     public DateOnly? FechaApertura { get; set; }
 
     public int? CuentaContrapartidaId { get; set; }
+
+    public string? MonedaCodigo { get; set; }
 }
 
 public class NuevoMovimientoManual
@@ -111,6 +119,9 @@ public class NuevaTransferencia
 
     [MaxLength(100)]
     public string? Referencia { get; set; }
+
+    public decimal? MontoDestino { get; set; }
 }
 
-public record TransferenciaResultado(Guid TransferenciaId, int AsientoId, MovimientoTesoreria Egreso, MovimientoTesoreria Ingreso);
+public record TransferenciaResultado(
+    Guid TransferenciaId, int AsientoId, MovimientoTesoreria Egreso, MovimientoTesoreria Ingreso, DiferencialRealizadoDto DiferencialRealizado);

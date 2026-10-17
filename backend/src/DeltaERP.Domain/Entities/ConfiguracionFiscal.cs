@@ -21,6 +21,10 @@ public class ConfiguracionFiscal
     public int? CuentaIvaCreditoId { get; set; }
     public int? CuentaIsrRetenidoPagarId { get; set; }
     public int? CuentaIvaRetenidoClientesId { get; set; }
+    public int? CuentaDifGananciaRealizadaId { get; set; }
+    public int? CuentaDifPerdidaRealizadaId { get; set; }
+    public int? CuentaRevalGananciaId { get; set; }
+    public int? CuentaRevalPerdidaId { get; set; }
     public DateTimeOffset ActualizadoEn { get; set; }
     public int? ActualizadoPor { get; set; }
 }

@@ -1,6 +1,7 @@
-import { formatoMoneda } from "../../utils/formato";
+import { esMonedaExtranjera, monedaDe, textoTipoCambio } from "../../utils/cambio";
+import { formatoImporte, formatoMoneda, formatoQuetzales } from "../../utils/formato";
 
-const COLUMNAS_BASE = 10;
+const COLUMNAS_BASE = 12;
 const COLUMNAS_RETENCION = 2;
 
 function RevisionRetencion({ factura, onResolver }) {
@@ -18,6 +19,30 @@ function RevisionRetencion({ factura, onResolver }) {
   return "—";
 }
 
+function CeldasMoneda({ factura }) {
+  const moneda = monedaDe(factura);
+  const extranjera = esMonedaExtranjera(moneda);
+  return (
+    <>
+      <td>
+        {moneda}
+        {extranjera && <small className="nota-fiscal">{textoTipoCambio(factura)}</small>}
+      </td>
+      <td className="numeric">{extranjera ? formatoImporte(factura.montoTotalOriginal, moneda) : null}</td>
+    </>
+  );
+}
+
+function CeldaSaldo({ factura }) {
+  const moneda = monedaDe(factura);
+  return (
+    <td className="numeric">
+      {formatoImporte(factura.saldoPendiente, moneda)}
+      {esMonedaExtranjera(moneda) && <small className="nota-fiscal">{`${formatoQuetzales(factura.saldoPendienteGtq)} en libros`}</small>}
+    </td>
+  );
+}
+
 function TablaFacturas({ facturas, etiquetaContraparte, campoContraparteNombre, conRetencion = false, onResolverRevision }) {
   const columnas = COLUMNAS_BASE + (conRetencion ? COLUMNAS_RETENCION : 0);
 
@@ -31,6 +56,8 @@ function TablaFacturas({ facturas, etiquetaContraparte, campoContraparteNombre, 
               <th>{etiquetaContraparte}</th>
               <th>Fecha</th>
               <th>Vencimiento</th>
+              <th>Moneda</th>
+              <th className="numeric">Total original</th>
               <th className="numeric">Base</th>
               <th className="numeric">IVA</th>
               <th className="numeric">Monto total</th>
@@ -54,11 +81,12 @@ function TablaFacturas({ facturas, etiquetaContraparte, campoContraparteNombre, 
                   <td>{f[campoContraparteNombre]}</td>
                   <td>{f.fecha}</td>
                   <td>{f.fechaVencimiento}</td>
+                  <CeldasMoneda factura={f} />
                   <td className="numeric">{formatoMoneda.format(f.montoBase)}</td>
                   <td className="numeric">{formatoMoneda.format(f.montoIva)}</td>
                   <td className="numeric">{formatoMoneda.format(f.montoTotal)}</td>
                   {conRetencion && <td className="numeric">{formatoMoneda.format(f.montoRetencionIsr ?? 0)}</td>}
-                  <td className="numeric">{formatoMoneda.format(f.saldoPendiente)}</td>
+                  <CeldaSaldo factura={f} />
                   <td>{f.dteSerie ? `${f.dteSerie}-${f.dteNumero}` : "—"}</td>
                   <td>{f.estado}</td>
                   {conRetencion && (

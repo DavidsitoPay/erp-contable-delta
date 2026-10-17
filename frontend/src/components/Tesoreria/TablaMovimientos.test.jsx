@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { formatoImporte, formatoQuetzales } from "../../utils/formato";
 import TablaMovimientos from "./TablaMovimientos";
 
 const cuentasPorId = { 7: { banco: "BAC", numero: "123" } };
@@ -46,4 +47,36 @@ describe("TablaMovimientos", () => {
 
     expect(screen.getByText("No hay movimientos.")).toBeInTheDocument();
   });
+
+  describe("cuentas en moneda extranjera", () => {
+    const cuentasPorId = { 10: { id: 10, banco: "BAC", numero: "USD-1", monedaCodigo: "USD" }, 7: { id: 7, banco: "BAC", numero: "123" } };
+    const movimientoUsd = { id: 1, cuentaBancariaId: 10, fecha: "2026-11-10", tipo: "Ingreso", monto: 400, montoGtq: 3080, tipoCambio: 7.7, descripcion: "Cobro", referencia: null, origen: "Manual", asientoId: 3 };
+    const movimientoGtq = { id: 2, cuentaBancariaId: 7, fecha: "2026-11-11", tipo: "Egreso", monto: 100, descripcion: "Comisión", referencia: null, origen: "Manual", asientoId: 4 };
+
+    it("muestra el monto original, el valor en quetzales y el tipo de cambio", () => {
+      render(<TablaMovimientos movimientos={[movimientoUsd]} cuentasPorId={cuentasPorId} />);
+
+      expect(screen.getByRole("columnheader", { name: "Valor en Q" })).toBeInTheDocument();
+      expect(screen.getByRole("columnheader", { name: "Tipo de cambio" })).toBeInTheDocument();
+      expect(screen.getByText(formatoImporte(400, "USD"))).toBeInTheDocument();
+      expect(screen.getByText(formatoQuetzales(3080))).toBeInTheDocument();
+      expect(screen.getByText("7.700000")).toBeInTheDocument();
+      expect(screen.getByText("BAC USD-1 (USD)")).toBeInTheDocument();
+    });
+
+    it("con cuentas solo en quetzales no muestra las columnas de moneda", () => {
+      render(<TablaMovimientos movimientos={[movimientoGtq]} cuentasPorId={cuentasPorId} />);
+
+      expect(screen.queryByRole("columnheader", { name: "Valor en Q" })).toBeNull();
+    });
+
+    it("en una lista mixta deja vacías las celdas de moneda de la cuenta en quetzales", () => {
+      render(<TablaMovimientos movimientos={[movimientoUsd, movimientoGtq]} cuentasPorId={cuentasPorId} />);
+
+      const filaGtq = within(screen.getByText("Comisión").closest("tr"));
+      expect(filaGtq.queryByText(/^Q/)).toBeNull();
+      expect(screen.getAllByText("7.700000")).toHaveLength(1);
+    });
+  });
+
 });

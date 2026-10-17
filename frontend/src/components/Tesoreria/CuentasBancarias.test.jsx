@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cuentasBancariasApi } from "../../services/api";
+import { formatoImporte, formatoQuetzales } from "../../utils/formato";
 import CuentasBancarias from "./CuentasBancarias";
 
 vi.mock("../../services/api", () => ({ cuentasBancariasApi: { crear: vi.fn(), desactivar: vi.fn() } }));
@@ -132,4 +133,22 @@ describe("CuentasBancarias", () => {
     fireEvent.click(screen.getByRole("button", { name: "Desactivar" }));
     expect(await screen.findByText("La cuenta tiene movimientos pendientes.")).toBeInTheDocument();
   });
+
+  it("crea una cuenta en dólares con saldo de apertura en su moneda y muestra el saldo original", async () => {
+    const cuentaUsd = { id: 9, banco: "BAC", numero: "USD-1", tipo: "Monetaria", activa: true, cuentaContableId: 1, cuentaContableCodigo: "1101", cuentaContableNombre: "Banco BAC", monedaCodigo: "USD", saldoApertura: 1000, fechaApertura: "2026-01-01", saldo: 2000, saldoLibrosGtq: 15300 };
+    render(<CuentasBancarias cuentasBancarias={[cuentaUsd]} cuentasContables={cuentasContables} recargar={recargar} />);
+
+    expect(screen.getByText(formatoImporte(2000, "USD"))).toBeInTheDocument();
+    expect(screen.getByText(formatoQuetzales(15300))).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Moneda de la cuenta"), { target: { value: "USD" } });
+    llenarBasicos();
+    fireEvent.change(screen.getByLabelText("Saldo de apertura en USD"), { target: { value: "1000" } });
+    fireEvent.change(screen.getByLabelText("Fecha de apertura"), { target: { value: "2026-01-01" } });
+    fireEvent.change(screen.getByLabelText("Cuenta de contrapartida de la apertura"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("button", { name: "Agregar" }));
+
+    await waitFor(() => expect(cuentasBancariasApi.crear).toHaveBeenCalledWith(expect.objectContaining({ monedaCodigo: "USD", saldoApertura: 1000 })));
+  });
+
 });

@@ -37,3 +37,18 @@ describe("cuentas", () => {
     expect(etiquetaSubcuentas(3)).toBe("3 subcuentas");
   });
 });
+
+describe("etiquetaCuenta con moneda", () => {
+  it("omite la moneda para cuentas en quetzales", () => {
+    expect(etiquetaCuenta({ banco: "BAC", numero: "123" })).toBe("BAC 123");
+    expect(etiquetaCuenta({ banco: "BAC", numero: "123", monedaCodigo: "GTQ" })).toBe("BAC 123");
+  });
+
+  it("agrega el código de moneda extranjera", () => {
+    expect(etiquetaCuenta({ banco: "BAC", numero: "123", monedaCodigo: "USD" })).toBe("BAC 123 (USD)");
+  });
+
+  it("devuelve vacío sin cuenta", () => {
+    expect(etiquetaCuenta(undefined)).toBe("");
+  });
+});

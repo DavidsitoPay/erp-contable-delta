@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { conciliacionesApi } from "../../services/api";
+import { esMonedaExtranjera } from "../../utils/cambio";
 import { indexarPorId } from "../../utils/cuentas";
-import { formatoMoneda, mensajeError, monto } from "../../utils/formato";
+import { formatoImporte, mensajeError, monto } from "../../utils/formato";
 import { FormularioCatalogo } from "../Catalogo/CatalogoCrud";
 import FormularioMovimiento from "./FormularioMovimiento";
 import TablaMovimientos from "./TablaMovimientos";
@@ -39,6 +40,7 @@ function ConciliacionDetalle({ id, cuentasBancarias, cuentasContables, onCambio 
   }
 
   const { resumen, marcados, disponibles } = detalle;
+  const moneda = resumen.monedaCodigo;
   const pendiente = resumen.estado === "Pendiente";
   const cuadrada = Number(resumen.diferencia) === 0;
   const cuentasPorId = indexarPorId(cuentasBancarias);
@@ -82,11 +84,12 @@ function ConciliacionDetalle({ id, cuentasBancarias, cuentasContables, onCambio 
   return (
     <section aria-label="Detalle de conciliación">
       <h3>Conciliación {resumen.id} ({resumen.estado})</h3>
+      {esMonedaExtranjera(moneda) && <p>{`Moneda de la cuenta: ${moneda}`}</p>}
 
       {lineasResumen.map(([etiqueta, valor]) => (
-        <p key={etiqueta}>{etiqueta}: {formatoMoneda.format(valor)}</p>
+        <p key={etiqueta}>{etiqueta}: {formatoImporte(valor, moneda)}</p>
       ))}
-      <p className="partida-indicator" data-balance={cuadrada ? "ok" : "off"}>Diferencia: {formatoMoneda.format(resumen.diferencia)}</p>
+      <p className="partida-indicator" data-balance={cuadrada ? "ok" : "off"}>Diferencia: {formatoImporte(resumen.diferencia, moneda)}</p>
 
       {error && <p className="error-chip">{error}</p>}
 

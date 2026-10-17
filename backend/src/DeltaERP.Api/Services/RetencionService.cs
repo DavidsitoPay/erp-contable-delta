@@ -52,6 +52,8 @@ public class RetencionService
     public const string MensajeIvaYaRetenido = "La factura ya tiene IVA retenido registrado.";
     private const string MensajeClienteNoAgente =
         "El cliente no está marcado como agente de retención de IVA; confirme que retuvo el impuesto (confirmaClienteNoAgente) para registrarlo.";
+    private const string MensajeIvaMonedaExtranjera =
+        "El IVA retenido por clientes sobre facturas en moneda extranjera no está disponible en esta versión.";
 
     private readonly DeltaErpDbContext _db;
     private readonly ConfiguracionFiscalService _configuracion;
@@ -127,6 +129,7 @@ public class RetencionService
             Tasa = preparada.Tasa,
             MontoCalculado = preparada.MontoCalculado,
             MontoRetenido = preparada.Monto,
+            MontoRetenidoOriginal = OriginalDe(documento, preparada.Monto),
             MotivoAjuste = preparada.MotivoAjuste,
             AsientoId = asientoId,
             RegistradoPor = usuarioId,
@@ -136,6 +139,9 @@ public class RetencionService
         await _db.SaveChangesAsync();
         return retencion;
     }
+
+    private static decimal OriginalDe(IDocumentoFactura documento, decimal monto) =>
+        documento.MontoTotal == 0 ? monto : MotorFiscal.Redondear(monto * documento.MontoTotalOriginal / documento.MontoTotal);
 
     public async Task<(VistaPreviaIsr? Resultado, ErrorValidacion? Error)> VistaPreviaIsrAsync(
         Contraparte proveedor, DateOnly fecha, decimal montoBase, decimal montoTotal)
@@ -193,6 +199,11 @@ public class RetencionService
         }
 
         var documentos = await _db.DocumentosCxC.Where(d => ids.Contains(d.Id)).ToDictionaryAsync(d => d.Id);
+        var monedaFuncionalId = (await _configuracion.ObtenerAsync()).MonedaFuncionalId;
+        if (documentos.Values.Any(d => d.MonedaId != monedaFuncionalId))
+        {
+            return (PreparacionIva.Vacia, ErrorValidacion.Conflicto(MensajeIvaMonedaExtranjera));
+        }
         var ivaNotas = await IvaNotasCreditoAsync(ids);
         var retenciones = new List<RetencionIvaPreparada>();
         var advertencias = new List<string>();
@@ -404,6 +415,7 @@ public class RetencionService
         Tasa = preparada.Parametro.TasaBase ?? 0m,
         MontoCalculado = preparada.Sugerido,
         MontoRetenido = preparada.Monto,
+        MontoRetenidoOriginal = preparada.Monto,
         AsientoId = asientoId,
         RegistradoPor = usuarioId,
         CreadoEn = DateTimeOffset.UtcNow,

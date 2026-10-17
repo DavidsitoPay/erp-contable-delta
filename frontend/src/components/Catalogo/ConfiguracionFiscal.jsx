@@ -16,7 +16,14 @@ const CAMPOS_CUENTA = [
   { campo: "cuentaIvaCreditoId", id: "cf-iva-credito", etiqueta: "Cuenta de IVA crédito fiscal (Activo)", tipo: "Activo" },
   { campo: "cuentaIsrRetenidoPagarId", id: "cf-isr-retenido", etiqueta: "Cuenta de ISR retenido por pagar (Pasivo)", tipo: "Pasivo" },
   { campo: "cuentaIvaRetenidoClientesId", id: "cf-iva-retenido", etiqueta: "Cuenta de IVA retenido por clientes (Activo)", tipo: "Activo" },
+  { campo: "cuentaDifGananciaRealizadaId", id: "cf-dif-ganancia", etiqueta: "Ganancia cambiaria realizada (Ingreso)", tipo: "Ingreso" },
+  { campo: "cuentaDifPerdidaRealizadaId", id: "cf-dif-perdida", etiqueta: "Pérdida cambiaria realizada (Gasto)", tipo: "Gasto" },
+  { campo: "cuentaRevalGananciaId", id: "cf-reval-ganancia", etiqueta: "Ganancia por revaluación no realizada (Ingreso)", tipo: "Ingreso" },
+  { campo: "cuentaRevalPerdidaId", id: "cf-reval-perdida", etiqueta: "Pérdida por revaluación no realizada (Gasto)", tipo: "Gasto" },
 ];
+const AVISO_CUENTAS_CAMBIARIAS =
+  "Falta configurar las cuentas de diferencial cambiario: no se podrán registrar cobros o pagos en moneda extranjera con diferencial ni revaluaciones hasta que se configuren.";
+const CAMPOS_CAMBIARIOS = ["cuentaDifGananciaRealizadaId", "cuentaDifPerdidaRealizadaId", "cuentaRevalGananciaId", "cuentaRevalPerdidaId"];
 
 const textoId = (id) => (id ? String(id) : "");
 const idONulo = (valor) => (valor ? Number(valor) : null);
@@ -95,9 +102,12 @@ function ConfiguracionFiscal() {
   const cuentasPorTipo = {
     Pasivo: hojas.filter((c) => c.tipo === "Pasivo" && c.naturaleza === "Acreedora"),
     Activo: hojas.filter((c) => c.tipo === "Activo" && c.naturaleza === "Deudora"),
+    Ingreso: hojas.filter((c) => c.tipo === "Ingreso" && c.naturaleza === "Acreedora"),
+    Gasto: hojas.filter((c) => c.tipo === "Gasto" && c.naturaleza === "Deudora"),
   };
   const faltanCuentas = !config.cuentaIvaDebitoId || !config.cuentaIvaCreditoId;
   const faltanCuentasRetencion = !config.cuentaIsrRetenidoPagarId || !config.cuentaIvaRetenidoClientesId;
+  const faltanCuentasCambiarias = CAMPOS_CAMBIARIOS.some((campo) => !config[campo]);
   const puedeGuardar = !guardando && (!form.agenteRetencionIva || form.tipoAgenteIva !== "");
   const autor = config.actualizadoPorNombre ? ` por ${config.actualizadoPorNombre}` : "";
 
@@ -170,6 +180,7 @@ function ConfiguracionFiscal() {
 
         {faltanCuentas && <p className="warning-chip">{AVISO_CUENTAS}</p>}
         {faltanCuentasRetencion && <p className="warning-chip">{AVISO_CUENTAS_RETENCION}</p>}
+        {faltanCuentasCambiarias && <p className="warning-chip">{AVISO_CUENTAS_CAMBIARIAS}</p>}
         {form.agenteRetencionIva && <p className="warning-chip">{AVISO_AGENTE}</p>}
         {error && <p className="error-chip">{error}</p>}
         {guardado && <p className="success-chip">Configuración guardada.</p>}

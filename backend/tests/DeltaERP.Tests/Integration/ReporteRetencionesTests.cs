@@ -53,7 +53,10 @@ public class ReporteRetencionesTests
 
         var reporte = await ConsultarAsync(m.Client, $"anio={m.Anio}&mes=6");
 
-        var filas = reporte.GetProperty("filas").EnumerateArray().ToDictionary(f => f.GetProperty("retencionId").GetInt32());
+        var propias = new[] { m.RetencionIsr, m.RetencionIva };
+        var filas = reporte.GetProperty("filas").EnumerateArray()
+            .Where(f => propias.Contains(f.GetProperty("retencionId").GetInt32()))
+            .ToDictionary(f => f.GetProperty("retencionId").GetInt32());
         Assert.Equal(2, filas.Count);
         var isr = filas[m.RetencionIsr];
         Assert.Equal(("EFECTUADA", "ISR_ROS", 10000m, 5m, 5m, 500m, "VENCIDA", false), (
@@ -98,7 +101,8 @@ public class ReporteRetencionesTests
 
         var reporte = await ConsultarAsync(m.Client, $"anio={m.Anio}&mes=6&{filtro}");
 
-        var fila = Assert.Single(reporte.GetProperty("filas").EnumerateArray());
+        var propias = new[] { m.RetencionIsr, m.RetencionIva };
+        var fila = Assert.Single(reporte.GetProperty("filas").EnumerateArray(), f => propias.Contains(f.GetProperty("retencionId").GetInt32()));
         Assert.Equal(conceptoEsperado, fila.GetProperty("concepto").GetString());
     }
 

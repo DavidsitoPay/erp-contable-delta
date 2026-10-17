@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { impuestosApi } from "../../services/api";
+import { camposMoneda } from "../../utils/cambio";
 import { calcularResumen, dtePayload, dteValido, impuestoDeLinea, impuestoPorDefecto, impuestosPermitidos } from "../../utils/fiscal";
 import { hoyIso, mensajeError, monto } from "../../utils/formato";
 import { AJUSTE_VACIO, ajusteValido, payloadAjuste, permiteAjuste } from "../../utils/retenciones";
@@ -9,7 +10,9 @@ import DatosDte from "./DatosDte";
 import LineasFactura from "./LineasFactura";
 import PanelRetencionIsr from "./PanelRetencionIsr";
 import ResumenFactura from "./ResumenFactura";
+import { useCambioDocumento } from "./useCambioDocumento";
 import { useRetencionPrevia } from "./useRetencionPrevia";
+import PanelTipoCambio from "../TiposCambio/PanelTipoCambio";
 
 const DTE_VACIO = { dteUuid: "", dteSerie: "", dteNumero: "", dteFechaCertificacion: "" };
 
@@ -33,6 +36,7 @@ function FormularioFactura({ config, contrapartes, hojas, cuentasControl, centro
     return {
       numero: "",
       tipoDocumento: "Factura",
+      monedaCodigo: "GTQ",
       [campoContraparteId]: "",
       documentoOrigenId: "",
       fecha: hoyIso(),
@@ -71,25 +75,6 @@ function FormularioFactura({ config, contrapartes, hojas, cuentasControl, centro
   const regimenIva = contraparte?.regimenIva;
   const permitidos = impuestosPermitidos(impuestos, regimenIva);
   const defecto = impuestoPorDefecto(permitidos, regimenIva);
-  const resumen = calcularResumen(
-    lineas.map((l) => ({
-      cantidad: monto(l.cantidad),
-      precioUnitario: monto(l.precioUnitario),
-      impuesto: impuestoDeLinea(l, permitidos, defecto),
-    }))
-  );
-
-  const estadoRetencion = useRetencionPrevia({
-    api,
-    activo: Boolean(config.retencionIsr) && form.tipoDocumento === "Factura",
-    proveedorId: form[campoContraparteId],
-    fecha: form.fecha,
-    montoBase: resumen.base,
-    montoTotal: resumen.total,
-  });
-  const ajusteActivo = ajuste.activo && permiteAjuste(estadoRetencion.previa);
-  const ajusteIncompleto = ajusteActivo && !ajusteValido(ajuste, resumen.total);
-
   const esNotaCredito = form.tipoDocumento === "NotaCredito";
   const origenes = facturas.filter(
     (f) =>
@@ -99,14 +84,35 @@ function FormularioFactura({ config, contrapartes, hojas, cuentasControl, centro
       String(f[campoContraparteId]) === String(form[campoContraparteId])
   );
   const origen = origenes.find((o) => String(o.id) === form.documentoOrigenId);
-  const excedeSaldo = esNotaCredito && origen !== undefined && resumen.total > origen.saldoPendiente;
+  const cambio = useCambioDocumento({ monedaCodigo: form.monedaCodigo, fecha: form.fecha, origen, esNotaCredito });
+  const resumen = calcularResumen(
+    lineas.map((l) => ({
+      cantidad: monto(l.cantidad),
+      precioUnitario: monto(l.precioUnitario),
+      impuesto: impuestoDeLinea(l, permitidos, defecto),
+    })),
+    cambio.tasa ?? 0
+  );
+
+  const estadoRetencion = useRetencionPrevia({
+    api,
+    activo: Boolean(config.retencionIsr) && form.tipoDocumento === "Factura" && !cambio.bloqueado,
+    proveedorId: form[campoContraparteId],
+    fecha: form.fecha,
+    montoBase: resumen.base,
+    montoTotal: resumen.total,
+  });
+  const ajusteActivo = ajuste.activo && permiteAjuste(estadoRetencion.previa);
+  const ajusteIncompleto = ajusteActivo && !ajusteValido(ajuste, resumen.total);
+
+  const excedeSaldo = esNotaCredito && origen !== undefined && resumen.totalOriginal > origen.saldoPendiente;
   const origenCompleto = !esNotaCredito || (origen !== undefined && !excedeSaldo);
 
   const encabezadoCompleto =
     form.numero.trim() !== "" && form[campoContraparteId] !== "" && form.periodoId !== "" && form.cuentaControlId !== "";
   const lineasCompletas = lineas.every((l) => l.cuentaContableId !== "" && monto(l.cantidad) > 0);
   const puedeEnviar =
-    !enviando && encabezadoCompleto && lineasCompletas && defecto !== null && dteValido(dte, dteObligatorio) && origenCompleto && !estadoRetencion.bloqueada && !ajusteIncompleto;
+    !enviando && encabezadoCompleto && lineasCompletas && defecto !== null && dteValido(dte, dteObligatorio) && origenCompleto && !estadoRetencion.bloqueada && !ajusteIncompleto && !cambio.bloqueado;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -123,6 +129,7 @@ function FormularioFactura({ config, contrapartes, hojas, cuentasControl, centro
         periodoId: Number(form.periodoId),
         cuentaControlId: Number(form.cuentaControlId),
         ...(esNotaCredito ? { documentoOrigenId: Number(form.documentoOrigenId) } : {}),
+        ...camposMoneda(cambio.moneda),
         ...dtePayload(dte),
         ...(ajusteActivo ? { retencionIsrAjuste: payloadAjuste(ajuste) } : {}),
         lineas: lineas.map((l) => ({
@@ -137,7 +144,7 @@ function FormularioFactura({ config, contrapartes, hojas, cuentasControl, centro
       };
       const { data } = await api.crearFactura(payload);
       setAdvertencias(data?.advertencias ?? []);
-      setForm({ ...formVacio(), periodoId: form.periodoId, cuentaControlId: form.cuentaControlId });
+      setForm({ ...formVacio(), periodoId: form.periodoId, cuentaControlId: form.cuentaControlId, monedaCodigo: form.monedaCodigo });
       setDte(DTE_VACIO);
       setAjuste(AJUSTE_VACIO);
       reiniciarLineas();
@@ -160,9 +167,12 @@ function FormularioFactura({ config, contrapartes, hojas, cuentasControl, centro
         cuentasControl={cuentasControl}
         origenes={origenes}
         esNotaCredito={esNotaCredito}
+        moneda={cambio.moneda}
       />
 
       <DatosDte valor={dte} onCambio={setDte} obligatorio={dteObligatorio} />
+
+      <PanelTipoCambio estado={cambio.estado} moneda={cambio.moneda} fecha={form.fecha} />
 
       <LineasFactura
         lineas={lineas}
@@ -174,13 +184,14 @@ function FormularioFactura({ config, contrapartes, hojas, cuentasControl, centro
         etiquetaCuentaLinea={etiquetaCuentaLinea}
         onActualizar={actualizarLinea}
         onQuitar={quitarLinea}
+        moneda={cambio.moneda}
       />
 
       <div className="lineas-toolbar">
         <button type="button" className="btn btn-outline btn-sm" onClick={agregarLinea}>+ Agregar línea</button>
       </div>
 
-      <ResumenFactura resumen={resumen} etiquetaIva={etiquetaIva} esCompra={aplicaImpuestoA === "COMPRAS"} />
+      <ResumenFactura resumen={resumen} etiquetaIva={etiquetaIva} esCompra={aplicaImpuestoA === "COMPRAS"} moneda={cambio.moneda} tipoCambio={cambio.estado.tipoCambio} />
 
       <PanelRetencionIsr estado={estadoRetencion} total={resumen.total} ajuste={ajuste} onAjuste={setAjuste} />
 

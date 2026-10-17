@@ -265,4 +265,22 @@ describe("LibroDiario reversa de asientos", () => {
     });
     expect(await screen.findByText("Asiento AS-001 anulado. Reversa REV-AS-001 registrada.")).toBeInTheDocument();
   });
+
+  it("marca como revaluación no realizada el asiento de revaluación, aun para el Administrador", async () => {
+    localStorage.setItem("delta_usuario", JSON.stringify({ perfil: PERFIL_ADMIN }));
+    librosApi.diario.mockResolvedValue({ data: [{ ...ASIENTOS_REVERSA[0], esRevaluacion: true, reversible: false }] });
+    await seleccionarPeriodo();
+
+    expect(await screen.findByText("Revaluación (no realizada)")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reversar" })).toBeNull();
+  });
+
+  it("no muestra la marca de revaluación en asientos normales", async () => {
+    localStorage.setItem("delta_usuario", JSON.stringify({ perfil: PERFIL_ADMIN }));
+    librosApi.diario.mockResolvedValue({ data: ASIENTOS_REVERSA });
+    await seleccionarPeriodo();
+    await screen.findByText("AS-001");
+
+    expect(screen.queryByText("Revaluación (no realizada)")).toBeNull();
+  });
 });

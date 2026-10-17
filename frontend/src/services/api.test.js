@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => {
 
 vi.mock("axios", () => ({ default: { create: mocks.create, get: mocks.get } }));
 
-import api, { asientosApi, checkHealth, conciliacionesApi, configuracionFiscalApi, contrapartesApi, cuentasApi, cuentasBancariasApi, cxcApi, cxpApi, impuestosApi, librosApi, librosFiscalesApi, login, movimientosTesoreriaApi, parametrosRetencionApi, periodosApi, reportesApi, retencionesApi } from "./api";
+import api, { asientosApi, checkHealth, conciliacionesApi, configuracionFiscalApi, contrapartesApi, cuentasApi, cuentasBancariasApi, cxcApi, cxpApi, impuestosApi, librosApi, librosFiscalesApi, login, monedasApi, movimientosTesoreriaApi, parametrosRetencionApi, periodosApi, reportesApi, reportesSaldosApi, retencionesApi, revaluacionesApi, tiposCambioApi } from "./api";
 
 const interceptor = mocks.instance.interceptors.request.use.mock.calls[0][0];
 const opcionesCreate = mocks.create.mock.calls[0][0];
@@ -257,5 +257,49 @@ describe("retenciones", () => {
     expect(mocks.instance.get).toHaveBeenNthCalledWith(2, "/retenciones/reporte", { params: { anio: 2026, mes: 10, sentido: "EFECTUADA" } });
     expect(mocks.instance.post).toHaveBeenNthCalledWith(1, "/retenciones/7/constancia", { numero: "A-1" });
     expect(mocks.instance.post).toHaveBeenNthCalledWith(2, "/retenciones/constancias/2/anular", { motivo: "Error de captura" });
+  });
+});
+
+describe("multimoneda", () => {
+  it("monedasApi.listar consulta /monedas", () => {
+    monedasApi.listar();
+    expect(mocks.instance.get).toHaveBeenCalledWith("/monedas");
+  });
+
+  it("tiposCambioApi cubre consultar, historial, captura manual, sustitución y baja", () => {
+    tiposCambioApi.consultar("USD", "2026-10-12");
+    tiposCambioApi.historial();
+    tiposCambioApi.historial({ moneda: "USD" });
+    tiposCambioApi.capturarManual({ monedaCodigo: "USD", tasa: 7.6 });
+    tiposCambioApi.sustituirPorBanguat({ monedaCodigo: "USD", fecha: "2026-10-12" });
+    tiposCambioApi.darDeBaja("5", "Error de captura");
+
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(1, "/tipos-cambio", { params: { moneda: "USD", fecha: "2026-10-12" } });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(2, "/tipos-cambio/historial", { params: {} });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(3, "/tipos-cambio/historial", { params: { moneda: "USD" } });
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(1, "/tipos-cambio/manual", { monedaCodigo: "USD", tasa: 7.6 });
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(2, "/tipos-cambio/sustituir-por-banguat", { monedaCodigo: "USD", fecha: "2026-10-12" });
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(3, "/tipos-cambio/5/baja", { motivo: "Error de captura" });
+  });
+
+  it("revaluacionesApi cubre vista previa, ejecución, listado, detalle y anulación", () => {
+    revaluacionesApi.vistaPrevia({ anio: 2026, mes: 10, monedaCodigo: "USD" });
+    revaluacionesApi.ejecutar({ anio: 2026, mes: 10, monedaCodigo: "USD" });
+    revaluacionesApi.listar();
+    revaluacionesApi.listar({ estado: "Vigente" });
+    revaluacionesApi.obtener("3");
+    revaluacionesApi.anular("3", "Tasa errónea");
+
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(1, "/revaluaciones/vista-previa", { anio: 2026, mes: 10, monedaCodigo: "USD" });
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(2, "/revaluaciones", { anio: 2026, mes: 10, monedaCodigo: "USD" });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(1, "/revaluaciones", { params: {} });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(2, "/revaluaciones", { params: { estado: "Vigente" } });
+    expect(mocks.instance.get).toHaveBeenNthCalledWith(3, "/revaluaciones/3");
+    expect(mocks.instance.post).toHaveBeenNthCalledWith(3, "/revaluaciones/3/anular", { motivo: "Tasa errónea" });
+  });
+
+  it("reportesSaldosApi.saldosAntiguedad envía los filtros", () => {
+    reportesSaldosApi.saldosAntiguedad({ tipo: "CxC", corte: "2026-10-31" });
+    expect(mocks.instance.get).toHaveBeenCalledWith("/reportes/saldos-antiguedad", { params: { tipo: "CxC", corte: "2026-10-31" } });
   });
 });

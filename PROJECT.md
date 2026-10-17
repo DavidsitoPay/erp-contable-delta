@@ -29,8 +29,8 @@ Fase 1: uso interno. Fase 2 (futura): comercialización SaaS B2B a PyMEs guatema
 ## Artefactos ya entregados (referencia)
 
 - `docs/architecture.md` — Arquitectura de 3 capas
-- `docs/data-dictionary.md` — Diccionario de datos completo, 31 tablas
-- `docs/business-rules.md` — Reglas de negocio RN-01 a RN-23, con la columna "Dónde se aplica"
+- `docs/data-dictionary.md` — Diccionario de datos completo, 33 tablas
+- `docs/business-rules.md` — Reglas de negocio RN-01 a RN-28, con la columna "Dónde se aplica"
 - `docs/diagrams/` — Diagramas de clases (1/2 y 2/2), componentes, secuencia, contexto, arquitectura
 
 ## Módulos funcionales (Product Backlog de alto nivel)
@@ -46,7 +46,7 @@ Fase 1: uso interno. Fase 2 (futura): comercialización SaaS B2B a PyMEs guatema
 | M7 | Reportes y estados financieros | Alta | Implementado (balance general y estado de resultados) |
 | M8 | Seguridad y auditoría | Alta | Implementado (login, JWT, roles, bitácora de auditoría) |
 | M9 | Carga inicial e importación | Media | Diseñado |
-| M10 | Cumplimiento fiscal y multimoneda | Alta | En curso (parámetros fiscales e IVA, registro de DTE de FEL, notas de crédito, libro de compras y ventas e incremento I2 de retenciones ISR/IVA implementados; multimoneda con tipo de cambio de Banguat, retención a no residentes y retención de IVA como agente pendientes en I3) |
+| M10 | Cumplimiento fiscal y multimoneda | Alta | En curso (parámetros fiscales e IVA, registro de DTE de FEL, notas de crédito, libro de compras y ventas e incrementos I2 de retenciones ISR/IVA e I3a de multimoneda con tipo de cambio de Banguat, diferencial cambiario y revaluación implementados; retención a no residentes, ajuste de retención por nota de crédito y enteramiento pendientes en I3b; la retención de IVA como agente está fuera de alcance porque Delta no es agente de retención de IVA) |
 
 ## Etapas del ciclo de desarrollo (SDLC) aplicadas al proyecto
 
@@ -73,7 +73,7 @@ Scripts numerados en `database/`, aplicados en orden por `database/run_migration
 - [x] `01_tables.sql` — DDL base
 - [x] `02_functions.sql`, `03_triggers.sql`, `04_procedures.sql`, `05_views.sql` — funciones, disparadores (partida doble, periodo cerrado, no eliminación de asientos, límites de pago, inmutabilidad de auditoría y saldos), procedimientos y vistas
 - [x] `06_seed_dev.sql` — usuarios de prueba por perfil
-- [x] `07` a `15` — perfil autorizado, correcciones de balance y cierre, tesorería, balance jerárquico, reportes, reversa de asientos, parámetros fiscales e IVA (M10), rol `delta_api` de mínimo privilegio y retenciones ISR/IVA (M10, I2)
+- [x] `07` a `16` — perfil autorizado, correcciones de balance y cierre, tesorería, balance jerárquico, reportes, reversa de asientos, parámetros fiscales e IVA (M10), rol `delta_api` de mínimo privilegio, retenciones ISR/IVA (M10, I2) y multimoneda (M10, I3a)
 - [x] `database/demo/` — datos de demostración
 
 ### Etapa 3 — Backend (completada para M1–M8; M10 en curso)
@@ -86,7 +86,7 @@ Orden seguido, según la dependencia entre módulos:
 5. ✅ **M4 / M5 CxC y CxP** — contrapartes, facturas con asiento automático, notas de crédito, y pagos con límite RN-05 en la API y en el trigger.
 6. ✅ **M6 Tesorería** — cuentas bancarias, movimientos, transferencias y conciliación (RN-10).
 7. ✅ **M7 Reportes** — balance general y estado de resultados.
-8. **M10 Cumplimiento fiscal** — en curso: configuración fiscal, catálogo de impuestos, IVA en facturas, DTE de FEL, notas de crédito, libro fiscal y retenciones ISR/IVA (I2) implementados; multimoneda, retención a no residentes y retención de IVA como agente pendientes (I3).
+8. **M10 Cumplimiento fiscal** — en curso: configuración fiscal, catálogo de impuestos, IVA en facturas, DTE de FEL, notas de crédito, libro fiscal, retenciones ISR/IVA (I2) y multimoneda con diferencial cambiario y revaluación (I3a) implementados; retención a no residentes, ajuste de retención por nota de crédito y enteramiento pendientes (I3b); la retención de IVA como agente está fuera de alcance porque Delta no es agente de retención de IVA.
 9. **M9 Importación** — diseñado, no iniciado.
 
 ### Etapa 4 — Frontend

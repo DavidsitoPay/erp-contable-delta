@@ -30,4 +30,8 @@ public class ConfiguracionFiscalService
             ? (id, null)
             : (null, ErrorValidacion.Conflicto($"La cuenta de {etiqueta} configurada no es utilizable: {error}"));
     }
+
+    public async Task<(int? CuentaId, ErrorValidacion? Error)> ResolverCuentaSiHayMontoAsync(
+        decimal monto, int? cuentaId, string etiqueta, string contexto) =>
+        monto <= 0 ? (null, null) : await ResolverCuentaAsync(cuentaId, etiqueta, contexto);
 }

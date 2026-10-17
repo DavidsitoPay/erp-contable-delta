@@ -14,6 +14,9 @@ namespace DeltaERP.Api.Controllers;
 [Authorize]
 public class ConfiguracionFiscalController : ControllerBase
 {
+    private const string NaturalezaAcreedora = "Acreedora";
+    private const string NaturalezaDeudora = "Deudora";
+
     private readonly DeltaErpDbContext _db;
     private readonly ConfiguracionFiscalService _configuracion;
     private readonly ValidacionContable _validacion;
@@ -41,6 +44,10 @@ public class ConfiguracionFiscalController : ControllerBase
         {
             CuentaIsrRetenidoPagarId = recibidos.CuentaIsrRetenidoPagarId ?? configuracion.CuentaIsrRetenidoPagarId,
             CuentaIvaRetenidoClientesId = recibidos.CuentaIvaRetenidoClientesId ?? configuracion.CuentaIvaRetenidoClientesId,
+            CuentaDifGananciaRealizadaId = recibidos.CuentaDifGananciaRealizadaId ?? configuracion.CuentaDifGananciaRealizadaId,
+            CuentaDifPerdidaRealizadaId = recibidos.CuentaDifPerdidaRealizadaId ?? configuracion.CuentaDifPerdidaRealizadaId,
+            CuentaRevalGananciaId = recibidos.CuentaRevalGananciaId ?? configuracion.CuentaRevalGananciaId,
+            CuentaRevalPerdidaId = recibidos.CuentaRevalPerdidaId ?? configuracion.CuentaRevalPerdidaId,
         };
         var error = ConfiguracionFiscalRules.Validar(datos) ?? await ValidarCuentasAsync(datos);
         if (error is not null)
@@ -59,6 +66,10 @@ public class ConfiguracionFiscalController : ControllerBase
         configuracion.CuentaIvaCreditoId = datos.CuentaIvaCreditoId;
         configuracion.CuentaIsrRetenidoPagarId = datos.CuentaIsrRetenidoPagarId;
         configuracion.CuentaIvaRetenidoClientesId = datos.CuentaIvaRetenidoClientesId;
+        configuracion.CuentaDifGananciaRealizadaId = datos.CuentaDifGananciaRealizadaId;
+        configuracion.CuentaDifPerdidaRealizadaId = datos.CuentaDifPerdidaRealizadaId;
+        configuracion.CuentaRevalGananciaId = datos.CuentaRevalGananciaId;
+        configuracion.CuentaRevalPerdidaId = datos.CuentaRevalPerdidaId;
         configuracion.ActualizadoEn = DateTimeOffset.UtcNow;
         configuracion.ActualizadoPor = usuarioId;
 
@@ -71,16 +82,20 @@ public class ConfiguracionFiscalController : ControllerBase
     }
 
     private static string Describir(ConfiguracionFiscal c) =>
-        $"régimen ISR {c.RegimenIsr}, agente IVA {c.AgenteRetencionIva} ({c.TipoAgenteIva}), cuenta débito {c.CuentaIvaDebitoId}, cuenta crédito {c.CuentaIvaCreditoId}, cuenta ISR retenido por pagar {c.CuentaIsrRetenidoPagarId}, cuenta IVA retenido por clientes {c.CuentaIvaRetenidoClientesId}";
+        $"régimen ISR {c.RegimenIsr}, agente IVA {c.AgenteRetencionIva} ({c.TipoAgenteIva}), cuenta débito {c.CuentaIvaDebitoId}, cuenta crédito {c.CuentaIvaCreditoId}, cuenta ISR retenido por pagar {c.CuentaIsrRetenidoPagarId}, cuenta IVA retenido por clientes {c.CuentaIvaRetenidoClientesId}, cuenta ganancia cambiaria realizada {c.CuentaDifGananciaRealizadaId}, cuenta pérdida cambiaria realizada {c.CuentaDifPerdidaRealizadaId}, cuenta ganancia por revaluación {c.CuentaRevalGananciaId}, cuenta pérdida por revaluación {c.CuentaRevalPerdidaId}";
 
     private async Task<string?> ValidarCuentasAsync(DatosConfiguracionFiscal datos)
     {
         var requisitos = new (int? CuentaId, string Tipo, string Naturaleza, string Mensaje)[]
         {
-            (datos.CuentaIvaDebitoId, "Pasivo", "Acreedora", "La cuenta de IVA débito fiscal debe ser de tipo Pasivo y naturaleza Acreedora."),
-            (datos.CuentaIvaCreditoId, "Activo", "Deudora", "La cuenta de IVA crédito fiscal debe ser de tipo Activo y naturaleza Deudora."),
-            (datos.CuentaIsrRetenidoPagarId, "Pasivo", "Acreedora", "La cuenta de ISR retenido por pagar debe ser de tipo Pasivo y naturaleza Acreedora."),
-            (datos.CuentaIvaRetenidoClientesId, "Activo", "Deudora", "La cuenta de IVA retenido por clientes debe ser de tipo Activo y naturaleza Deudora."),
+            (datos.CuentaIvaDebitoId, "Pasivo", NaturalezaAcreedora, "La cuenta de IVA débito fiscal debe ser de tipo Pasivo y naturaleza Acreedora."),
+            (datos.CuentaIvaCreditoId, "Activo", NaturalezaDeudora, "La cuenta de IVA crédito fiscal debe ser de tipo Activo y naturaleza Deudora."),
+            (datos.CuentaIsrRetenidoPagarId, "Pasivo", NaturalezaAcreedora, "La cuenta de ISR retenido por pagar debe ser de tipo Pasivo y naturaleza Acreedora."),
+            (datos.CuentaIvaRetenidoClientesId, "Activo", NaturalezaDeudora, "La cuenta de IVA retenido por clientes debe ser de tipo Activo y naturaleza Deudora."),
+            (datos.CuentaDifGananciaRealizadaId, "Ingreso", NaturalezaAcreedora, "La cuenta de ganancia cambiaria realizada debe ser de tipo Ingreso y naturaleza Acreedora."),
+            (datos.CuentaDifPerdidaRealizadaId, "Gasto", NaturalezaDeudora, "La cuenta de pérdida cambiaria realizada debe ser de tipo Gasto y naturaleza Deudora."),
+            (datos.CuentaRevalGananciaId, "Ingreso", NaturalezaAcreedora, "La cuenta de ganancia por revaluación debe ser de tipo Ingreso y naturaleza Acreedora."),
+            (datos.CuentaRevalPerdidaId, "Gasto", NaturalezaDeudora, "La cuenta de pérdida por revaluación debe ser de tipo Gasto y naturaleza Deudora."),
         };
         foreach (var (cuentaId, tipo, naturaleza, mensaje) in requisitos)
         {
@@ -116,6 +131,7 @@ public class ConfiguracionFiscalController : ControllerBase
         return new ConfiguracionFiscalRespuesta(
             c.NitEmpresa, c.NombreLegal, c.MonedaFuncionalId, moneda?.Codigo, c.RegimenIsr, c.AgenteRetencionIva,
             c.TipoAgenteIva, c.CuentaIvaDebitoId, c.CuentaIvaCreditoId, c.CuentaIsrRetenidoPagarId, c.CuentaIvaRetenidoClientesId,
-            c.ActualizadoEn, usuario?.Nombre);
+            c.ActualizadoEn, usuario?.Nombre, c.CuentaDifGananciaRealizadaId, c.CuentaDifPerdidaRealizadaId,
+            c.CuentaRevalGananciaId, c.CuentaRevalPerdidaId);
     }
 }

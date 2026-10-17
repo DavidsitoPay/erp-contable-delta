@@ -4,19 +4,22 @@ using DeltaERP.Domain.Rules;
 namespace DeltaERP.Api.Services;
 
 public sealed record ResultadoFiscal(
-    ResumenFiscal Resumen, int? CuentaIvaId, RetencionIsrPreparada? Retencion, IReadOnlyList<string> Advertencias);
+    ResumenFiscal Resumen, int? CuentaIvaId, RetencionIsrPreparada? Retencion, IReadOnlyList<string> Advertencias, TipoCambioAplicable Cambio);
 
 public class FacturaFiscalService
 {
     private readonly ValidacionContable _validacion;
     private readonly ConfiguracionFiscalService _configuracion;
     private readonly RetencionService _retenciones;
+    private readonly TipoCambioService _tiposCambio;
 
-    public FacturaFiscalService(ValidacionContable validacion, ConfiguracionFiscalService configuracion, RetencionService retenciones)
+    public FacturaFiscalService(
+        ValidacionContable validacion, ConfiguracionFiscalService configuracion, RetencionService retenciones, TipoCambioService tiposCambio)
     {
         _validacion = validacion;
         _configuracion = configuracion;
         _retenciones = retenciones;
+        _tiposCambio = tiposCambio;
     }
 
     public async Task<(ResultadoFiscal? Resultado, ErrorValidacion? Error)> PrepararAsync(
@@ -37,29 +40,45 @@ public class FacturaFiscalService
             return (null, errorRegimen);
         }
 
-        var resumen = MotorFiscal.Calcular(documento.Lineas.Select(l => new EntradaLinea(
-            l.Cantidad, l.PrecioUnitario, ImpuestoRules.ComoParametro(impuestos[l.ImpuestoId]), l.TipoBienServicio)));
-        var error = ValidarDte(documento, tercero, perfil, resumen);
-        var (errorOrigen, advertenciaOrigen) = await ValidarOrigenAsync(documento, perfil);
-        error ??= errorOrigen;
-        if (error is not null)
+        var (errorOrigen, advertenciaOrigen, origen) = await ValidarOrigenAsync(documento, perfil);
+        if (errorOrigen is not null)
         {
-            return (null, error);
+            return (null, errorOrigen);
         }
+        var (cambio, errorCambio) = await ResolverCambioAsync(documento, origen);
+        if (cambio is null)
+        {
+            return (null, errorCambio);
+        }
+        var advertencias = advertenciaOrigen is null ? new List<string>() : [advertenciaOrigen];
+        return await CompletarAsync(documento, tercero, perfil, impuestos, cambio, advertencias);
+    }
 
+    private async Task<(ResultadoFiscal? Resultado, ErrorValidacion? Error)> CompletarAsync(
+        IDocumentoFactura documento, Contraparte tercero, PerfilFactura perfil, Dictionary<int, Impuesto> impuestos,
+        TipoCambioAplicable cambio, List<string> advertencias)
+    {
+        var resumen = MotorFiscal.Calcular(
+            documento.Lineas.Select(l => new EntradaLinea(
+                l.Cantidad, l.PrecioUnitario, ImpuestoRules.ComoParametro(impuestos[l.ImpuestoId]), l.TipoBienServicio)),
+            cambio.Tasa);
+        var errorDte = ValidarDte(documento, tercero, perfil, resumen);
+        if (errorDte is not null)
+        {
+            return (null, errorDte);
+        }
         var (cuentaIvaId, errorCuenta) = await ResolverCuentaIvaAsync(perfil, resumen);
         if (errorCuenta is not null)
         {
             return (null, errorCuenta);
         }
-        var advertencias = advertenciaOrigen is null ? new List<string>() : [advertenciaOrigen];
         return perfil.EsVenta || documento is not DocumentoCxP compra
-            ? (new ResultadoFiscal(resumen, cuentaIvaId, null, advertencias), null)
-            : await PrepararRetencionAsync(compra, tercero, resumen, cuentaIvaId, advertencias);
+            ? (new ResultadoFiscal(resumen, cuentaIvaId, null, advertencias, cambio), null)
+            : await PrepararRetencionAsync(compra, tercero, resumen, cuentaIvaId, advertencias, cambio);
     }
 
     private async Task<(ResultadoFiscal? Resultado, ErrorValidacion? Error)> PrepararRetencionAsync(
-        DocumentoCxP compra, Contraparte proveedor, ResumenFiscal resumen, int? cuentaIvaId, List<string> advertencias)
+        DocumentoCxP compra, Contraparte proveedor, ResumenFiscal resumen, int? cuentaIvaId, List<string> advertencias, TipoCambioAplicable cambio)
     {
         var (retencion, error) = await _retenciones.PrepararIsrAsync(compra, proveedor, resumen);
         if (error is not null)
@@ -73,7 +92,35 @@ public class FacturaFiscalService
             advertencias.Add(RetencionService.AvisoAgenteIva);
         }
         advertencias.AddRange(retencion.Advertencias);
-        return (new ResultadoFiscal(resumen, cuentaIvaId, retencion, advertencias), null);
+        return (new ResultadoFiscal(resumen, cuentaIvaId, retencion, advertencias, cambio), null);
+    }
+
+    private async Task<(TipoCambioAplicable? Cambio, ErrorValidacion? Error)> ResolverCambioAsync(IDocumentoFactura documento, IDocumentoFactura? origen)
+    {
+        if (origen is null)
+        {
+            return await _tiposCambio.ResolverParaDocumentoAsync(documento.MonedaCodigo, documento.Fecha);
+        }
+        TipoCambioAplicable? heredado;
+        ErrorValidacion? error;
+        if (origen.TipoCambioId is { } tipoCambioId)
+        {
+            (heredado, error) = await _tiposCambio.ResolverPorIdAsync(tipoCambioId);
+        }
+        else
+        {
+            (heredado, error) = (await _tiposCambio.CambioFuncionalAsync(documento.Fecha), null);
+        }
+        if (heredado is null)
+        {
+            return (null, error);
+        }
+        var pedida = documento.MonedaCodigo?.Trim().ToUpperInvariant();
+        if (!string.IsNullOrEmpty(pedida) && pedida != heredado.MonedaCodigo)
+        {
+            return (null, ErrorValidacion.Solicitud($"La nota de crédito usa la moneda de su factura de origen ({heredado.MonedaCodigo})."));
+        }
+        return (heredado, null);
     }
 
     private async Task<(Dictionary<int, Impuesto> Impuestos, ErrorValidacion? Error)> CargarImpuestosAsync(
@@ -107,26 +154,27 @@ public class FacturaFiscalService
         return ErrorValidacion.SolicitudSi(error);
     }
 
-    private async Task<(ErrorValidacion? Error, string? Advertencia)> ValidarOrigenAsync(IDocumentoFactura documento, PerfilFactura perfil)
+    private async Task<(ErrorValidacion? Error, string? Advertencia, IDocumentoFactura? Origen)> ValidarOrigenAsync(
+        IDocumentoFactura documento, PerfilFactura perfil)
     {
         if (documento.TipoDocumento != TiposDocumento.NotaCredito || documento.DocumentoOrigenId is not { } origenId)
         {
-            return (null, null);
+            return (null, null, null);
         }
         var origen = await _validacion.ObtenerDocumentoAsync(perfil.EsVenta, origenId);
         if (origen is null)
         {
-            return (ErrorValidacion.Solicitud("El documento de origen no existe."), null);
+            return (ErrorValidacion.Solicitud("El documento de origen no existe."), null, null);
         }
         if (origen.TerceroId != documento.TerceroId)
         {
-            return (ErrorValidacion.Solicitud($"El documento de origen pertenece a otro {perfil.TipoTercero.ToLowerInvariant()}."), null);
+            return (ErrorValidacion.Solicitud($"El documento de origen pertenece a otro {perfil.TipoTercero.ToLowerInvariant()}."), null, null);
         }
         if (origen.TipoDocumento != TiposDocumento.Factura || origen.Estado != "Vigente")
         {
-            return (ErrorValidacion.Solicitud("El documento de origen debe ser una factura vigente."), null);
+            return (ErrorValidacion.Solicitud("El documento de origen debe ser una factura vigente."), null, null);
         }
-        return (null, await AdvertirRetencionOrigenAsync(perfil, origenId));
+        return (null, await AdvertirRetencionOrigenAsync(perfil, origenId), origen);
     }
 
     private async Task<string?> AdvertirRetencionOrigenAsync(PerfilFactura perfil, int origenId)

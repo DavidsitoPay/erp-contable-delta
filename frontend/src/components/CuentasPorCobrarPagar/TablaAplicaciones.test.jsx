@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { formatoMoneda } from "../../utils/formato";
+import { formatoImporte, formatoMoneda, formatoQuetzales } from "../../utils/formato";
 import TablaAplicaciones from "./TablaAplicaciones";
 
 const facturas = [
@@ -36,5 +36,46 @@ describe("TablaAplicaciones", () => {
     fireEvent.click(screen.getByLabelText("El cliente retuvo IVA en F-1"));
 
     expect(retencionIva.onCambio).toHaveBeenCalledWith(1, { activa: false });
+  });
+
+  describe("facturas en moneda extranjera", () => {
+    const facturaUsd = { id: 3, numero: "F-USD", moneda: "USD", saldoPendiente: 720 };
+    const facturaGtq = { id: 4, numero: "F-GTQ", saldoPendiente: 300 };
+    const retencionVacia = { valores: {}, sugerencias: {}, clienteAgente: true, onCambio: vi.fn() };
+
+    it("muestra el saldo en la moneda de la factura", () => {
+      render(<TablaAplicaciones facturas={[facturaUsd]} montosAplicados={{}} onMonto={vi.fn()} />);
+
+      expect(screen.getByText(formatoImporte(720, "USD"))).toBeInTheDocument();
+    });
+
+    it("pide el efectivo en quetzales solo para la factura extranjera", () => {
+      const onEfectivo = vi.fn();
+      const liquidacion = { pideEfectivo: true, efectivos: { 3: "5400" }, onEfectivo, tasaPago: null };
+      render(<TablaAplicaciones facturas={[facturaUsd, facturaGtq]} montosAplicados={{ 3: "400" }} onMonto={vi.fn()} liquidacion={liquidacion} />);
+
+      expect(screen.getByRole("columnheader", { name: "Efectivo en Q" })).toBeInTheDocument();
+      const efectivo = screen.getByLabelText("Efectivo en Q de F-USD");
+      expect(efectivo).toHaveValue(5400);
+      expect(screen.queryByLabelText("Efectivo en Q de F-GTQ")).toBeNull();
+
+      fireEvent.change(efectivo, { target: { value: "5000" } });
+
+      expect(onEfectivo).toHaveBeenCalledWith(3, "5000");
+    });
+
+    it("muestra el valor en quetzales con la tasa del pago", () => {
+      const liquidacion = { pideEfectivo: false, efectivos: {}, onEfectivo: vi.fn(), tasaPago: 7.7 };
+      render(<TablaAplicaciones facturas={[facturaUsd]} montosAplicados={{ 3: "400" }} onMonto={vi.fn()} liquidacion={liquidacion} />);
+
+      expect(screen.getByRole("columnheader", { name: "Valor en Q" })).toBeInTheDocument();
+      expect(screen.getByText(formatoQuetzales(3080))).toBeInTheDocument();
+    });
+
+    it("no ofrece la sugerencia de IVA retenido para una factura en moneda extranjera", () => {
+      render(<TablaAplicaciones facturas={[facturaUsd]} montosAplicados={{ 3: "400" }} onMonto={vi.fn()} retencionIva={retencionVacia} />);
+
+      expect(screen.queryByText(/retuvo IVA en F-USD/)).toBeNull();
+    });
   });
 });

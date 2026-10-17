@@ -10,10 +10,10 @@ public static class RetencionPayloads
     public const string RutaPagosCxC = "/api/cxc/pagos";
     public const string RutaPagosCxP = "/api/cxp/pagos";
 
-    private static int _anioAislado = 2014;
+    private static int _anioAislado = 2026;
 
     // Cada prueba de reporte usa un año propio para que sus totales no se mezclen con los de otras pruebas.
-    public static int SiguienteAnio() => Interlocked.Increment(ref _anioAislado);
+    public static int SiguienteAnio() => Interlocked.Decrement(ref _anioAislado);
 
     public static string Numero() => $"R-{TestData.Sufijo()}";
 
@@ -64,6 +64,24 @@ public static class RetencionPayloads
         cuentaBancariaId,
         aplicaciones,
     };
+
+    public static object AplicacionMe(int documentoId, decimal montoAplicado, decimal? valorEfectivoGtq = null) => new
+    {
+        documentoId,
+        montoAplicado,
+        valorEfectivoGtq,
+    };
+
+    public static object PagoProveedor(int proveedorId, int cuentaBancariaId, string fecha, params object[] aplicaciones) => new
+    {
+        proveedorId,
+        fecha,
+        metodoPago = "Transferencia",
+        cuentaBancariaId,
+        aplicaciones,
+    };
+
+    public static string Dia(this DateOnly fecha) => fecha.ToString("yyyy-MM-dd");
 
     public static async Task<(int FacturaId, int? RetencionId, JsonElement Cuerpo)> RegistrarCompraAsync(
         this HttpClient client, Dictionary<string, object?> payload)

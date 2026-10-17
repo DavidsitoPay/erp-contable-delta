@@ -65,7 +65,8 @@ public static class FacturaPayloads
     public static async Task<(HttpStatusCode Estado, JsonElement Cuerpo)> EnviarAsync(this HttpClient client, string ruta, object payload)
     {
         var response = await client.PostAsJsonAsync(ruta, payload);
-        return (response.StatusCode, await response.LeerJsonAsync());
+        var cuerpo = await response.Content.ReadAsStringAsync();
+        return (response.StatusCode, string.IsNullOrWhiteSpace(cuerpo) ? default : JsonDocument.Parse(cuerpo).RootElement);
     }
 
     public static async Task<(Escenario E, HttpClient Client)> PrepararAsync(this PostgresFixture pg)
@@ -73,6 +74,22 @@ public static class FacturaPayloads
         var e = await pg.Data.SembrarEscenarioAsync();
         return (e, pg.CreateApiClient(e.UsuarioId));
     }
+
+    public static Dictionary<string, object?> EnMoneda(this Dictionary<string, object?> payload, string codigo)
+    {
+        payload["monedaCodigo"] = codigo;
+        return payload;
+    }
+
+    public static Dictionary<string, object?> CxcEn(
+        EscenarioMe m, string moneda, DateOnly fecha, decimal precio, int? impuestoId = null, int? clienteId = null) =>
+        Cxc(m.E, $"F-{TestData.Sufijo()}", new[] { Linea(impuestoId ?? m.E.ImpuestoExentoId, m.E.CuentaIngreso, precio: precio) }, clienteId)
+            .EnFecha(fecha).EnMoneda(moneda);
+
+    public static Dictionary<string, object?> CxpEn(
+        EscenarioMe m, string moneda, DateOnly fecha, decimal precio, int? proveedorId = null, int? impuestoId = null) =>
+        Cxp(m.E, $"P-{TestData.Sufijo()}", new[] { Linea(impuestoId ?? m.E.ImpuestoExentoId, m.E.CuentaGasto, precio: precio) }, proveedorId)
+            .EnFecha(fecha).EnMoneda(moneda);
 
     public static Dictionary<string, object?> Dte() => new()
     {

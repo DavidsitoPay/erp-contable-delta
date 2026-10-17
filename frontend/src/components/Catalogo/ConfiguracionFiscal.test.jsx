@@ -19,6 +19,10 @@ const cuentas = [
   { id: 16, codigo: "2100-1", nombre: "Pasivo hijo", tipo: "Pasivo", naturaleza: "Acreedora", activa: true, cuentaPadreId: 15 },
   { id: 17, codigo: "2107", nombre: "ISR retenido", tipo: "Pasivo", naturaleza: "Acreedora", activa: true, cuentaPadreId: null },
   { id: 18, codigo: "1106", nombre: "IVA retenido por clientes", tipo: "Activo", naturaleza: "Deudora", activa: true, cuentaPadreId: null },
+  { id: 21, codigo: "4201", nombre: "Ganancia cambiaria realizada", tipo: "Ingreso", naturaleza: "Acreedora", activa: true, cuentaPadreId: null },
+  { id: 22, codigo: "5201", nombre: "Pérdida cambiaria realizada", tipo: "Gasto", naturaleza: "Deudora", activa: true, cuentaPadreId: null },
+  { id: 23, codigo: "4202", nombre: "Ganancia por revaluación", tipo: "Ingreso", naturaleza: "Acreedora", activa: true, cuentaPadreId: null },
+  { id: 24, codigo: "5202", nombre: "Pérdida por revaluación", tipo: "Gasto", naturaleza: "Deudora", activa: true, cuentaPadreId: null },
 ];
 
 const configCompleta = {
@@ -33,10 +37,24 @@ const configCompleta = {
   cuentaIvaCreditoId: 12,
   cuentaIsrRetenidoPagarId: 17,
   cuentaIvaRetenidoClientesId: 18,
+  cuentaDifGananciaRealizadaId: 21,
+  cuentaDifPerdidaRealizadaId: 22,
+  cuentaRevalGananciaId: 23,
+  cuentaRevalPerdidaId: 24,
   actualizadoEn: "2026-10-09T15:00:00Z",
   actualizadoPorNombre: "Administradora Delta",
 };
-const configSinCuentas = { ...configCompleta, cuentaIvaDebitoId: null, cuentaIvaCreditoId: null, cuentaIsrRetenidoPagarId: null, cuentaIvaRetenidoClientesId: null };
+const configSinCuentas = {
+  ...configCompleta,
+  cuentaIvaDebitoId: null,
+  cuentaIvaCreditoId: null,
+  cuentaIsrRetenidoPagarId: null,
+  cuentaIvaRetenidoClientesId: null,
+  cuentaDifGananciaRealizadaId: null,
+  cuentaDifPerdidaRealizadaId: null,
+  cuentaRevalGananciaId: null,
+  cuentaRevalPerdidaId: null,
+};
 
 async function renderCon(config) {
   configuracionFiscalApi.obtener.mockResolvedValue({ data: config });
@@ -124,6 +142,10 @@ describe("ConfiguracionFiscal", () => {
         cuentaIvaCreditoId: 12,
         cuentaIsrRetenidoPagarId: null,
         cuentaIvaRetenidoClientesId: null,
+        cuentaDifGananciaRealizadaId: null,
+        cuentaDifPerdidaRealizadaId: null,
+        cuentaRevalGananciaId: null,
+        cuentaRevalPerdidaId: null,
       })
     );
     expect(await screen.findByText("Configuración guardada.")).toBeInTheDocument();
@@ -150,6 +172,10 @@ describe("ConfiguracionFiscal", () => {
         cuentaIvaCreditoId: null,
         cuentaIsrRetenidoPagarId: null,
         cuentaIvaRetenidoClientesId: null,
+        cuentaDifGananciaRealizadaId: null,
+        cuentaDifPerdidaRealizadaId: null,
+        cuentaRevalGananciaId: null,
+        cuentaRevalPerdidaId: null,
       })
     );
   });
@@ -226,5 +252,49 @@ describe("ConfiguracionFiscal", () => {
     render(<ConfiguracionFiscal />);
 
     expect(screen.getByText("Cargando...")).toBeInTheDocument();
+  });
+
+  it("muestra las cuatro cuentas cambiarias guardadas sin aviso", async () => {
+    await renderCon(configCompleta);
+
+    expect(screen.getByLabelText("Ganancia cambiaria realizada (Ingreso)")).toHaveValue("21");
+    expect(screen.getByLabelText("Pérdida cambiaria realizada (Gasto)")).toHaveValue("22");
+    expect(screen.getByLabelText("Ganancia por revaluación no realizada (Ingreso)")).toHaveValue("23");
+    expect(screen.getByLabelText("Pérdida por revaluación no realizada (Gasto)")).toHaveValue("24");
+    expect(screen.queryByText(/Falta configurar las cuentas de diferencial cambiario/)).toBeNull();
+  });
+
+  it("avisa de las cuentas cambiarias pendientes", async () => {
+    await renderCon(configSinCuentas);
+
+    expect(screen.getByText(/Falta configurar las cuentas de diferencial cambiario/)).toBeInTheDocument();
+  });
+
+  it("ofrece ingresos para ganancias y gastos para pérdidas", async () => {
+    await renderCon(configSinCuentas);
+
+    const ganancia = screen.getByLabelText("Ganancia cambiaria realizada (Ingreso)");
+    expect(within(ganancia).getByRole("option", { name: "4201 - Ganancia cambiaria realizada" })).toBeInTheDocument();
+    expect(within(ganancia).queryByRole("option", { name: "5201 - Pérdida cambiaria realizada" })).toBeNull();
+    const perdida = screen.getByLabelText("Pérdida cambiaria realizada (Gasto)");
+    expect(within(perdida).getByRole("option", { name: "5201 - Pérdida cambiaria realizada" })).toBeInTheDocument();
+    expect(within(perdida).queryByRole("option", { name: "4201 - Ganancia cambiaria realizada" })).toBeNull();
+  });
+
+  it("guarda las cuatro cuentas cambiarias elegidas", async () => {
+    configuracionFiscalApi.actualizar.mockResolvedValue({ data: configCompleta });
+    await renderCon(configSinCuentas);
+
+    fireEvent.change(screen.getByLabelText("Ganancia cambiaria realizada (Ingreso)"), { target: { value: "21" } });
+    fireEvent.change(screen.getByLabelText("Pérdida cambiaria realizada (Gasto)"), { target: { value: "22" } });
+    fireEvent.change(screen.getByLabelText("Ganancia por revaluación no realizada (Ingreso)"), { target: { value: "23" } });
+    fireEvent.change(screen.getByLabelText("Pérdida por revaluación no realizada (Gasto)"), { target: { value: "24" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar configuración" }));
+
+    await waitFor(() =>
+      expect(configuracionFiscalApi.actualizar).toHaveBeenCalledWith(
+        expect.objectContaining({ cuentaDifGananciaRealizadaId: 21, cuentaDifPerdidaRealizadaId: 22, cuentaRevalGananciaId: 23, cuentaRevalPerdidaId: 24 })
+      )
+    );
   });
 });

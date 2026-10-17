@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { centrosCostoApi, contrapartesApi, cuentasApi, cuentasBancariasApi, impuestosApi, periodosApi } from "../../services/api";
-import { formatoMoneda } from "../../utils/formato";
+import { centrosCostoApi, contrapartesApi, cuentasApi, cuentasBancariasApi, impuestosApi, periodosApi, tiposCambioApi } from "../../services/api";
+import { formatoDiferencial, formatoMoneda, formatoQuetzales } from "../../utils/formato";
 import GestionCuentasPorCobrarPagar from "./GestionCuentasPorCobrarPagar";
 
 vi.mock("../../services/api", () => ({
@@ -11,6 +11,7 @@ vi.mock("../../services/api", () => ({
   cuentasBancariasApi: { listar: vi.fn() },
   impuestosApi: { listar: vi.fn() },
   periodosApi: { listar: vi.fn() },
+  tiposCambioApi: { consultar: vi.fn() },
 }));
 
 const UUID = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
@@ -370,5 +371,104 @@ describe("GestionCuentasPorCobrarPagar", () => {
 
     await waitFor(() => expect(api.crearPago).toHaveBeenCalledTimes(1));
     expect(api.crearPago.mock.calls[0][0].aplicaciones).toEqual([{ documentoId: 1, montoAplicado: 100 }]);
+  });
+
+  describe("cobros en moneda extranjera", () => {
+    const cuentaUsd = { id: 9, banco: "BAC", numero: "USD-1", activa: true, monedaCodigo: "USD" };
+    const facturaUsd = { ...base, id: 7, numero: "F-USD", clienteId: 5, clienteNombre: "ACME", moneda: "USD", montoTotal: 8512, montoTotalOriginal: 1120, saldoPendiente: 1120, saldoPendienteGtq: 8512, tipoCambioAplicado: 7.6, tipoCambioFuente: "Banguat", tipoCambioArrastrado: false, estado: "Vigente" };
+    const tasa77 = { data: { disponible: true, tipoCambio: { id: 2, tasa: 7.7, fuente: "Banguat", arrastrado: false, fechaReferencia: "2026-11-10" }, propuesta: null, mensaje: null } };
+
+    function configCobroUsd(config = crearConfig(), listado = [facturaUsd]) {
+      config.esCobro = true;
+      api.listarFacturas.mockResolvedValue({ data: listado });
+      cuentasBancariasApi.listar.mockResolvedValue({ data: [...cuentasBancarias, cuentaUsd] });
+      tiposCambioApi.consultar.mockResolvedValue(tasa77);
+      return config;
+    }
+
+    async function iniciarCobro(config, { cuentaId, factura = "F-USD", monto = "400" }) {
+      await renderCargado(config, factura);
+      fireEvent.click(screen.getByRole("button", { name: "Pagos" }));
+      fireEvent.change(await screen.findByLabelText("Cliente"), { target: { value: "5" } });
+      const cuenta = screen.getByLabelText("Cuenta bancaria");
+      await within(cuenta).findByRole("option", { name: cuentaId === "9" ? /USD-1/ : /BAC 123/ });
+      fireEvent.change(cuenta, { target: { value: cuentaId } });
+      fireEvent.change(screen.getByLabelText("Método de pago"), { target: { value: "Transferencia" } });
+      fireEvent.change(screen.getByLabelText(`Monto a aplicar a ${factura}`), { target: { value: monto } });
+    }
+
+    it("con cuenta GTQ pide el efectivo en quetzales y calcula el diferencial estimado", async () => {
+      const config = configCobroUsd();
+      await iniciarCobro(config, { cuentaId: "7" });
+
+      expect(screen.getByRole("button", { name: "Registrar pago" })).toBeDisabled();
+      fireEvent.change(screen.getByLabelText("Efectivo en Q de F-USD"), { target: { value: "3080" } });
+
+      expect(screen.getByText(`Diferencial estimado: ${formatoDiferencial(40)} (el sistema recalcula)`)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Registrar pago" })).toBeEnabled();
+
+      fireEvent.click(screen.getByRole("button", { name: "Registrar pago" }));
+
+      await waitFor(() => expect(api.crearPago).toHaveBeenCalledTimes(1));
+      expect(api.crearPago).toHaveBeenCalledWith(
+        expect.objectContaining({ cuentaBancariaId: 7, aplicaciones: [{ documentoId: 7, montoAplicado: 400, valorEfectivoGtq: 3080 }] })
+      );
+    });
+
+    it("con cuenta USD valora con el tipo de cambio de la fecha y no pide efectivo", async () => {
+      const config = configCobroUsd();
+      await iniciarCobro(config, { cuentaId: "9" });
+
+      expect(await screen.findByText("Tipo de cambio: 7.700000 (Banguat)")).toBeInTheDocument();
+      expect(tiposCambioApi.consultar).toHaveBeenCalledWith("USD", expect.any(String));
+      expect(screen.getByRole("columnheader", { name: "Valor en Q" })).toBeInTheDocument();
+      expect(screen.getByText(formatoQuetzales(3080))).toBeInTheDocument();
+      expect(screen.getByText(`Diferencial estimado: ${formatoDiferencial(40)} (el sistema recalcula)`)).toBeInTheDocument();
+      expect(screen.queryByLabelText("Efectivo en Q de F-USD")).toBeNull();
+
+      await waitFor(() => expect(screen.getByRole("button", { name: "Registrar pago" })).toBeEnabled());
+      fireEvent.click(screen.getByRole("button", { name: "Registrar pago" }));
+
+      await waitFor(() => expect(api.crearPago).toHaveBeenCalledTimes(1));
+      expect(api.crearPago.mock.calls[0][0].aplicaciones[0]).not.toHaveProperty("valorEfectivoGtq");
+      expect(api.crearPago.mock.calls[0][0].cuentaBancariaId).toBe(9);
+    });
+
+    it("bloquea el pago de una factura en quetzales con cuenta en dólares (RN-27)", async () => {
+      const config = configCobroUsd(crearConfig(), [facturaUsd, facturas[0]]);
+      await iniciarCobro(config, { cuentaId: "9", factura: "F-1", monto: "100" });
+
+      expect(await screen.findByText(/^RN-27/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Registrar pago" })).toBeDisabled();
+    });
+
+    it("sin tasa de Banguat mantiene bloqueado el pago en moneda extranjera", async () => {
+      const config = configCobroUsd();
+      tiposCambioApi.consultar.mockResolvedValue({ data: { disponible: false, tipoCambio: null, propuesta: null, mensaje: "Banguat no respondió; capture la tasa manual o reintente." } });
+      await iniciarCobro(config, { cuentaId: "9" });
+
+      expect(await screen.findByText("Banguat no respondió; capture la tasa manual o reintente.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Registrar pago" })).toBeDisabled();
+    });
+
+    it("muestra el 409 de cuenta de diferencial cambiario tal cual", async () => {
+      const config = configCobroUsd();
+      api.crearPago.mockRejectedValue({ response: { data: { error: "Falta configurar la cuenta de ganancia cambiaria realizada en Catálogo > Configuración fiscal." } } });
+      await iniciarCobro(config, { cuentaId: "9" });
+      await waitFor(() => expect(screen.getByRole("button", { name: "Registrar pago" })).toBeEnabled());
+
+      fireEvent.click(screen.getByRole("button", { name: "Registrar pago" }));
+
+      expect(await screen.findByText("Falta configurar la cuenta de ganancia cambiaria realizada en Catálogo > Configuración fiscal.")).toBeInTheDocument();
+    });
+
+    it("no ofrece la retención de IVA para una factura en moneda extranjera", async () => {
+      const config = configCobroUsd(configConRetencionIva(sugerenciaIva));
+      await iniciarCobro(config, { cuentaId: "9" });
+      await screen.findByText("Tipo de cambio: 7.700000 (Banguat)");
+
+      expect(screen.queryByText(/El cliente retuvo IVA en F-USD/)).toBeNull();
+      expect(api.retencionIvaSugerida).not.toHaveBeenCalled();
+    });
   });
 });

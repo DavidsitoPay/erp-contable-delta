@@ -1,9 +1,11 @@
 import { TIPOS_BIEN_SERVICIO } from "../../utils/etiquetasFiscales";
+import { esMonedaExtranjera } from "../../utils/cambio";
 import { impuestoDeLinea } from "../../utils/fiscal";
 import { formatoMoneda } from "../../utils/formato";
 import OpcionesSelect from "../OpcionesSelect";
 
-function LineasFactura({ lineas, resumen, permitidos, defecto, hojas, centros, etiquetaCuentaLinea, onActualizar, onQuitar }) {
+function LineasFactura({ lineas, resumen, permitidos, defecto, hojas, centros, etiquetaCuentaLinea, onActualizar, onQuitar, moneda = "GTQ" }) {
+  const extranjera = esMonedaExtranjera(moneda);
   return (
     <div className="table-wrap">
       <div className="table-scroll">
@@ -12,11 +14,12 @@ function LineasFactura({ lineas, resumen, permitidos, defecto, hojas, centros, e
             <tr>
               <th>Descripción</th>
               <th>Cantidad</th>
-              <th>Precio unitario (IVA incluido)</th>
+              <th>{extranjera ? `Precio unitario (IVA incluido) en ${moneda}` : "Precio unitario (IVA incluido)"}</th>
               <th>Impuesto</th>
               <th>Tipo</th>
               <th>{etiquetaCuentaLinea}</th>
               <th>Centro de costo</th>
+              {extranjera && <th className="numeric">{`Total en ${moneda}`}</th>}
               <th className="numeric">Base</th>
               <th className="numeric">IVA</th>
               <th className="numeric">Total línea</th>
@@ -55,6 +58,7 @@ function LineasFactura({ lineas, resumen, permitidos, defecto, hojas, centros, e
                       {centros.map((c) => <option key={c.id} value={c.id}>{c.codigo} - {c.nombre}</option>)}
                     </select>
                   </td>
+                  {extranjera && <td className="numeric">{formatoMoneda.format(calculo.montoLineaOriginal)}</td>}
                   <td className="numeric">{formatoMoneda.format(calculo.base)}</td>
                   <td className="numeric">{formatoMoneda.format(calculo.iva)}</td>
                   <td className="numeric">{formatoMoneda.format(calculo.montoLinea)}</td>

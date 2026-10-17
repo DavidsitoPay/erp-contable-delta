@@ -28,6 +28,9 @@ function fila(cambios) {
     referenciaSerie: null,
     referenciaNumero: null,
     referenciaUuid: null,
+    moneda: "GTQ",
+    importeOriginal: 250.5,
+    tipoCambio: 1,
     ...cambios,
   };
 }
@@ -88,7 +91,7 @@ describe("LibroFiscal", () => {
     const filaAcme = within(screen.getByText("ACME").closest("tr"));
     expect(filaAcme.getByText(formatoMoneda.format(178.57))).toBeInTheDocument();
     expect(filaAcme.getByText(formatoMoneda.format(21.43))).toBeInTheDocument();
-    expect(filaAcme.getByText(formatoMoneda.format(250.5))).toBeInTheDocument();
+    expect(filaAcme.getAllByText(formatoMoneda.format(250.5))).toHaveLength(2);
     const totales = within(screen.getByText("Totales").closest("tr"));
     [44.44, 111.11, 22.22, 33.33, 166.66].forEach((valor) => expect(totales.getByText(formatoMoneda.format(valor))).toBeInTheDocument());
   });
@@ -171,5 +174,20 @@ describe("LibroFiscal", () => {
     expect(nombre).toBe("libro-ventas-2026-03.csv");
     expect(contenido.split("\r\n")[0]).toMatch(/^Fecha,Tipo,Serie,Número,NIT,Nombre,/);
     expect(contenido).toContain(",,,,,TOTAL,44.44,111.11,22.22,33.33,166.66");
+  });
+
+  it("muestra moneda, importe original y tipo de cambio de las facturas en dólares", async () => {
+    const usd = { ...reporte, filas: [fila({ numeroInterno: "F-USD", nombre: "Exportadora", moneda: "USD", importeOriginal: 1120, tipoCambio: 7.6, total: 8512 })] };
+    librosFiscalesApi.ventas.mockResolvedValueOnce({ data: usd });
+    render(<LibroFiscal />);
+
+    await consultar();
+
+    const filaUsd = within(screen.getByText("Exportadora").closest("tr"));
+    expect(filaUsd.getByText("USD")).toBeInTheDocument();
+    expect(filaUsd.getByText(formatoMoneda.format(1120))).toBeInTheDocument();
+    expect(filaUsd.getByText("7.600000")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Importe original" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Tipo de cambio" })).toBeInTheDocument();
   });
 });

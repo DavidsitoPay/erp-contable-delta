@@ -17,6 +17,7 @@ function EstadoAsiento({ asiento, puedeReversar, onReversar }) {
         </span>
       )}
       {asiento.reversaDeId && <span className="badge">Reversa de {asiento.reversaDeNumero}</span>}
+      {asiento.esRevaluacion && <span className="badge badge-warning">Revaluación (no realizada)</span>}
       {puedeReversar && asiento.reversible && (
         <button type="button" className="btn btn-outline btn-sm" onClick={() => onReversar(asiento)}>
           Reversar

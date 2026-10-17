@@ -38,6 +38,7 @@ public class CxCController : FacturaControllerBase
             from d in _db.DocumentosCxC
             join s in _db.SaldosDocumentoCxC on d.Id equals s.DocumentoId
             join c in _db.Contrapartes on d.ClienteId equals c.Id
+            join m in _db.Monedas on d.MonedaId equals m.Id
             orderby d.Fecha descending, d.Numero descending
             select new
             {
@@ -55,7 +56,13 @@ public class CxCController : FacturaControllerBase
                 d.DteSerie,
                 d.DteNumero,
                 d.CalculoLegado,
+                Moneda = m.Codigo,
+                d.MontoTotalOriginal,
+                d.TipoCambioAplicado,
+                d.TipoCambioFuente,
+                d.TipoCambioArrastrado,
                 s.SaldoPendiente,
+                s.SaldoPendienteGtq,
                 ClienteNombre = c.Nombre,
             }).ToListAsync();
 
@@ -93,14 +100,25 @@ public class CxCController : FacturaControllerBase
         var pagos = await (
             from r in _db.RecibosPagoCliente
             join c in _db.Contrapartes on r.ClienteId equals c.Id
+            join m in _db.Monedas on r.MonedaId equals m.Id
             orderby r.Fecha descending, r.Id descending
-            select new { r.Id, r.ClienteId, ClienteNombre = c.Nombre, r.Fecha, r.MontoTotal, r.MetodoPago, r.ReferenciaBancaria }
+            select new { r.Id, r.ClienteId, ClienteNombre = c.Nombre, r.Fecha, r.MontoTotal, r.MontoTotalGtq, Moneda = m.Codigo, r.MetodoPago, r.ReferenciaBancaria }
             ).ToListAsync();
 
         var ids = pagos.Select(p => p.Id).ToList();
         var aplicaciones = await _db.AplicacionesPagoCliente
             .Where(a => ids.Contains(a.ReciboPagoId))
-            .Join(_db.DocumentosCxC, a => a.DocumentoId, d => d.Id, (a, d) => new { a.Id, a.ReciboPagoId, d.Numero, a.MontoAplicado })
+            .Join(_db.DocumentosCxC, a => a.DocumentoId, d => d.Id, (a, d) => new
+            {
+                a.Id,
+                a.ReciboPagoId,
+                d.Numero,
+                a.MontoAplicado,
+                a.MontoAplicadoGtq,
+                a.ValorGtq,
+                a.DiferencialGtq,
+                TipoCambioPago = _db.TiposCambio.Where(t => t.Id == a.TipoCambioPagoId).Select(t => (decimal?)t.Tasa).FirstOrDefault(),
+            })
             .ToListAsync();
         var idsAplicacion = aplicaciones.Select(a => (int?)a.Id).ToList();
         var retenido = await _db.Retenciones
@@ -114,12 +132,23 @@ public class CxCController : FacturaControllerBase
             p.ClienteNombre,
             p.Fecha,
             p.MontoTotal,
+            p.MontoTotalGtq,
+            p.Moneda,
             MontoNeto = p.MontoTotal - aplicaciones.Where(a => a.ReciboPagoId == p.Id).Sum(a => retenido.GetValueOrDefault(a.Id)),
             p.MetodoPago,
             p.ReferenciaBancaria,
             Aplicaciones = aplicaciones
                 .Where(a => a.ReciboPagoId == p.Id)
-                .Select(a => new { a.Numero, a.MontoAplicado, RetencionIva = retenido.GetValueOrDefault(a.Id) }),
+                .Select(a => new
+                {
+                    a.Numero,
+                    a.MontoAplicado,
+                    RetencionIva = retenido.GetValueOrDefault(a.Id),
+                    a.MontoAplicadoGtq,
+                    a.ValorGtq,
+                    a.DiferencialGtq,
+                    a.TipoCambioPago,
+                }),
         });
 
         return Ok(resultado);
@@ -129,7 +158,8 @@ public class CxCController : FacturaControllerBase
     [Authorize(Roles = Roles.RegistroPagos)]
     public async Task<IActionResult> CrearPago([FromBody] ReciboPagoCliente recibo)
     {
-        var aplicaciones = recibo.Aplicaciones.Select(a => (a.DocumentoId, Monto: a.MontoAplicado)).ToList();
+        var entradas = AplicacionEntrada.Desde(recibo.Aplicaciones);
+        var aplicaciones = entradas.Select(a => (a.DocumentoId, a.Monto)).ToList();
 
         var errorSolicitud = PagoRules.ValidarSolicitud(aplicaciones.Select(a => a.Monto).ToList(), recibo.MetodoPago);
         if (errorSolicitud is not null)
@@ -148,7 +178,9 @@ public class CxCController : FacturaControllerBase
             from d in _db.DocumentosCxC
             join s in _db.SaldosDocumentoCxC on d.Id equals s.DocumentoId
             where idsDocumento.Contains(d.Id)
-            select new DocumentoPagable(d.Id, d.Numero, d.ClienteId, d.Estado, s.SaldoPendiente, d.AsientoId, d.TipoDocumento == TiposDocumento.NotaCredito)
+            select new DocumentoPagable(
+                d.Id, d.Numero, d.ClienteId, d.Estado, s.SaldoPendiente, d.AsientoId, d.TipoDocumento == TiposDocumento.NotaCredito,
+                d.MonedaId, d.TipoCambioAplicado, s.SaldoPendienteGtq, d.MontoTotalOriginal)
             ).ToListAsync();
 
         var errorAplicaciones = PagoRules.ValidarAplicaciones("cliente", recibo.ClienteId, aplicaciones, documentos);
@@ -160,24 +192,27 @@ public class CxCController : FacturaControllerBase
         var (retencionIva, errorRetencion) = await _retenciones.PrepararIvaClienteAsync(cliente, recibo);
         if (errorRetencion is not null)
         {
-            return StatusCode(errorRetencion.Estado, new { error = errorRetencion.Mensaje });
+            return this.Fallo(errorRetencion);
         }
 
         var (bancario, errorBanco) = await _tesoreria.PrepararPagoAsync(
-            Perfil, recibo.CuentaBancariaId, recibo.Fecha, documentos, aplicaciones, retencionIva.ParaAsiento());
+            Perfil, recibo.CuentaBancariaId, recibo.Fecha, documentos, entradas, retencionIva.ParaAsiento());
         if (bancario is null)
         {
-            return BadRequest(new { error = errorBanco });
+            return this.Fallo(errorBanco!);
         }
 
         var usuarioId = this.UsuarioId();
 
         recibo.Id = 0;
-        recibo.MontoTotal = aplicaciones.Sum(a => a.Monto);
+        recibo.MonedaId = bancario.MonedaDocumentoId;
+        recibo.MontoTotal = bancario.TotalAplicado;
+        recibo.MontoTotalGtq = bancario.TotalValorGtq;
         foreach (var aplicacion in recibo.Aplicaciones)
         {
             aplicacion.Id = 0;
         }
+        TesoreriaService.AplicarLiquidacion(recibo.Aplicaciones, bancario);
 
         IReadOnlyList<RetencionCobroRespuesta> retenciones = [];
         var conflicto = await this.GuardarAuditadoAsync(_auditoria, "registrar_pago_cxc", "recibopagocliente", async () =>
@@ -189,17 +224,19 @@ public class CxCController : FacturaControllerBase
             retenciones = await _retenciones.RegistrarIvaClienteAsync(retencionIva, recibo, asientoId, usuarioId);
 
             var detalleRetencion = retenciones.Count == 0 ? string.Empty : $", retención IVA Q{retenciones.Sum(r => r.Monto)}, cobro neto Q{bancario.Neto}";
-            return $"Recibo {recibo.Id} (cliente {cliente.Nombre}) registrado, monto {recibo.MontoTotal}{detalleRetencion}";
+            return $"Recibo {recibo.Id} (cliente {cliente.Nombre}) registrado, monto {recibo.MontoTotal}{detalleRetencion}{TesoreriaService.DescribirDiferencial(bancario)}";
         });
 
         var aplicacionesGuardadas = recibo.Aplicaciones
-            .Select(a => new AplicacionCobroRespuesta(a.Id, a.ReciboPagoId, a.DocumentoId, a.MontoAplicado))
+            .Select(a => new AplicacionCobroRespuesta(
+                a.Id, a.ReciboPagoId, a.DocumentoId, a.MontoAplicado, a.MontoAplicadoGtq, a.ValorGtq, a.DiferencialGtq, bancario.TipoCambioPago))
             .ToList();
         return conflicto ?? CreatedAtAction(
             nameof(ListarPagos),
             new { },
             new ReciboCobroRespuesta(
-                recibo.Id, recibo.ClienteId, recibo.Fecha, recibo.MontoTotal, bancario.Neto, recibo.MetodoPago, recibo.ReferenciaBancaria,
-                recibo.CuentaBancariaId, aplicacionesGuardadas, retenciones, retencionIva.Advertencias));
+                recibo.Id, recibo.ClienteId, recibo.Fecha, recibo.MontoTotal, bancario.MontoNetoDocumento, recibo.MetodoPago,
+                recibo.ReferenciaBancaria, recibo.CuentaBancariaId, aplicacionesGuardadas, retenciones, retencionIva.Advertencias,
+                bancario.MonedaDocumentoCodigo, recibo.MontoTotalGtq, bancario.MontoCuenta, bancario.DiferencialRealizado));
     }
 }

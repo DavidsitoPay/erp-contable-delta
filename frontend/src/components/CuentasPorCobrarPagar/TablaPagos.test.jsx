@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { formatoMoneda } from "../../utils/formato";
+import { formatoDiferencial, formatoImporte, formatoMoneda, formatoQuetzales } from "../../utils/formato";
 import TablaPagos from "./TablaPagos";
 
 const pagos = [
@@ -36,5 +36,35 @@ describe("TablaPagos", () => {
 
     expect(screen.getByText("No hay pagos registrados todavía.")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Proveedor" })).toBeInTheDocument();
+  });
+
+  describe("pagos en moneda extranjera", () => {
+    const pagoUsd = { id: 5, clienteNombre: "Exportadora", fecha: "2026-11-10", moneda: "USD", montoTotal: 400, montoTotalGtq: 3080, metodoPago: "Transferencia", aplicaciones: [{ numero: "F-USD", montoAplicado: 400, montoAplicadoGtq: 3040, valorGtq: 3080, diferencialGtq: 40 }] };
+    const pagoUsdPerdida = { ...pagoUsd, id: 6, aplicaciones: [{ ...pagoUsd.aplicaciones[0], diferencialGtq: -72 }] };
+
+    it("muestra moneda, valor en quetzales, diferencial y la aplicación en moneda original", () => {
+      render(<TablaPagos pagos={[pagoUsd]} etiquetaContraparte="Cliente" campoContraparteNombre="clienteNombre" />);
+
+      const fila = within(screen.getByText("Exportadora").closest("tr"));
+      expect(screen.getByRole("columnheader", { name: "Diferencial" })).toBeInTheDocument();
+      expect(fila.getByText("USD")).toBeInTheDocument();
+      expect(fila.getByText(formatoImporte(400, "USD"))).toBeInTheDocument();
+      expect(fila.getByText(formatoQuetzales(3080))).toBeInTheDocument();
+      expect(fila.getByText(formatoDiferencial(40))).toBeInTheDocument();
+      expect(fila.getByText(`F-USD (${formatoImporte(400, "USD")})`)).toBeInTheDocument();
+    });
+
+    it("muestra la pérdida con signo negativo", () => {
+      render(<TablaPagos pagos={[pagoUsdPerdida]} etiquetaContraparte="Cliente" campoContraparteNombre="clienteNombre" />);
+
+      expect(screen.getByText("-Q72.00")).toBeInTheDocument();
+    });
+
+    it("con solo pagos en quetzales no muestra las columnas de moneda", () => {
+      render(<TablaPagos pagos={pagos} etiquetaContraparte="Cliente" campoContraparteNombre="clienteNombre" />);
+
+      expect(screen.queryByRole("columnheader", { name: "Diferencial" })).toBeNull();
+      expect(screen.queryByRole("columnheader", { name: "Valor en Q" })).toBeNull();
+    });
   });
 });

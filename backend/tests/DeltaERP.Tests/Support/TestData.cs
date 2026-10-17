@@ -22,6 +22,18 @@ public sealed record Escenario(
     int CuentaIsrRetenido,
     int CuentaIvaRetenidoClientes);
 
+public sealed record EscenarioMe(
+    Escenario E, DateOnly Lunes, int BancoGtqId, int BancoGtqContableId, int BancoUsdId, int BancoUsdContableId,
+    int CuentaDifGanancia, int CuentaDifPerdida, int CuentaRevalGanancia, int CuentaRevalPerdida)
+{
+    public DateOnly Miercoles => Lunes.AddDays(2);
+    public DateOnly Jueves => Lunes.AddDays(3);
+    public DateOnly Viernes => Lunes.AddDays(4);
+    public DateOnly Sabado => Lunes.AddDays(5);
+}
+
+public sealed record EscenarioRevaluacion(EscenarioMe M, int Anio, int PeriodoOctubre, int PeriodoNoviembre, int PeriodoPrevio);
+
 public sealed record EscenarioTesoreria(int Usuario, int Periodo, DateOnly Inicio, int CuentaBancaria, int CuentaContableBanco, int Contrapartida);
 
 public sealed record EscenarioJerarquia(int Usuario, int Periodo, int Padre, int HijoA, int HijoB, int Ingreso);
@@ -50,6 +62,11 @@ public sealed class TestData
     private readonly NpgsqlDataSource _db;
     private static int _anioPeriodoUnico = 2099;
     private static int _anioPeriodoHistorico = 1900;
+    private const int AnioMinimoRevaluacion = 1901;
+    private static int _anioRevaluacion = 2014;
+    private static int _semanaUnica = -1;
+    private static readonly DateOnly LunesInicial = new(2014, 1, 6);
+    private static readonly DateOnly InicioHistorico = new(1900, 1, 1);
     public static readonly DateOnly FechaSinPeriodo = new(1990, 6, 15);
     public const string NitValido = "1234567-9";
     public const string CodigoCuentaIvaDebito = "T-IVA-DEBITO";
@@ -68,6 +85,20 @@ public sealed class TestData
     {
         var anio = Interlocked.Increment(ref _anioPeriodoUnico);
         return (new DateOnly(anio, 1, 1), new DateOnly(anio, 12, 31));
+    }
+
+    // Semana única (lunes) desde 2014-01-06: no se repite dentro de la corrida.
+    public static DateOnly SiguienteSemana() => LunesInicial.AddDays(7 * Interlocked.Increment(ref _semanaUnica));
+
+    public static DateOnly SiguienteDiaHabil() => SiguienteSemana().AddDays(2);
+
+    public static DateOnly SiguienteSabado() => SiguienteSemana().AddDays(5);
+
+    // Años descendentes (2013 a 1901): ningún documento en moneda extranjera de otra prueba es anterior al corte de una prueba de revaluación o reporte.
+    public static int ReservarAnioRevaluacion()
+    {
+        var anio = Interlocked.Decrement(ref _anioRevaluacion);
+        return anio >= AnioMinimoRevaluacion ? anio : throw new InvalidOperationException("Se agotaron los años de revaluación disponibles (1901-2013).");
     }
 
     public async Task<T> ScalarAsync<T>(string sql, params object[] args)
@@ -110,7 +141,8 @@ public sealed class TestData
         EjecutarAsync(
             "UPDATE configuracionfiscal SET nit_empresa = $1, nombre_legal = 'Delta de Pruebas, S.A.', regimen_isr = 'UTILIDADES', agente_retencion_iva = FALSE, tipo_agente_iva = NULL, " +
             "cuenta_iva_debito_id = (SELECT id FROM cuentacontable WHERE codigo = $2), cuenta_iva_credito_id = (SELECT id FROM cuentacontable WHERE codigo = $3), " +
-            "cuenta_isr_retenido_pagar_id = (SELECT id FROM cuentacontable WHERE codigo = $4), cuenta_iva_retenido_clientes_id = (SELECT id FROM cuentacontable WHERE codigo = $5) WHERE id = 1",
+            "cuenta_isr_retenido_pagar_id = (SELECT id FROM cuentacontable WHERE codigo = $4), cuenta_iva_retenido_clientes_id = (SELECT id FROM cuentacontable WHERE codigo = $5), cuenta_dif_ganancia_realizada_id = NULL, " +
+            "cuenta_dif_perdida_realizada_id = NULL, cuenta_reval_ganancia_id = NULL, cuenta_reval_perdida_id = NULL WHERE id = 1",
             NitValido, CodigoCuentaIvaDebito, CodigoCuentaIvaCredito, CodigoCuentaIsrRetenido, CodigoCuentaIvaRetenidoClientes);
 
     public Task ConfigurarCuentasFiscalesAsync(int? debitoId, int? creditoId) =>
@@ -351,12 +383,13 @@ public sealed class TestData
     public Task CerrarPeriodoDirectoAsync(int periodoId) =>
         EjecutarAsync("UPDATE periodocontable SET estado = 'Cerrado' WHERE id = $1", periodoId);
 
-    public async Task<(int Id, int CuentaContableId)> CrearCuentaBancariaAsync(string tipo = "Monetaria")
+    public async Task<(int Id, int CuentaContableId)> CrearCuentaBancariaAsync(string tipo = "Monetaria", string moneda = "GTQ")
     {
         var cuentaContableId = await CrearCuentaAsync("Activo", "Deudora");
         var id = await ScalarAsync<int>(
-            "INSERT INTO cuentabancaria (banco, numero, tipo, cuenta_contable_id, saldo_apertura) VALUES ($1, $2, $3, $4, 0) RETURNING id",
-            $"Banco {Sufijo()}", $"N{Sufijo()}", tipo, cuentaContableId);
+            "INSERT INTO cuentabancaria (banco, numero, tipo, cuenta_contable_id, saldo_apertura, moneda_id) " +
+            "VALUES ($1, $2, $3, $4, 0, (SELECT id FROM moneda WHERE codigo = $5)) RETURNING id",
+            $"Banco {Sufijo()}", $"N{Sufijo()}", tipo, cuentaContableId, moneda);
         return (id, cuentaContableId);
     }
 
@@ -406,4 +439,65 @@ public sealed class TestData
 
     public Task<long> ContarAuditoriaAsync(int usuarioId, string accion) =>
         ScalarAsync<long>("SELECT COUNT(*) FROM bitacoraauditoria WHERE usuario_id = $1 AND accion = $2", usuarioId, accion);
+
+    public Task<int> SembrarTipoCambioAsync(string monedaCodigo, DateOnly fecha, decimal tasa, string fuente = "Banguat", bool arrastrado = false) =>
+        ScalarAsync<int>(
+            "INSERT INTO historialtipocambio (moneda_id, fecha, tasa, fuente, fecha_referencia, arrastrado, motivo, usuario_id) " +
+            "VALUES ((SELECT id FROM moneda WHERE codigo = $1), $2, $3, $4, $2, $5, $6::varchar, (SELECT MIN(id) FROM usuario)) RETURNING id",
+            monedaCodigo, fecha, tasa, fuente, arrastrado, fuente == "Manual" ? (object)"Sembrado de prueba" : DBNull.Value);
+
+    public Task ConfigurarCuentasCambiariasAsync(int? gananciaRealizadaId, int? perdidaRealizadaId, int? gananciaRevalId, int? perdidaRevalId) =>
+        EjecutarAsync(
+            "UPDATE configuracionfiscal SET cuenta_dif_ganancia_realizada_id = $1::int, cuenta_dif_perdida_realizada_id = $2::int, " +
+            "cuenta_reval_ganancia_id = $3::int, cuenta_reval_perdida_id = $4::int WHERE id = 1",
+            (object?)gananciaRealizadaId ?? DBNull.Value, (object?)perdidaRealizadaId ?? DBNull.Value,
+            (object?)gananciaRevalId ?? DBNull.Value, (object?)perdidaRevalId ?? DBNull.Value);
+
+    // 14 días: la API exige que la fecha del documento pertenezca a su período y una semana puede cruzar de año.
+    public async Task<EscenarioMe> SembrarEscenarioMeAsync()
+    {
+        var lunes = SiguienteSemana();
+        var periodo = await CrearPeriodoEnRangoAsync(lunes, lunes.AddDays(13));
+        return await ArmarEscenarioMeAsync(lunes, periodo);
+    }
+
+    // Impuesto exento propio desde 1900: los sembrados rigen desde 1992. PeriodoNoviembre queda en 0 con conPeriodoNoviembre = false.
+    public async Task<EscenarioRevaluacion> SembrarEscenarioRevaluacionAsync(bool conPeriodoNoviembre = true)
+    {
+        var anio = ReservarAnioRevaluacion();
+        var octubre = await CrearPeriodoEnRangoAsync(new DateOnly(anio, 10, 1), new DateOnly(anio, 10, 31));
+        var noviembre = conPeriodoNoviembre ? await CrearPeriodoEnRangoAsync(new DateOnly(anio, 11, 1), new DateOnly(anio, 11, 30)) : 0;
+        var previo = await CrearPeriodoEnRangoAsync(new DateOnly(anio, 7, 1), new DateOnly(anio, 9, 30));
+        var escenario = await ArmarEscenarioMeAsync(new DateOnly(anio, 10, 1), octubre);
+        var exento = await CrearImpuestoAsync(new OpcionesImpuesto("EXENTO", 0m, "AMBOS", false, InicioHistorico));
+        return new EscenarioRevaluacion(escenario with { E = escenario.E with { ImpuestoExentoId = exento } }, anio, octubre, noviembre, previo);
+    }
+
+    private async Task<EscenarioMe> ArmarEscenarioMeAsync(DateOnly lunes, int periodoId)
+    {
+        var e = (await SembrarEscenarioAsync()) with { PeriodoId = periodoId };
+        var bancoGtq = await CrearCuentaBancariaAsync();
+        var bancoUsd = await CrearCuentaBancariaAsync(moneda: "USD");
+        var gananciaRealizada = await CrearCuentaAsync("Ingreso", "Acreedora");
+        var perdidaRealizada = await CrearCuentaAsync("Gasto", "Deudora");
+        var gananciaReval = await CrearCuentaAsync("Ingreso", "Acreedora");
+        var perdidaReval = await CrearCuentaAsync("Gasto", "Deudora");
+        await ConfigurarCuentasCambiariasAsync(gananciaRealizada, perdidaRealizada, gananciaReval, perdidaReval);
+        return new EscenarioMe(
+            e, lunes, bancoGtq.Id, bancoGtq.CuentaContableId, bancoUsd.Id, bancoUsd.CuentaContableId,
+            gananciaRealizada, perdidaRealizada, gananciaReval, perdidaReval);
+    }
+
+    public Task<decimal> SaldoLibrosGtqAsync(int cuentaContableId) =>
+        ScalarAsync<decimal>(
+            "SELECT COALESCE(SUM(l.debito - l.credito), 0) FROM lineaasiento l JOIN asientocontable a ON a.id = l.asiento_id " +
+            "WHERE l.cuenta_id = $1 AND a.estado IN ('Confirmado', 'Anulado')", cuentaContableId);
+
+    public Task<bool> AsientoCuadraAsync(int asientoId) =>
+        ScalarAsync<bool>(
+            "SELECT COALESCE(SUM(debito), 0) = COALESCE(SUM(credito), 0) AND COUNT(*) > 0 FROM lineaasiento WHERE asiento_id = $1", asientoId);
+
+    public Task<string> DetalleAuditoriaAsync(int usuarioId, string accion) =>
+        ScalarAsync<string>(
+            "SELECT detalle FROM bitacoraauditoria WHERE usuario_id = $1 AND accion = $2 ORDER BY id DESC LIMIT 1", usuarioId, accion);
 }

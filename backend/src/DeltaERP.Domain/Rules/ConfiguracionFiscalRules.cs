@@ -11,7 +11,11 @@ public sealed record DatosConfiguracionFiscal(
     int? CuentaIvaDebitoId,
     int? CuentaIvaCreditoId,
     int? CuentaIsrRetenidoPagarId = null,
-    int? CuentaIvaRetenidoClientesId = null);
+    int? CuentaIvaRetenidoClientesId = null,
+    int? CuentaDifGananciaRealizadaId = null,
+    int? CuentaDifPerdidaRealizadaId = null,
+    int? CuentaRevalGananciaId = null,
+    int? CuentaRevalPerdidaId = null);
 
 public static class ConfiguracionFiscalRules
 {
@@ -23,7 +27,7 @@ public static class ConfiguracionFiscalRules
 
     public static string? Validar(DatosConfiguracionFiscal datos) =>
         ValidarRegimen(datos) ?? ValidarAgente(datos) ?? ValidarCuentasDistintas(datos) ?? ValidarCuentasRetencionDistintas(datos)
-        ?? ValidarIdentificacion(datos);
+        ?? ValidarCuentasCambiariasDistintas(datos) ?? ValidarIdentificacion(datos);
 
     private static string? ValidarRegimen(DatosConfiguracionFiscal datos) =>
         datos.RegimenIsr is null || !ConfiguracionFiscal.RegimenesIsrValidos.Contains(datos.RegimenIsr)
@@ -50,15 +54,22 @@ public static class ConfiguracionFiscalRules
             ? "Las cuentas de IVA débito y crédito deben ser distintas."
             : null;
 
-    private static string? ValidarCuentasRetencionDistintas(DatosConfiguracionFiscal datos)
-    {
-        var cuentas = new[]
-        {
-            datos.CuentaIvaDebitoId, datos.CuentaIvaCreditoId, datos.CuentaIsrRetenidoPagarId, datos.CuentaIvaRetenidoClientesId,
-        }.OfType<int>().ToList();
-        return cuentas.Distinct().Count() == cuentas.Count
+    private static string? ValidarCuentasRetencionDistintas(DatosConfiguracionFiscal datos) =>
+        TodasDistintas(datos.CuentaIvaDebitoId, datos.CuentaIvaCreditoId, datos.CuentaIsrRetenidoPagarId, datos.CuentaIvaRetenidoClientesId)
             ? null
             : "Las cuentas de IVA y de retención (ISR retenido por pagar, IVA retenido por clientes) deben ser distintas entre sí.";
+
+    private static string? ValidarCuentasCambiariasDistintas(DatosConfiguracionFiscal datos) =>
+        TodasDistintas(
+            datos.CuentaIvaDebitoId, datos.CuentaIvaCreditoId, datos.CuentaIsrRetenidoPagarId, datos.CuentaIvaRetenidoClientesId,
+            datos.CuentaDifGananciaRealizadaId, datos.CuentaDifPerdidaRealizadaId, datos.CuentaRevalGananciaId, datos.CuentaRevalPerdidaId)
+            ? null
+            : "Las cuentas de diferencial cambiario y de revaluación deben ser distintas entre sí y de las cuentas de IVA y de retención.";
+
+    private static bool TodasDistintas(params int?[] cuentas)
+    {
+        var presentes = cuentas.OfType<int>().ToList();
+        return presentes.Distinct().Count() == presentes.Count;
     }
 
     private static string? ValidarIdentificacion(DatosConfiguracionFiscal datos)

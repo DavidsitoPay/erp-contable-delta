@@ -27,12 +27,13 @@ public class LibroFiscalService
         var impuestos = await _db.Impuestos.ToDictionaryAsync(i => i.Id);
         var idsTercero = documentos.Select(d => d.TerceroId).Distinct().ToList();
         var terceros = await _db.Contrapartes.Where(c => idsTercero.Contains(c.Id)).ToDictionaryAsync(c => c.Id);
+        var monedas = await _db.Monedas.AsNoTracking().ToDictionaryAsync(m => m.Id, m => m.Codigo);
 
         var filas = new List<FilaLibroFiscal>();
         foreach (var documento in documentos)
         {
             var origen = documento.DocumentoOrigenId is { } origenId ? await _validacion.ObtenerDocumentoAsync(esVenta, origenId) : null;
-            filas.Add(ConstruirFila(documento, terceros[documento.TerceroId], impuestos, esVenta, origen));
+            filas.Add(ConstruirFila(documento, terceros[documento.TerceroId], impuestos, esVenta, origen, monedas));
         }
 
         var configuracion = await _configuracion.ObtenerAsync();
@@ -58,7 +59,8 @@ public class LibroFiscalService
     }
 
     private static FilaLibroFiscal ConstruirFila(
-        IDocumentoFactura documento, Contraparte tercero, IReadOnlyDictionary<int, Impuesto> impuestos, bool esVenta, IDocumentoFactura? origen)
+        IDocumentoFactura documento, Contraparte tercero, IReadOnlyDictionary<int, Impuesto> impuestos, bool esVenta, IDocumentoFactura? origen,
+        IReadOnlyDictionary<int, string> monedas)
     {
         var esNotaCredito = documento.TipoDocumento == TiposDocumento.NotaCredito;
         var signo = esNotaCredito ? -1m : 1m;
@@ -73,7 +75,10 @@ public class LibroFiscalService
             string.IsNullOrWhiteSpace(tercero.Nit) ? NitRules.ConsumidorFinal : tercero.Nit,
             tercero.Nombre, documento.Estado, documento.CalculoLegado,
             importes.BaseBienes * signo, importes.BaseServicios * signo, importes.Exento * signo, importes.Iva * signo, total * signo,
-            origen?.DteSerie, origen?.DteNumero, origen?.DteUuid);
+            origen?.DteSerie, origen?.DteNumero, origen?.DteUuid,
+            monedas.GetValueOrDefault(documento.MonedaId, "GTQ"),
+            (documento.Estado == "Anulado" ? 0m : documento.MontoTotalOriginal) * signo,
+            documento.TipoCambioAplicado);
     }
 
     private static ImportesLibro SumarLineas(IReadOnlyList<ILineaFactura> lineas, IReadOnlyDictionary<int, Impuesto> impuestos, bool esVenta)

@@ -74,6 +74,62 @@ public class LibroFiscalControllerTests
     }
 
     [Fact]
+    public async Task Ventas_ConFacturaUsd_ExponeMonedaImporteOriginalYTasa()
+    {
+        var m = await _pg.Data.SembrarEscenarioMeAsync();
+        await _pg.Data.SembrarTipoCambioAsync("USD", m.Miercoles, 7.60m);
+        var client = _pg.CreateApiClient(m.E.UsuarioId);
+        var payload = FacturaPayloads.CxcEn(m, "USD", m.Miercoles, 1120m, m.E.ImpuestoIvaId);
+        var numero = (string)payload["numero"]!;
+        await client.RegistrarVentaAsync(payload);
+
+        var libro = await client.GetFromJsonAsync<JsonElement>($"/api/libros/fiscal/ventas?anio={m.Miercoles.Year}&mes={m.Miercoles.Month}");
+
+        var fila = libro.GetProperty("filas").EnumerateArray().Single(f => f.GetProperty("numeroInterno").GetString() == numero);
+        Assert.Equal(("USD", 1120m, 7.6m), (fila.GetProperty("moneda").GetString(), fila.GetProperty("importeOriginal").GetDecimal(), fila.GetProperty("tipoCambio").GetDecimal()));
+        Assert.Equal((8512m, 912m), (fila.GetProperty("total").GetDecimal(), fila.GetProperty("iva").GetDecimal()));
+        var totalesFilas = libro.GetProperty("filas").EnumerateArray().Sum(f => f.GetProperty("total").GetDecimal());
+        Assert.Equal(totalesFilas, Totales(libro.GetProperty("totales")).Total);
+    }
+
+    [Fact]
+    public async Task Ventas_NotaDeCreditoEnUsd_ExponeImporteOriginalNegativo()
+    {
+        var m = await _pg.Data.SembrarEscenarioMeAsync();
+        await _pg.Data.SembrarTipoCambioAsync("USD", m.Miercoles, 7.60m);
+        var client = _pg.CreateApiClient(m.E.UsuarioId);
+        var facturaId = await client.RegistrarVentaAsync(FacturaPayloads.CxcEn(m, "USD", m.Miercoles, 1120m, m.E.ImpuestoIvaId));
+        var nota = FacturaPayloads.CxcEn(m, "USD", m.Miercoles, 1120m, m.E.ImpuestoIvaId)
+            .Con("tipoDocumento", "NotaCredito")
+            .Con("documentoOrigenId", facturaId);
+        var numero = (string)nota["numero"]!;
+        await client.RegistrarVentaAsync(nota);
+
+        var libro = await client.GetFromJsonAsync<JsonElement>($"/api/libros/fiscal/ventas?anio={m.Miercoles.Year}&mes={m.Miercoles.Month}");
+
+        var fila = libro.GetProperty("filas").EnumerateArray().Single(f => f.GetProperty("numeroInterno").GetString() == numero);
+        Assert.Equal(("USD", -1120m, 7.6m), (fila.GetProperty("moneda").GetString(), fila.GetProperty("importeOriginal").GetDecimal(), fila.GetProperty("tipoCambio").GetDecimal()));
+    }
+
+    [Fact]
+    public async Task Ventas_DocumentoLegado_SaleEnQuetzalesConTasaUno()
+    {
+        var (e, client, anio) = await PrepararAsync();
+        var numero = $"F-{TestData.Sufijo()}";
+        await _pg.Data.ScalarAsync<int>(
+            "INSERT INTO documentocxc (numero, tipo_documento, cliente_id, fecha, fecha_vencimiento, monto_total, monto_base, calculo_legado, estado) " +
+            "VALUES ($1, 'Factura', $2, $3, $4, 100, 100, TRUE, 'Vigente') RETURNING id",
+            numero, e.ClienteId, new DateOnly(anio, 6, 20), new DateOnly(anio, 7, 20));
+
+        var libro = await client.GetFromJsonAsync<JsonElement>($"/api/libros/fiscal/ventas?anio={anio}&mes=6");
+
+        var fila = libro.GetProperty("filas").EnumerateArray().Single(f => f.GetProperty("numeroInterno").GetString() == numero);
+        Assert.Equal("GTQ", fila.GetProperty("moneda").GetString());
+        Assert.Equal(100m, fila.GetProperty("importeOriginal").GetDecimal());
+        Assert.Equal(1m, fila.GetProperty("tipoCambio").GetDecimal());
+    }
+
+    [Fact]
     public async Task Compras_ConCreditoSinCreditoYAnulada_AjustaLasColumnas()
     {
         var (e, client, anio) = await PrepararAsync();
@@ -106,13 +162,14 @@ public class LibroFiscalControllerTests
     {
         var (e, client, anio) = await PrepararAsync();
         var asiento = await _pg.Data.SembrarAsientoAsync(e.PeriodoId, e.UsuarioId, e.CuentaCxC, e.CuentaIngreso, 100m, new DateOnly(anio, 8, 1));
-        await _pg.Data.VincularFacturaCxCAsync(e.ClienteId, asiento, new DateOnly(anio, 8, 1));
+        var documentoId = await _pg.Data.VincularFacturaCxCAsync(e.ClienteId, asiento, new DateOnly(anio, 8, 1));
+        var numero = await _pg.Data.ScalarAsync<string>("SELECT numero FROM documentocxc WHERE id = $1", documentoId);
 
         var libro = await client.GetFromJsonAsync<JsonElement>($"/api/libros/fiscal/ventas?anio={anio}&mes=8");
 
-        Assert.Equal(1, libro.GetProperty("filas").GetArrayLength());
+        var fila = libro.GetProperty("filas").EnumerateArray().Single(f => f.GetProperty("numeroInterno").GetString() == numero);
         Assert.Contains("calculo legado", libro.GetProperty("advertencias")[0].GetString());
-        Assert.True(libro.GetProperty("filas")[0].GetProperty("legado").GetBoolean());
+        Assert.True(fila.GetProperty("legado").GetBoolean());
     }
 
     [Theory]
