@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { cuentasBancariasApi, enteramientosApi } from "../../services/api";
-import { cuentasGtq, enteramientoValido, FORMULARIOS_ENTERAMIENTO, payloadEnteramiento, solicitudEnteramiento } from "../../utils/enteramiento";
+import { cuentasGtq, enteramientoValido, FORMULARIOS_ENTERAMIENTO, hoyGuatemala, payloadEnteramiento, solicitudEnteramiento } from "../../utils/enteramiento";
 import { mensajeError } from "../../utils/formato";
 import { FormularioCatalogo } from "../Catalogo/CatalogoCrud";
 import CampoFormulario from "../CampoFormulario";
@@ -60,7 +60,7 @@ function FormularioEnteramiento({ saldo, onRegistrado, onCancelar }) {
           </select>
         </CampoFormulario>
         <CampoFormulario id="ent-pago" etiqueta="Fecha de pago">
-          <input id="ent-pago" type="date" className="input" min={saldo.periodo} value={form.fechaPago} onChange={cambiar("fechaPago")} required />
+          <input id="ent-pago" type="date" className="input" min={saldo.periodo} max={hoyGuatemala()} value={form.fechaPago} onChange={cambiar("fechaPago")} required />
         </CampoFormulario>
         <CampoFormulario id="ent-boleta" etiqueta="Número de boleta">
           <input id="ent-boleta" className="input" maxLength={40} value={form.boleta} onChange={cambiar("boleta")} required />

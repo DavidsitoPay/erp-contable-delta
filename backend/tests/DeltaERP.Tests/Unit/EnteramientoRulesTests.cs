@@ -4,8 +4,12 @@ namespace DeltaERP.Tests.Unit;
 
 public class EnteramientoRulesTests
 {
+    private static readonly DateOnly Hoy = new(2026, 10, 17);
+
     [Theory]
     [InlineData("SAT-1352", "2026-09-01", "2026-10-01", "B-1", 10, null)]
+    [InlineData("SAT-1331", "2026-09-01", "2026-10-18", "B-1", 10, "posterior a hoy")]
+    [InlineData("SAT-1331", "2026-09-01", "2026-10-17", "B-1", 10, null)]
     [InlineData("X", "2026-09-01", "2026-10-01", "B-1", 10, "Formulario")]
     [InlineData("SAT-1331", "2026-09-15", "2026-10-01", "B-1", 10, "primer día")]
     [InlineData("SAT-1331", "0001-01-01", "2026-10-01", "B-1", 10, "obligatorio")]
@@ -15,7 +19,7 @@ public class EnteramientoRulesTests
     [InlineData("SAT-1331", "2026-09-01", "2026-10-01", "B-1", 0, "monto")]
     public void ValidarSolicitud_DetectaCadaDatoInvalido(string? formulario, string periodo, string fechaPago, string? boleta, int monto, string? fragmento)
     {
-        var error = EnteramientoRules.ValidarSolicitud(formulario, DateOnly.Parse(periodo), DateOnly.Parse(fechaPago), boleta, monto);
+        var error = EnteramientoRules.ValidarSolicitud(formulario, DateOnly.Parse(periodo), DateOnly.Parse(fechaPago), Hoy, boleta, monto);
 
         if (fragmento is null)
         {

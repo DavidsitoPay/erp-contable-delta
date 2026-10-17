@@ -26,7 +26,7 @@ function renderCon() {
 async function llenar() {
   await screen.findByRole("option", { name: /Banco Industrial/ });
   fireEvent.change(screen.getByLabelText("Formulario"), { target: { value: "SAT-1331" } });
-  fireEvent.change(screen.getByLabelText("Fecha de pago"), { target: { value: "2026-11-10" } });
+  fireEvent.change(screen.getByLabelText("Fecha de pago"), { target: { value: "2026-10-10" } });
   fireEvent.change(screen.getByLabelText("Número de boleta"), { target: { value: "B-1" } });
   fireEvent.change(screen.getByLabelText("Cuenta bancaria"), { target: { value: "1" } });
 }
@@ -99,9 +99,22 @@ describe("FormularioEnteramiento", () => {
       monto: 150,
       cuentaBancariaId: 1,
       formulario: "SAT-1331",
-      fechaPago: "2026-11-10",
+      fechaPago: "2026-10-10",
       boleta: "B-1",
     });
     expect(await screen.findByText("La boleta ya existe.")).toBeInTheDocument();
+  });
+
+  it("limita la fecha de pago a hoy en hora de Guatemala", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-18T03:00:00Z"));
+    try {
+      renderCon();
+      await screen.findByRole("option", { name: /Banco Industrial/ });
+
+      expect(screen.getByLabelText("Fecha de pago")).toHaveAttribute("max", "2026-10-17");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

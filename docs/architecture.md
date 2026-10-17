@@ -146,7 +146,7 @@ Si el proveedor no tiene régimen definido o es no residente sin tipo de renta n
 - La retención de ISR se reconoce al registrar la factura (no al pagar), con el saldo neto como fuente única; `retencion` es append-only por privilegios y guarda una instantánea (base, tasa, parámetro, cuenta, montos).
 - Los parámetros de retención son una tabla propia (no se reutiliza `impuesto`) con el mismo patrón de vigencia y los mismos códigos de error `55000`.
 - Un tercero sin datos de retención se advierte y se marca para revisión; no se bloquea el registro.
-- Pendiente para I3b-2 (no implementado): ajuste de la retención por nota de crédito posterior y registro del enteramiento a SAT.
+- El ajuste de la retención por nota de crédito posterior y el registro del enteramiento a SAT están implementados (I3b-2, ver las secciones siguientes).
 - Fuera de alcance: retención de IVA como agente y a pequeño contribuyente, porque Delta no es agente de retención de IVA.
 
 ## Fiscal: retención de ISR a no residentes (M10, I3b-1)
@@ -293,7 +293,8 @@ ser una aplicación de una sola página sin estado de servidor, se despliega dir
 en Vercel a partir del código fuente, sin pasar por una imagen de contenedor. La base
 de datos PostgreSQL corre en Neon (proveedor sin servidor), con una rama `production`
 —la única que usa el backend desplegado— separada de la rama `development` de uso
-local.
+local. CI no migra la rama `development`: sus migraciones se aplican a mano y deben dejar el
+mismo registro en `schema_migrations` que escribe `run_migrations.sh`.
 
 La integración y el despliegue continuo corren en GitHub Actions, en cuatro workflows
 independientes (`.github/workflows/`):

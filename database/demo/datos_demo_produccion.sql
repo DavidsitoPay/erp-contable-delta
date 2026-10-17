@@ -33,7 +33,8 @@ INSERT INTO cuentacontable (codigo, nombre, tipo, naturaleza, cuenta_padre_id) V
     ('2', 'Pasivo',   'Pasivo',  'Acreedora', NULL),
     ('3', 'Capital',  'Capital', 'Acreedora', NULL),
     ('4', 'Ingresos', 'Ingreso', 'Acreedora', NULL),
-    ('5', 'Gastos',   'Gasto',   'Deudora',   NULL);
+    ('5', 'Gastos',   'Gasto',   'Deudora',   NULL)
+ON CONFLICT (codigo) DO NOTHING;
 
 INSERT INTO cuentacontable (codigo, nombre, tipo, naturaleza, cuenta_padre_id)
 SELECT v.codigo, v.nombre, p.tipo, p.naturaleza, p.id
@@ -45,7 +46,8 @@ FROM (VALUES
     ('4.1', 'Ingresos de operación', '4'),
     ('5.1', 'Gastos de operación',   '5')
 ) AS v(codigo, nombre, padre)
-JOIN cuentacontable p ON p.codigo = v.padre;
+JOIN cuentacontable p ON p.codigo = v.padre
+ON CONFLICT (codigo) DO NOTHING;
 
 INSERT INTO cuentacontable (codigo, nombre, tipo, naturaleza, cuenta_padre_id)
 SELECT v.codigo, v.nombre, p.tipo, p.naturaleza, p.id
@@ -68,7 +70,8 @@ FROM (VALUES
     ('5.1.03', 'Alquiler de oficina',                '5.1'),
     ('5.1.04', 'Papelería y útiles',                 '5.1')
 ) AS v(codigo, nombre, padre)
-JOIN cuentacontable p ON p.codigo = v.padre;
+JOIN cuentacontable p ON p.codigo = v.padre
+ON CONFLICT (codigo) DO NOTHING;
 
 -- 3. Catálogo: centros de costo, periodos y contrapartes --------------------------
 

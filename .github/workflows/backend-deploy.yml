@@ -41,7 +41,7 @@ jobs:
             echo "## Migraciones (Neon production)"
             if [ -f migraciones.log ]; then
               if grep -qE '^== (Aplicando|Nada nuevo)' migraciones.log; then
-                grep '^== (Aplicando|Nada nuevo)' migraciones.log | sed 's/^== /- /' | sed 's/ ==$//'
+                grep -E '^== (Aplicando|Nada nuevo)' migraciones.log | sed 's/^== /- /' | sed 's/ ==$//'
               else
                 echo "- Sin información de migraciones"
               fi
