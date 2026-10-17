@@ -1,8 +1,9 @@
 import { CONCEPTOS_RETENCION, ESTADOS_CONSTANCIA, SENTIDOS_RETENCION, etiquetaDe } from "../../utils/etiquetasFiscales";
 import { formatoMoneda } from "../../utils/formato";
+import { AYUDA_AJUSTE_RETENCION, ROTULO_AJUSTE_RETENCION } from "../../utils/retenciones";
 import { TablaCatalogo } from "../Catalogo/CatalogoCrud";
 
-const ENCABEZADOS = ["Sentido", "Impuesto", "NIT", "Nombre", "Documento", "Fecha documento", "Fecha pago o cobro", "Base", "Tasa efectiva (%)", "Retención", "Constancia", "Estado", "Tipo de renta", "Monto origen", "Tipo de cambio"];
+const ENCABEZADOS = ["Sentido", "Impuesto", "NIT", "Nombre", "País", "Documento","Fecha documento", "Fecha pago o cobro", "Base", "Tasa efectiva (%)", "Retención", "Constancia", "Estado", "Tipo de renta", "Monto origen", "Tipo de cambio"];
 const CLASE_ESTADO = { PENDIENTE: "badge-warning", VENCIDA: "badge-warning", EMITIDA: "badge-ok" };
 const ESTADOS_ALERTA = new Set(["PENDIENTE", "VENCIDA"]);
 
@@ -22,6 +23,18 @@ function AccionConstancia({ fila, onAccion }) {
   );
 }
 
+function AjustePendiente({ fila, onAccion }) {
+  if (!fila.ajustePendiente) return null;
+  return (
+    <>
+      <span className="badge badge-warning" title={AYUDA_AJUSTE_RETENCION}>{ROTULO_AJUSTE_RETENCION}</span>
+      <button type="button" className="btn btn-outline btn-sm" aria-label={`Resolver ajuste de ${fila.documentoNumero}`} onClick={() => onAccion({ tipo: "ajuste", fila })}>
+        Resolver ajuste
+      </button>
+    </>
+  );
+}
+
 function TablaRetenciones({ filas, onAccion }) {
   return (
     <TablaCatalogo encabezados={ENCABEZADOS}>
@@ -36,6 +49,7 @@ function TablaRetenciones({ filas, onAccion }) {
             <td>{etiquetaDe(CONCEPTOS_RETENCION, f.concepto)}</td>
             <td>{f.nit}</td>
             <td>{f.nombre}</td>
+            <td>{f.pais ?? "—"}</td>
             <td>
               {f.documentoNumero}
               {f.periodoContableDistinto && <small className="nota-fiscal">Cobro en otro mes</small>}
@@ -57,6 +71,7 @@ function TablaRetenciones({ filas, onAccion }) {
             <td className="numeric">{f.tipoCambio == null ? "—" : `${f.tipoCambio} (${f.tipoCambioFecha})`}</td>
             <td>
               <AccionConstancia fila={f} onAccion={onAccion} />
+              <AjustePendiente fila={f} onAccion={onAccion} />
             </td>
           </tr>
         ))

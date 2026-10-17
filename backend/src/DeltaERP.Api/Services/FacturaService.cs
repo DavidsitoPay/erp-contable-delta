@@ -22,13 +22,16 @@ public class FacturaService
     private readonly AuditoriaService _auditoria;
     private readonly FacturaFiscalService _fiscal;
     private readonly RetencionService _retenciones;
+    private readonly AjusteRetencionService _ajustes;
 
-    public FacturaService(DeltaErpDbContext db, AuditoriaService auditoria, FacturaFiscalService fiscal, RetencionService retenciones)
+    public FacturaService(
+        DeltaErpDbContext db, AuditoriaService auditoria, FacturaFiscalService fiscal, RetencionService retenciones, AjusteRetencionService ajustes)
     {
         _db = db;
         _auditoria = auditoria;
         _fiscal = fiscal;
         _retenciones = retenciones;
+        _ajustes = ajustes;
     }
 
     // El asiento se guarda primero porque la factura necesita su AsientoId.
@@ -59,6 +62,10 @@ public class FacturaService
                 await _db.SaveChangesAsync();
 
                 registrada = await _retenciones.RegistrarIsrAsync(documento, fiscal.Retencion, asiento.Id, usuarioId);
+                if (!perfil.EsVenta)
+                {
+                    await _ajustes.RegistrarSiAplicaAsync(documento, usuarioId);
+                }
 
                 return $"Factura {documento.Numero} (id {documento.Id}) registrada para {perfil.TipoTercero.ToLowerInvariant()} {tercero.Nombre}, monto {asiento.Monto}, base {documento.MontoBase}, IVA {documento.MontoIva}{DescribirRetencion(fiscal.Retencion)}{DescribirMoneda(fiscal.Cambio, documento)}";
             });

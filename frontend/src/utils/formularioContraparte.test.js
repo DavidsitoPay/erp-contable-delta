@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contraparteCompleta, formularioContraparteVacio, payloadContraparte, requiereFundamento, requiereTipoAgente, requiereTipoRenta } from "./formularioContraparte";
+import { contraparteCompleta, formularioContraparteVacio, payloadContraparte, requiereFundamento, requierePais, requiereTipoAgente, requiereTipoRenta } from "./formularioContraparte";
 
 describe("formularioContraparte", () => {
   it("el proveedor inicia con régimen de ISR No definido y el cliente conserva UTILIDADES", () => {
@@ -68,5 +68,19 @@ describe("formularioContraparte", () => {
     expect(payloadContraparte(noResidente)).toMatchObject({ tipoRentaNrCodigo: "NR_SERVICIOS" });
     expect(payloadContraparte({ ...noResidente, esResidente: true })).toMatchObject({ tipoRentaNrCodigo: null });
     expect(payloadContraparte({ ...formularioContraparteVacio("Cliente"), esResidente: false, tipoRentaNrCodigo: "NR_SERVICIOS" })).toMatchObject({ tipoRentaNrCodigo: null });
+  });
+
+  it("el país ISO-2 se exige solo a contrapartes no residentes y se normaliza en el payload", () => {
+    const residente = formularioContraparteVacio("Cliente");
+    const extranjero = { ...residente, esResidente: false };
+
+    expect(requierePais(residente)).toBe(false);
+    expect(payloadContraparte(residente)).toMatchObject({ pais: null });
+    expect(contraparteCompleta(residente)).toBe(true);
+    expect(contraparteCompleta({ ...extranjero, pais: "" })).toBe(false);
+    expect(contraparteCompleta({ ...extranjero, pais: "G" })).toBe(false);
+    expect(contraparteCompleta({ ...extranjero, pais: "G1" })).toBe(false);
+    expect(contraparteCompleta({ ...extranjero, pais: "gt" })).toBe(true);
+    expect(payloadContraparte({ ...extranjero, pais: " gt " })).toMatchObject({ pais: "GT" });
   });
 });

@@ -39,4 +39,6 @@ public class VwRetencionReporte
     public DateOnly? TipoCambioFecha { get; set; }
     public decimal EnteradoGtq { get; set; }
     public decimal SaldoPorEnterarGtq { get; set; }
+    public string? Pais { get; set; }
+    public bool AjustePendiente { get; set; }
 }

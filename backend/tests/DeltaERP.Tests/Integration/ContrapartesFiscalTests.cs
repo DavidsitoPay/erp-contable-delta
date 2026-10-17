@@ -30,6 +30,7 @@ public class ContrapartesFiscalTests
         ["esAgenteRetencionIva"] = true,
         ["tipoAgenteIva"] = "AGENTE_PRIVADO",
         ["tipoRentaNrCodigo"] = tipoRentaNr,
+        ["pais"] = esResidente ? null : "US",
     };
 
     private async Task<HttpClient> ClienteAsync() => _pg.CreateApiClient(await _pg.Data.CrearUsuarioAsync());
@@ -166,5 +167,27 @@ public class ContrapartesFiscalTests
         Assert.Equal(("Proveedor", "6-K", "EXENTO"), guardado);
         Assert.Equal(HttpStatusCode.OK, reemplazo.StatusCode);
         Assert.Equal("GENERAL", (await reemplazo.LeerJsonAsync()).GetProperty("regimenIva").GetString());
+    }
+
+    [Fact]
+    public async Task Crear_NoResidenteSinPaisOPaisInvalido_Responde400()
+    {
+        var client = await ClienteAsync();
+
+        var sinPais = await client.PostAsJsonAsync(Ruta, Cuerpo("Proveedor", "1234567-9", esResidente: false, tipoRentaNr: "NR_REGALIAS").Con("pais", null));
+        var invalido = await client.PostAsJsonAsync(Ruta, Cuerpo("Proveedor", "1234567-9", esResidente: false, tipoRentaNr: "NR_REGALIAS").Con("pais", "USA"));
+
+        Assert.Equal((HttpStatusCode.BadRequest, HttpStatusCode.BadRequest), (sinPais.StatusCode, invalido.StatusCode));
+    }
+
+    [Fact]
+    public async Task Crear_NoResidente_NormalizaElPaisAMayusculas()
+    {
+        var client = await ClienteAsync();
+
+        var response = await client.PostAsJsonAsync(Ruta, Cuerpo("Proveedor", "1234567-9", esResidente: false, tipoRentaNr: "NR_REGALIAS").Con("pais", " gt "));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal("GT", (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("pais").GetString());
     }
 }

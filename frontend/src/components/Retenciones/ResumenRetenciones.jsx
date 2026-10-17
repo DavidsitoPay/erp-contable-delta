@@ -57,6 +57,22 @@ function ResumenRetenciones({ reporte }) {
         </>
       )}
 
+      {reporte.saldosEnterar?.length > 0 && (
+        <>
+          <h3>Saldo por enterar por período</h3>
+          <TablaCatalogo encabezados={["Período", "Retenido", "Enterado", "Saldo por enterar"]}>
+            {reporte.saldosEnterar.map((s) => (
+              <tr key={s.periodo}>
+                <td>{s.periodo.slice(0, 7)}</td>
+                <td className="numeric">{formatoMoneda.format(s.retenido)}</td>
+                <td className="numeric">{formatoMoneda.format(s.enterado)}</td>
+                <td className="numeric">{formatoMoneda.format(s.saldoPorEnterar)}</td>
+              </tr>
+            ))}
+          </TablaCatalogo>
+        </>
+      )}
+
       <h3>Conciliación con las cuentas de retención</h3>
       <div className="table-wrap">
         <div className="table-scroll">

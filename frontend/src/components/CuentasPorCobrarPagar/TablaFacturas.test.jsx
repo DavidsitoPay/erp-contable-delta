@@ -69,6 +69,17 @@ describe("TablaFacturas con retención de ISR", () => {
     expect(within(screen.getByText("P-1").closest("tr")).getAllByText("—")).toHaveLength(2);
   });
 
+  it("muestra el ajuste de retención pendiente con el botón para resolverlo solo donde aplica", () => {
+    const onResolverAjuste = vi.fn();
+    const facturas = [{ ...facturasCxp[0], ajusteRetencionPendiente: true }, { ...facturasCxp[2], ajusteRetencionPendiente: false }];
+    render(<TablaFacturas facturas={facturas} etiquetaContraparte="Proveedor" campoContraparteNombre="proveedorNombre" conRetencion onResolverAjuste={onResolverAjuste} />);
+
+    expect(screen.getAllByText("Ajuste de retención pendiente")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Resolver ajuste de P-1" }));
+
+    expect(onResolverAjuste).toHaveBeenCalledWith(expect.objectContaining({ id: 11 }));
+  });
+
   it("sin conRetencion no muestra esas columnas", () => {
     render(<TablaFacturas facturas={facturasCxp} etiquetaContraparte="Proveedor" campoContraparteNombre="proveedorNombre" />);
 

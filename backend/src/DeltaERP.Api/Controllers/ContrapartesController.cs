@@ -74,6 +74,7 @@ public class ContrapartesController : ControllerBase
         contraparte.IsrFundamento = ContraparteRules.FundamentoNormalizado(contraparte);
         contraparte.TipoAgenteIva = ContraparteRules.TipoAgenteNormalizado(contraparte);
         contraparte.TipoRentaNrCodigo = ContraparteRules.TipoRentaNrNormalizado(contraparte, contraparte.Tipo);
+        contraparte.Pais = ContraparteRules.PaisNormalizado(contraparte);
         _db.Contrapartes.Add(contraparte);
         await _db.SaveChangesAsync();
         return CreatedAtAction(nameof(Obtener), new { id = contraparte.Id }, contraparte);
@@ -116,6 +117,7 @@ public class ContrapartesController : ControllerBase
         contraparte.EsAgenteRetencionIva = cambios.EsAgenteRetencionIva;
         contraparte.TipoAgenteIva = ContraparteRules.TipoAgenteNormalizado(cambios);
         contraparte.TipoRentaNrCodigo = ContraparteRules.TipoRentaNrNormalizado(cambios, contraparte.Tipo);
+        contraparte.Pais = ContraparteRules.PaisNormalizado(cambios);
         var conflicto = await this.GuardarAuditadoAsync(_auditoria, "actualizar_contraparte", "contraparte", async () =>
         {
             await _db.SaveChangesAsync();
@@ -135,5 +137,5 @@ public class ContrapartesController : ControllerBase
     }
 
     private static string DescribirFiscal(Contraparte c) =>
-        $"régimen ISR {c.RegimenIsr} (fundamento {c.IsrFundamento}), residente {c.EsResidente}, agente IVA {c.EsAgenteRetencionIva} ({c.TipoAgenteIva}), tipo de renta NR {c.TipoRentaNrCodigo}";
+        $"régimen ISR {c.RegimenIsr} (fundamento {c.IsrFundamento}), residente {c.EsResidente}, agente IVA {c.EsAgenteRetencionIva} ({c.TipoAgenteIva}), tipo de renta NR {c.TipoRentaNrCodigo}, país {c.Pais}";
 }

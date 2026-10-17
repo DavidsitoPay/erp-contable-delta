@@ -21,22 +21,11 @@ public class PagosCxPRetencionNoResidenteTests
         _pg.Banguat.Reiniciar();
     }
 
-    private sealed record Compra(EscenarioMe M, HttpClient Client, int ProveedorId, int FacturaId);
-
     private static decimal Dec(JsonElement e, string propiedad) => e.GetProperty(propiedad).GetDecimal();
 
-    private async Task<Compra> CompraAsync(
-        string moneda = "USD", string? tipoRenta = "NR_REGALIAS", string regimen = "SIMPLIFICADO", string? fundamento = null, decimal precio = 1000m)
-    {
-        var m = await _pg.Data.SembrarEscenarioMeAsync();
-        await _pg.Data.SembrarTipoCambioAsync("USD", m.Miercoles, 7.60m);
-        await _pg.Data.SembrarTipoCambioAsync("USD", m.Jueves, 7.70m);
-        var proveedor = await _pg.Data.CrearProveedorNoResidenteAsync(tipoRenta, regimen, fundamento);
-        var client = _pg.CreateApiClient(m.E.UsuarioId);
-        var (estado, cuerpo) = await client.EnviarAsync(RutaFacturasCxP, FacturaPayloads.CxpEn(m, moneda, m.Miercoles, precio, proveedor));
-        Assert.Equal(HttpStatusCode.Created, estado);
-        return new Compra(m, client, proveedor, cuerpo.GetProperty("id").GetInt32());
-    }
+    private Task<Compra> CompraAsync(
+        string moneda = "USD", string? tipoRenta = "NR_REGALIAS", string regimen = "SIMPLIFICADO", string? fundamento = null, decimal precio = 1000m) =>
+        _pg.CompraNrAsync(moneda, tipoRenta, regimen, fundamento, precio);
 
     private static Task<(HttpStatusCode Estado, JsonElement Cuerpo)> Pagar(
         Compra c, int cuentaId, DateOnly fecha, decimal monto, decimal? efectivo = null, string? tipoRenta = null) =>
@@ -117,6 +106,22 @@ public class PagosCxPRetencionNoResidenteTests
         Assert.Equal((1000m, 150m, 1m, c.M.Jueves.ToDateTime(TimeOnly.MinValue)), (
             await Fila<decimal>(id, "base"), await Fila<decimal>(id, "monto_retenido"), await Fila<decimal>(id, "tipo_cambio"), await Fila<DateTime>(id, "tipo_cambio_fecha")));
         Assert.Equal(850m, await _pg.Data.ScalarAsync<decimal>("SELECT monto FROM movimientotesoreria WHERE pago_proveedor_id = $1", cuerpo.GetProperty("id").GetInt32()));
+    }
+
+    [Fact]
+    public async Task Pago_ConNotaDeCreditoPrevia_RetieneSobreLaBaseNeta()
+    {
+        var c = await CompraAsync("GTQ");
+        var nota = FacturaPayloads.CxpEn(c.M, "GTQ", c.M.Miercoles, 200m, c.ProveedorId)
+            .Con("tipoDocumento", "NotaCredito").Con("documentoOrigenId", c.FacturaId);
+        var (estadoNota, _) = await c.Client.EnviarAsync(RutaFacturasCxP, nota);
+        Assert.Equal(HttpStatusCode.Created, estadoNota);
+
+        var (estado, cuerpo) = await Pagar(c, c.M.BancoGtqId, c.M.Jueves, 800m);
+
+        Assert.Equal(HttpStatusCode.Created, estado);
+        var id = cuerpo.GetProperty("retenciones")[0].GetProperty("retencionId").GetInt32();
+        Assert.Equal((800m, 120m), (await Fila<decimal>(id, "base"), await Fila<decimal>(id, "monto_retenido")));
     }
 
     [Fact]

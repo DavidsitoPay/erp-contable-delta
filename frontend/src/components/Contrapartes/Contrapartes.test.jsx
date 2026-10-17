@@ -113,13 +113,23 @@ describe("Contrapartes", () => {
     fireEvent.click(screen.getByLabelText("Agente de retención de IVA"));
     expect(screen.getByRole("button", { name: "Agregar cliente" })).toBeDisabled();
     escribir("Tipo de agente de IVA", "SECTOR_PUBLICO");
+    escribir("País (ISO-2)", "us");
     fireEvent.click(screen.getByRole("button", { name: "Agregar cliente" }));
 
     await waitFor(() =>
       expect(contrapartesApi.crear).toHaveBeenCalledWith(
-        expect.objectContaining({ nombre: "Cliente exento", nit: "", regimenIva: "EXENTO", esResidente: false, esAgenteRetencionIva: true, tipoAgenteIva: "SECTOR_PUBLICO" })
+        expect.objectContaining({ nombre: "Cliente exento", nit: "", regimenIva: "EXENTO", esResidente: false, esAgenteRetencionIva: true, tipoAgenteIva: "SECTOR_PUBLICO", pais: "US" })
       )
     );
+  });
+
+  it("muestra el país de cada contraparte o guion si no lo tiene", async () => {
+    contrapartesApi.listar.mockResolvedValue({ data: [{ ...clientes[0], pais: "US" }, clientes[1]] });
+    render(<Contrapartes />);
+    await screen.findByText("ACME");
+
+    expect(within(screen.getByText("ACME").closest("tr")).getByText("US")).toBeInTheDocument();
+    expect(within(screen.getByText("Otra Empresa").closest("tr")).getByText("—")).toBeInTheDocument();
   });
 
   it("crea un proveedor con su régimen de ISR", async () => {

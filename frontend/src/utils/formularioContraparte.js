@@ -13,6 +13,7 @@ export function formularioContraparteVacio(tipo) {
     esAgenteRetencionIva: false,
     tipoAgenteIva: "",
     tipoRentaNrCodigo: "",
+    pais: "",
   };
 }
 
@@ -22,11 +23,14 @@ export const requiereTipoAgente = (form) => form.tipo === "Cliente" && form.esAg
 
 export const requiereTipoRenta = (form) => form.tipo === "Proveedor" && !form.esResidente && form.regimenIsr !== "EXENTO";
 
+export const requierePais = (form) => !form.esResidente;
+
 export function contraparteCompleta(form) {
   const fundamentoCompleto = !requiereFundamento(form) || form.isrFundamento.trim() !== "";
   const agenteCompleto = !requiereTipoAgente(form) || form.tipoAgenteIva !== "";
   const rentaCompleta = !requiereTipoRenta(form) || form.tipoRentaNrCodigo !== "";
-  return fundamentoCompleto && agenteCompleto && rentaCompleta;
+  const paisCompleto = !requierePais(form) || /^[A-Z]{2}$/.test((form.pais ?? "").trim().toUpperCase());
+  return fundamentoCompleto && agenteCompleto && rentaCompleta && paisCompleto;
 }
 
 export function payloadContraparte(form) {
@@ -37,5 +41,6 @@ export function payloadContraparte(form) {
     isrFundamento: requiereFundamento(form) ? form.isrFundamento.trim() : null,
     tipoAgenteIva: requiereTipoAgente(form) ? form.tipoAgenteIva : null,
     tipoRentaNrCodigo: form.tipo === "Proveedor" && !form.esResidente && form.tipoRentaNrCodigo !== "" ? form.tipoRentaNrCodigo : null,
+    pais: requierePais(form) ? (form.pais ?? "").trim().toUpperCase() : null,
   };
 }

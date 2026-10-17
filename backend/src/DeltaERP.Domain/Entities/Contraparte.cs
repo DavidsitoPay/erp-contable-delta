@@ -36,4 +36,5 @@ public class Contraparte
     public bool EsAgenteRetencionIva { get; set; }
     public string? TipoAgenteIva { get; set; }
     public string? TipoRentaNrCodigo { get; set; }
+    public string? Pais { get; set; }
 }

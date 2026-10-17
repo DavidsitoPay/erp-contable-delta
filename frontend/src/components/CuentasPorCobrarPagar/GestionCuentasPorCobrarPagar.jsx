@@ -6,6 +6,7 @@ import { hoyIso, monto } from "../../utils/formato";
 import { perfilActual, puedeGestionarTesoreria } from "../../utils/perfiles";
 import { aplicacionesConRetencion, aplicacionesConTipoRenta, hayErrorRetencionIva, resumenCobro, tipoRentaInicial } from "../../utils/retenciones";
 import FormularioMotivo from "../FormularioMotivo";
+import ResolverAjusteDialog from "../Retenciones/ResolverAjusteDialog";
 import SelectCuentaBancaria from "../Tesoreria/SelectCuentaBancaria";
 import FormularioFactura from "./FormularioFactura";
 import PanelLiquidacion from "./PanelLiquidacion";
@@ -18,6 +19,10 @@ import TablaPagos from "./TablaPagos";
 import { useLiquidacionPago } from "./useLiquidacionPago";
 import { useRetencionPreviaPago } from "./useRetencionPreviaPago";
 import { useRetencionesCobro } from "./useRetencionesCobro";
+
+function conservarTiposRentaVigentes(seleccion, tipos) {
+  return Object.fromEntries(Object.entries(seleccion).filter(([, codigo]) => tipos.some((t) => t.codigo === codigo)));
+}
 
 // config aísla las diferencias de terminología/cuenta de control entre CxC y
 // CxP, de ahí las claves dinámicas como pagoContraparteId.
@@ -53,6 +58,7 @@ function GestionCuentasPorCobrarPagar({ config }) {
   const [montosAplicados, setMontosAplicados] = useState({}); // documentoId -> string
   const [soloPorRevisar, setSoloPorRevisar] = useState(false);
   const [revisionDe, setRevisionDe] = useState(null);
+  const [ajusteDe, setAjusteDe] = useState(null);
   const [tiposRenta, setTiposRenta] = useState([]);
   const [tiposRentaPago, setTiposRentaPago] = useState({}); // documentoId -> código
   const retencionesCobro = useRetencionesCobro(api);
@@ -76,12 +82,23 @@ function GestionCuentasPorCobrarPagar({ config }) {
     void cargarPagos();
     if (puedeRegistrarPagos) {
       void cuentasBancariasApi.listar().then(({ data }) => setCuentasBancarias(data));
-      if (config.retencionIsr) {
-        void parametrosRetencionApi.listar({ concepto: "ISR_NO_RESIDENTE", vigenteEn: hoyIso() }).then(({ data }) => setTiposRenta(data)).catch(() => setTiposRenta([]));
-      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tipoContraparte]);
+
+  useEffect(() => {
+    if (!puedeRegistrarPagos || !config.retencionIsr) return;
+    void parametrosRetencionApi.listar({ concepto: "ISR_NO_RESIDENTE", vigenteEn: pagoFecha || hoyIso() })
+      .then(({ data }) => {
+        setTiposRenta(data);
+        setTiposRentaPago((p) => conservarTiposRentaVigentes(p, data));
+      })
+      .catch(() => {
+        setTiposRenta([]);
+        setTiposRentaPago({});
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagoFecha]);
 
   const conRetencionIsr = Boolean(config.retencionIsr);
   const conRetencionIva = Boolean(config.retencionIvaCobro);
@@ -228,12 +245,20 @@ function GestionCuentasPorCobrarPagar({ config }) {
               onCancelar={() => setRevisionDe(null)}
             />
           )}
+          {ajusteDe && (
+            <ResolverAjusteDialog
+              documentoId={ajusteDe.id}
+              onResuelto={async () => { setAjusteDe(null); await cargarFacturas(); }}
+              onCancelar={() => setAjusteDe(null)}
+            />
+          )}
           <TablaFacturas
             facturas={facturasVisibles}
             etiquetaContraparte={etiquetaContraparte}
             campoContraparteNombre={campoContraparteNombre}
             conRetencion={conRetencionIsr}
             onResolverRevision={setRevisionDe}
+            onResolverAjuste={setAjusteDe}
           />
         </>
       )}

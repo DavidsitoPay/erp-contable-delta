@@ -181,9 +181,9 @@ describe("reporte de retenciones", () => {
     const lineas = csvRetenciones(reporte).split("\r\n");
 
     expect(lineas[0]).toBe(
-      "Sentido,Impuesto,NIT,Nombre,Documento,Serie DTE,Numero DTE,UUID,Fecha documento,Fecha pago o cobro,Base,Tasa,Retencion,Constancia,Fecha constancia,Formulario,Estado constancia,Tipo de renta (codigo),Tipo de renta,Moneda,Monto origen,Tipo de cambio,Fecha tipo de cambio,Enterado,Saldo por enterar"
+      "Sentido,Impuesto,NIT,Nombre,Pais,Documento,Serie DTE,Numero DTE,UUID,Fecha documento,Fecha pago o cobro,Base,Tasa,Retencion,Constancia,Fecha constancia,Formulario,Estado constancia,Tipo de renta (codigo),Tipo de renta,Moneda,Monto origen,Tipo de cambio,Fecha tipo de cambio,Enterado,Saldo por enterar,AjustePendiente"
     );
-    expect(lineas[1]).toBe('Efectuada,ISR,1234567-8,"Proveedor, S.A.",F-001,A,99,uuid-1,2026-10-05,2026-10-05,40000.00,5.5,2200.00,,,,PENDIENTE,,,,,,,0.00,0.00');
+    expect(lineas[1]).toBe('Efectuada,ISR,1234567-8,"Proveedor, S.A.",,F-001,A,99,uuid-1,2026-10-05,2026-10-05,40000.00,5.5,2200.00,,,,PENDIENTE,,,,,,,0.00,0.00,No');
     expect(lineas).toHaveLength(2);
   });
 
@@ -207,7 +207,7 @@ describe("reporte de retenciones", () => {
     };
 
     expect(csvRetenciones(noResidente).split("\r\n")[1]).toBe(
-      'Efectuada,ISR no residentes,1234567-8,"Proveedor, S.A.",F-001,A,99,uuid-1,2026-10-05,2026-10-05,40000.00,15,2200.00,,,,PENDIENTE,SERV,Servicios,USD,1000.5,7.8,2026-10-05,2000.00,1200.00'
+      'Efectuada,ISR no residentes,1234567-8,"Proveedor, S.A.",,F-001,A,99,uuid-1,2026-10-05,2026-10-05,40000.00,15,2200.00,,,,PENDIENTE,SERV,Servicios,USD,1000.5,7.8,2026-10-05,2000.00,1200.00,No'
     );
   });
 

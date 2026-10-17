@@ -5,6 +5,8 @@ import { formatoMoneda, monto } from "./formato";
 
 export const LEYENDA_REFERENCIAL = "Referencial, validar con asesor";
 export const AVISO_CONSTANCIA = "Insumo para declarar; el ERP registra los datos de la constancia, no la emite.";
+export const ROTULO_AJUSTE_RETENCION = "Ajuste de retención pendiente";
+export const AYUDA_AJUSTE_RETENCION = "Nota de crédito registrada después del entero; revise si se retuvo de más.";
 
 export const AJUSTE_VACIO = { activo: false, monto: "", motivo: "" };
 export const RETENCION_VACIA = { activa: null, monto: "", confirma: false, constanciaNumero: "", constanciaFecha: "" };
@@ -85,6 +87,7 @@ export const COLUMNAS_CSV = [
   { clave: "impuesto", titulo: "Impuesto" },
   { clave: "nit", titulo: "NIT" },
   { clave: "nombre", titulo: "Nombre" },
+  { clave: "pais", titulo: "Pais" },
   { clave: "documento", titulo: "Documento" },
   { clave: "dteSerie", titulo: "Serie DTE" },
   { clave: "dteNumero", titulo: "Numero DTE" },
@@ -106,6 +109,7 @@ export const COLUMNAS_CSV = [
   { clave: "tipoCambioFecha", titulo: "Fecha tipo de cambio" },
   { clave: "enteradoGtq", titulo: "Enterado", numerica: true },
   { clave: "saldoPorEnterarGtq", titulo: "Saldo por enterar", numerica: true },
+  { clave: "ajustePendiente", titulo: "AjustePendiente" },
 ];
 
 export function nombreArchivoCsv(anio, mes) {
@@ -119,6 +123,8 @@ export function csvRetenciones(reporte) {
     impuesto: IMPUESTO_CSV[fila.concepto] ?? "",
     documento: fila.documentoNumero,
     tasa: fila.tasaEfectiva ?? fila.tasa,
+    pais: fila.pais ?? "",
+    ajustePendiente: fila.ajustePendiente ? "Sí" : "No",
   }));
   return construirCsv(COLUMNAS_CSV, filas);
 }

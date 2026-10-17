@@ -1,5 +1,6 @@
 import { esMonedaExtranjera, monedaDe, textoTipoCambio } from "../../utils/cambio";
 import { formatoImporte, formatoMoneda, formatoQuetzales } from "../../utils/formato";
+import { AYUDA_AJUSTE_RETENCION, ROTULO_AJUSTE_RETENCION } from "../../utils/retenciones";
 
 const COLUMNAS_BASE = 12;
 const COLUMNAS_RETENCION = 2;
@@ -17,6 +18,18 @@ function RevisionRetencion({ factura, onResolver }) {
   }
   if (factura.revisionRetencion === "RESUELTA") return <small className="nota-fiscal">{`Resuelta: ${factura.revisionMotivo}`}</small>;
   return "—";
+}
+
+function AjusteRetencion({ factura, onResolver }) {
+  if (!factura.ajusteRetencionPendiente) return null;
+  return (
+    <>
+      <span className="badge badge-warning" title={AYUDA_AJUSTE_RETENCION}>{ROTULO_AJUSTE_RETENCION}</span>
+      <button type="button" className="btn btn-outline btn-sm" aria-label={`Resolver ajuste de ${factura.numero}`} onClick={() => onResolver(factura)}>
+        Resolver ajuste
+      </button>
+    </>
+  );
 }
 
 function CeldasMoneda({ factura }) {
@@ -43,7 +56,7 @@ function CeldaSaldo({ factura }) {
   );
 }
 
-function TablaFacturas({ facturas, etiquetaContraparte, campoContraparteNombre, conRetencion = false, onResolverRevision }) {
+function TablaFacturas({ facturas, etiquetaContraparte, campoContraparteNombre, conRetencion = false, onResolverRevision, onResolverAjuste }) {
   const columnas = COLUMNAS_BASE + (conRetencion ? COLUMNAS_RETENCION : 0);
 
   return (
@@ -92,6 +105,7 @@ function TablaFacturas({ facturas, etiquetaContraparte, campoContraparteNombre, 
                   {conRetencion && (
                     <td>
                       <RevisionRetencion factura={f} onResolver={onResolverRevision} />
+                      <AjusteRetencion factura={f} onResolver={onResolverAjuste} />
                     </td>
                   )}
                 </tr>

@@ -68,6 +68,8 @@ public class CxPController : FacturaControllerBase
                     .Sum(r => (decimal?)r.MontoRetenido) ?? 0m,
                 d.RevisionRetencion,
                 d.RevisionMotivo,
+                AjusteRetencionPendiente = _db.AjustesRetencion.Any(a => a.Estado == AjusteRetencion.EstadoPendiente
+                    && (a.NotaCreditoId == d.Id || _db.Retenciones.Any(r => r.Id == a.RetencionId && r.DocumentoCxpId == d.Id))),
                 ProveedorNombre = c.Nombre,
             }).ToListAsync();
 
