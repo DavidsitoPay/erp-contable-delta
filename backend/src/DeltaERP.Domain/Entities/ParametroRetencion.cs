@@ -5,6 +5,7 @@ public class ParametroRetencion
     public const string ConceptoIsrProveedor = "ISR_PROVEEDOR_ROS";
     public const string ConceptoIvaCliente = "IVA_RETENIDO_CLIENTE";
     public const string ConceptoPlazoConstancia = "PLAZO_CONSTANCIA";
+    public const string ConceptoIsrNoResidente = "ISR_NO_RESIDENTE";
     public const string UmbralBase = "BASE";
     public const string UmbralTotal = "TOTAL";
     public const string NotaReferencial = "Referencial, validar con asesor";
@@ -14,7 +15,7 @@ public class ParametroRetencion
     public const string CodigoIvaAgentePrivado = "IVA_CLIENTE_AGENTE_PRIVADO";
     public const string CodigoPlazoConstanciaIsr = "PLAZO_CONSTANCIA_ISR";
 
-    public static readonly string[] ConceptosValidos = { ConceptoIsrProveedor, ConceptoIvaCliente, ConceptoPlazoConstancia };
+    public static readonly string[] ConceptosValidos = { ConceptoIsrProveedor, ConceptoIvaCliente, ConceptoPlazoConstancia, ConceptoIsrNoResidente };
     public static readonly string[] UmbralesValidos = { UmbralBase, UmbralTotal };
 
     public int Id { get; set; }

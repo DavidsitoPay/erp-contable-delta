@@ -143,4 +143,29 @@ public class AsientoTesoreriaMonedaTests
         Assert.Throws<InvalidOperationException>(() => Cruzada(7600m, 7641.57m, perdida: null));
         Assert.Throws<InvalidOperationException>(() => Cruzada(7700m, 7641.57m, ganancia: null));
     }
+
+    [Theory]
+    [InlineData(false, 0, 90)]
+    [InlineData(true, 90, 0)]
+    public void ConstruirLiquidacion_ConRetenciones_BancoNetoYRetencionDelMismoLadoQueElBanco(bool esCobro, int debitoBanco, int creditoBanco)
+    {
+        var asiento = AsientoTesoreriaBuilder.ConstruirLiquidacion(
+            Cab(), esCobro, Banco, 90m, [(Control, 100m)], DiferencialLiquidacion.Ninguno, [(77, 10m)]);
+
+        var lineas = Lineas(asiento);
+        Assert.Equal(3, lineas.Count);
+        Assert.Equal((Banco, (decimal)debitoBanco, (decimal)creditoBanco), lineas[0]);
+        Assert.Equal(esCobro ? (77, 10m, 0m) : (77, 0m, 10m), lineas[2]);
+        Assert.Equal(100m, asiento.Monto);
+    }
+
+    [Fact]
+    public void ConstruirLiquidacion_ConRetencionesYPerdida_CuadraEnGtq()
+    {
+        var asiento = AsientoTesoreriaBuilder.ConstruirLiquidacion(
+            Cab(), false, Banco, 2618m, [(Control, 3040m)], new DiferencialLiquidacion(null, Perdida, 0m, 40m), [(77, 462m)]);
+
+        Assert.Equal(3080m, asiento.Lineas.Sum(l => l.Debito));
+        Assert.Equal(3080m, asiento.Lineas.Sum(l => l.Credito));
+    }
 }

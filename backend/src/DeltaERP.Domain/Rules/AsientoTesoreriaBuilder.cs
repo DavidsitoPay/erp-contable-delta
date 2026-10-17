@@ -47,22 +47,30 @@ public static class AsientoTesoreriaBuilder
         return asiento;
     }
 
-    // RN-01: banco por el neto + retenciones = total de las contrapartidas.
-    public static AsientoContable ConstruirCobroConRetenciones(
-        string prefijo, DateOnly fecha, int periodoId, int usuarioId, int cuentaBancoId,
+    // RN-01: banco por el neto + retenciones (mismo lado que el banco) = total de las contrapartidas.
+    public static AsientoContable ConstruirConRetenciones(
+        CabeceraAsiento cabecera, string tipoMovimiento, int cuentaBancoId,
         IReadOnlyList<(int CuentaId, decimal Monto)> contrapartidas,
         IReadOnlyList<(int CuentaId, decimal Monto)> retenciones)
     {
-        var asiento = Construir(prefijo, fecha, periodoId, usuarioId, MovimientoTesoreria.TipoIngreso, cuentaBancoId, contrapartidas);
+        var asiento = Construir(cabecera.Prefijo, cabecera.Fecha, cabecera.PeriodoId, cabecera.UsuarioId, tipoMovimiento, cuentaBancoId, contrapartidas);
         var retenido = retenciones.Sum(r => r.Monto);
         if (retenido >= asiento.Monto)
         {
-            throw new InvalidOperationException("Las retenciones deben ser menores al total cobrado.");
+            throw new InvalidOperationException("Las retenciones deben ser menores al total del movimiento.");
         }
-        asiento.Lineas[0].Debito -= retenido;
+        var bancoEsDebito = tipoMovimiento == MovimientoTesoreria.TipoIngreso;
+        if (bancoEsDebito)
+        {
+            asiento.Lineas[0].Debito -= retenido;
+        }
+        else
+        {
+            asiento.Lineas[0].Credito -= retenido;
+        }
         foreach (var (cuentaId, monto) in retenciones)
         {
-            asiento.Lineas.Add(new LineaAsiento { CuentaId = cuentaId, Debito = monto });
+            asiento.Lineas.Add(NuevaLinea(cuentaId, monto, bancoEsDebito));
         }
         return asiento;
     }
@@ -70,7 +78,8 @@ public static class AsientoTesoreriaBuilder
     // RN-01 y RN-26: Σ libros + diferencial = Σ valor; la ganancia va al crédito y la pérdida al débito.
     public static AsientoContable ConstruirLiquidacion(
         CabeceraAsiento cabecera, bool esCobro, int cuentaBancoId, decimal montoBancoGtq,
-        IReadOnlyList<(int CuentaId, decimal Monto)> libros, DiferencialLiquidacion diferencial)
+        IReadOnlyList<(int CuentaId, decimal Monto)> libros, DiferencialLiquidacion diferencial,
+        IReadOnlyList<(int CuentaId, decimal Monto)>? retenciones = null)
     {
         var asiento = NuevoAsiento(cabecera);
         asiento.Lineas.Add(NuevaLinea(cuentaBancoId, montoBancoGtq, esCobro));
@@ -85,6 +94,10 @@ public static class AsientoTesoreriaBuilder
         if (diferencial.Perdida > 0)
         {
             asiento.Lineas.Add(NuevaLinea(diferencial.CuentaPerdidaId ?? throw CuentaFaltante("pérdida"), diferencial.Perdida, true));
+        }
+        foreach (var (cuentaId, monto) in retenciones ?? [])
+        {
+            asiento.Lineas.Add(NuevaLinea(cuentaId, monto, esCobro));
         }
         return Cerrar(asiento);
     }

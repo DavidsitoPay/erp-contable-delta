@@ -50,4 +50,36 @@ describe("CamposFiscalesContraparte", () => {
     expect(onCambio).toHaveBeenNthCalledWith(1, { ...form, regimenIsr: "SIMPLIFICADO" });
     expect(onCambio).toHaveBeenNthCalledWith(2, { ...form, esResidente: false });
   });
+
+  it("el proveedor no residente elige tipo de renta art. 104 con su tasa y es obligatorio fuera de EXENTO", () => {
+    const tiposRenta = [{ id: 7, codigo: "NR_SERVICIOS", nombre: "Servicios", tasaBase: 15 }];
+    const { rerender } = render(<CamposFiscalesContraparte form={{ ...formularioContraparteVacio("Proveedor"), esResidente: false }} onCambio={vi.fn()} tiposRenta={tiposRenta} />);
+
+    expect(screen.getByLabelText("Tipo de renta (art. 104)")).toBeRequired();
+    expect(screen.getByRole("option", { name: "Servicios (15 %)" })).toHaveValue("NR_SERVICIOS");
+
+    rerender(<CamposFiscalesContraparte form={{ ...formularioContraparteVacio("Proveedor"), esResidente: false, regimenIsr: "EXENTO", isrFundamento: "Res. 1" }} onCambio={vi.fn()} tiposRenta={tiposRenta} />);
+
+    expect(screen.getByLabelText("Tipo de renta (art. 104)")).not.toBeRequired();
+  });
+
+  it("el tipo de renta no aparece para proveedores residentes ni para clientes", () => {
+    const { rerender } = render(<CamposFiscalesContraparte form={formularioContraparteVacio("Proveedor")} onCambio={vi.fn()} />);
+
+    expect(screen.queryByLabelText("Tipo de renta (art. 104)")).toBeNull();
+
+    rerender(<CamposFiscalesContraparte form={{ ...formularioContraparteVacio("Cliente"), esResidente: false }} onCambio={vi.fn()} />);
+
+    expect(screen.queryByLabelText("Tipo de renta (art. 104)")).toBeNull();
+  });
+
+  it("al volver a marcar residente limpia el tipo de renta elegido", () => {
+    const form = { ...formularioContraparteVacio("Proveedor"), esResidente: false, tipoRentaNrCodigo: "NR_SERVICIOS" };
+    const onCambio = vi.fn();
+    render(<CamposFiscalesContraparte form={form} onCambio={onCambio} tiposRenta={[]} />);
+
+    fireEvent.click(screen.getByLabelText("Residente en Guatemala"));
+
+    expect(onCambio).toHaveBeenCalledWith({ ...form, esResidente: true, tipoRentaNrCodigo: "" });
+  });
 });

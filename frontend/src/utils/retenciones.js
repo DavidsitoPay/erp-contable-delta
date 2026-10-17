@@ -9,7 +9,7 @@ export const AVISO_CONSTANCIA = "Insumo para declarar; el ERP registra los datos
 export const AJUSTE_VACIO = { activo: false, monto: "", motivo: "" };
 export const RETENCION_VACIA = { activa: null, monto: "", confirma: false, constanciaNumero: "", constanciaFecha: "" };
 
-const IMPUESTO_CSV = { ISR_ROS: "ISR", IVA_CLIENTE: "IVA" };
+const IMPUESTO_CSV = { ISR_ROS: "ISR", IVA_CLIENTE: "IVA", ISR_NORES: "ISR no residentes" };
 
 export function descripcionEscala({ tasaBase, tramoLimite, tasaExcedente }) {
   if (tramoLimite === null || tramoLimite === undefined) return `${tasaBase} %`;
@@ -98,6 +98,14 @@ export const COLUMNAS_CSV = [
   { clave: "constanciaFecha", titulo: "Fecha constancia" },
   { clave: "formulario", titulo: "Formulario" },
   { clave: "estadoConstancia", titulo: "Estado constancia" },
+  { clave: "tipoRentaCodigo", titulo: "Tipo de renta (codigo)" },
+  { clave: "tipoRentaNombre", titulo: "Tipo de renta" },
+  { clave: "monedaCodigo", titulo: "Moneda" },
+  { clave: "montoOrigen", titulo: "Monto origen" },
+  { clave: "tipoCambio", titulo: "Tipo de cambio" },
+  { clave: "tipoCambioFecha", titulo: "Fecha tipo de cambio" },
+  { clave: "enteradoGtq", titulo: "Enterado", numerica: true },
+  { clave: "saldoPorEnterarGtq", titulo: "Saldo por enterar", numerica: true },
 ];
 
 export function nombreArchivoCsv(anio, mes) {
@@ -133,3 +141,11 @@ export function payloadConstancia(form) {
     periodoDeclarado: form.periodoDeclarado ? `${form.periodoDeclarado}-01` : null,
   };
 }
+
+export const tipoRentaInicial = (proveedor) => proveedor?.tipoRentaNrCodigo ?? "";
+
+export const aplicacionesConTipoRenta = (aplicaciones, tipos, porDefecto) =>
+  aplicaciones.map((a) => {
+    const codigo = tipos[a.documentoId] || porDefecto;
+    return codigo ? { ...a, tipoRentaCodigo: codigo } : a;
+  });

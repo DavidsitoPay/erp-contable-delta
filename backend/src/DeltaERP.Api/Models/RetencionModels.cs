@@ -9,6 +9,24 @@ public sealed record SolicitudRetencionPrevia(
     [property: JsonRequired] decimal MontoBase,
     [property: JsonRequired] decimal MontoTotal);
 
+public sealed record SolicitudRetencionPreviaPago(
+    [property: JsonRequired] int ProveedorId,
+    [property: JsonRequired] DateOnly Fecha,
+    int? CuentaBancariaId,
+    IReadOnlyList<AplicacionRetencionPrevia> Aplicaciones);
+
+public sealed record AplicacionRetencionPrevia(int DocumentoId, decimal MontoAplicado, decimal? ValorEfectivoGtq, string? TipoRentaCodigo);
+
+public sealed record LineaRetencionPrevia(
+    int DocumentoId, string TipoRentaCodigo, string TipoRentaNombre, decimal Tasa, int ParametroId, string MonedaCodigo, decimal MontoOrigen,
+    decimal TipoCambio, DateOnly TipoCambioFecha, decimal BaseGtq, decimal RetencionGtq);
+
+public sealed record RetencionPreviaPagoRespuesta(
+    bool Aplica, string? MotivoNoAplica, IReadOnlyList<LineaRetencionPrevia> Lineas, decimal TotalBaseGtq, decimal TotalRetencionGtq,
+    decimal? NetoBancoGtq, IReadOnlyList<string> Advertencias);
+
+public sealed record RetencionPagoRespuesta(int RetencionId, int DocumentoId, decimal Monto);
+
 public sealed record SolicitudMotivo(string? Motivo);
 
 public sealed record SolicitudConstancia(
@@ -150,9 +168,19 @@ public sealed record FilaReporteRetencion(
     DateOnly? ConstanciaFecha,
     string? Formulario,
     string EstadoConstancia,
-    bool PeriodoContableDistinto);
+    bool PeriodoContableDistinto,
+    string? TipoRentaCodigo,
+    string? TipoRentaNombre,
+    string? MonedaCodigo,
+    decimal? MontoOrigen,
+    decimal? TipoCambio,
+    DateOnly? TipoCambioFecha,
+    decimal EnteradoGtq,
+    decimal SaldoPorEnterarGtq);
 
 public sealed record TotalReporteRetencion(string Sentido, string Concepto, int Cantidad, decimal Base, decimal Monto, int SinConstancia);
+
+public sealed record TotalTipoRentaReporte(string TipoRentaCodigo, string TipoRentaNombre, int Cantidad, decimal Base, decimal Monto);
 
 public sealed record ConciliacionReporteRetencion(
     string Concepto,
@@ -167,4 +195,5 @@ public sealed record ReporteRetencionRespuesta(
     int Mes,
     IReadOnlyList<FilaReporteRetencion> Filas,
     IReadOnlyList<TotalReporteRetencion> Totales,
-    IReadOnlyList<ConciliacionReporteRetencion> Conciliacion);
+    IReadOnlyList<ConciliacionReporteRetencion> Conciliacion,
+    IReadOnlyList<TotalTipoRentaReporte> TotalesTipoRenta);

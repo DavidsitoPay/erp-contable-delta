@@ -1,6 +1,7 @@
 import { formatoMoneda, monto } from "../../utils/formato";
 import { LEYENDA_REFERENCIAL, ajusteValido, descripcionEscala, netoAPagar, permiteAjuste } from "../../utils/retenciones";
 import CampoFormulario from "../CampoFormulario";
+import MarcoPanelRetencion from "./MarcoPanelRetencion";
 
 function DetallePrevia({ previa, total, ajusteActivo, ajuste }) {
   const retencion = ajusteActivo ? monto(ajuste.monto) : previa.retencion;
@@ -59,17 +60,13 @@ function CamposAjuste({ ajuste, total, onAjuste }) {
 }
 
 function PanelRetencionIsr({ estado, total, ajuste, onAjuste }) {
-  const { previa, error, cargando } = estado;
-  if (!previa && !error && !cargando) return null;
+  const { previa } = estado;
 
   return (
-    <fieldset className="dte-datos">
-      <legend>Retención de ISR</legend>
-      {cargando && <p>Calculando retención...</p>}
-      {error && <p className="error-chip">{error}</p>}
+    <MarcoPanelRetencion titulo="Retención de ISR" estado={estado}>
       {previa && <DetallePrevia previa={previa} total={total} ajusteActivo={ajuste.activo && permiteAjuste(previa)} ajuste={ajuste} />}
       {permiteAjuste(previa) && <CamposAjuste ajuste={ajuste} total={total} onAjuste={onAjuste} />}
-    </fieldset>
+    </MarcoPanelRetencion>
   );
 }
 

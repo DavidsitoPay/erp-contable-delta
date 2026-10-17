@@ -46,6 +46,25 @@ public class ParametrosRetencionControllerTests
     private static async Task<JsonElement> ListarAsync(HttpClient client, string consulta) =>
         await client.GetFromJsonAsync<JsonElement>($"{Ruta}{consulta}");
 
+    [Theory]
+    [InlineData(false, HttpStatusCode.Created)]
+    [InlineData(true, HttpStatusCode.BadRequest)]
+    public async Task Crear_IsrNoResidente_SoloAceptaTasaSinTramo(bool conTramo, HttpStatusCode esperado)
+    {
+        var client = await ClienteAsync(Roles.Administrador);
+        var cuerpo = Cuerpo(CodigoNuevo());
+        cuerpo["concepto"] = "ISR_NO_RESIDENTE";
+        if (!conTramo)
+        {
+            cuerpo["tramoLimite"] = null;
+            cuerpo["tasaExcedente"] = null;
+        }
+
+        var response = await client.PostAsJsonAsync(Ruta, cuerpo);
+
+        Assert.Equal(esperado, response.StatusCode);
+    }
+
     [Fact]
     public async Task Crear_ComoAdministrador_Responde201AuditaYSeListaConLaNotaReferencial()
     {

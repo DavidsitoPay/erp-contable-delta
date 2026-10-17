@@ -4,7 +4,7 @@ import OpcionesSelect from "../OpcionesSelect";
 
 const AYUDA_SIN_REGIMEN = "Sin régimen definido, las facturas se registran sin retención y quedan marcadas para revisión.";
 
-function CamposFiscalesContraparte({ form, onCambio }) {
+function CamposFiscalesContraparte({ form, onCambio, tiposRenta = [] }) {
   const esProveedor = form.tipo === "Proveedor";
   const cambiar = (campo) => (e) => onCambio({ ...form, [campo]: e.target.value });
 
@@ -22,9 +22,17 @@ function CamposFiscalesContraparte({ form, onCambio }) {
         <input className="input" placeholder="Fundamento o número de resolución" aria-label="Fundamento o número de resolución" maxLength={200} value={form.isrFundamento} onChange={cambiar("isrFundamento")} required />
       )}
       <label>
-        <input type="checkbox" checked={form.esResidente} onChange={(e) => onCambio({ ...form, esResidente: e.target.checked })} />
+        <input type="checkbox" checked={form.esResidente} onChange={(e) => onCambio({ ...form, esResidente: e.target.checked, tipoRentaNrCodigo: "" })} />
         <span>Residente en Guatemala</span>
       </label>
+      {esProveedor && !form.esResidente && (
+        <select className="select" aria-label="Tipo de renta (art. 104)" value={form.tipoRentaNrCodigo} onChange={cambiar("tipoRentaNrCodigo")} required={form.regimenIsr !== "EXENTO"}>
+          <option value="">Selecciona tipo de renta</option>
+          {tiposRenta.map((t) => (
+            <option key={t.id} value={t.codigo}>{`${t.nombre} (${t.tasaBase} %)`}</option>
+          ))}
+        </select>
+      )}
       {!esProveedor && (
         <label>
           <input type="checkbox" checked={form.esAgenteRetencionIva} onChange={(e) => onCambio({ ...form, esAgenteRetencionIva: e.target.checked })} />

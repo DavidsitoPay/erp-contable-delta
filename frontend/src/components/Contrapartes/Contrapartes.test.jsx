@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contrapartesApi } from "../../services/api";
 import Contrapartes from "./Contrapartes";
 
-vi.mock("../../services/api", () => ({ contrapartesApi: { listar: vi.fn(), crear: vi.fn() } }));
+vi.mock("../../services/api", () => ({
+  contrapartesApi: { listar: vi.fn(), crear: vi.fn() },
+  parametrosRetencionApi: { listar: vi.fn().mockResolvedValue({ data: [] }) },
+}));
 
 const NIT_VALIDO = "1234567-9";
 const clientes = [
@@ -94,6 +97,7 @@ describe("Contrapartes", () => {
       esAgenteRetencionIva: false,
       isrFundamento: null,
       tipoAgenteIva: null,
+      tipoRentaNrCodigo: null,
     });
     await waitFor(() => expect(contrapartesApi.listar).toHaveBeenCalledTimes(2));
   });
@@ -140,6 +144,7 @@ describe("Contrapartes", () => {
         esAgenteRetencionIva: false,
         isrFundamento: null,
         tipoAgenteIva: null,
+        tipoRentaNrCodigo: null,
       })
     );
   });

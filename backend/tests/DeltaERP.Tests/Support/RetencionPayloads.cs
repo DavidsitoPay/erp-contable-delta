@@ -72,6 +72,14 @@ public static class RetencionPayloads
         valorEfectivoGtq,
     };
 
+    public static object AplicacionNr(int documentoId, decimal montoAplicado, decimal? valorEfectivoGtq = null, string? tipoRentaCodigo = null) => new
+    {
+        documentoId,
+        montoAplicado,
+        valorEfectivoGtq,
+        tipoRentaCodigo,
+    };
+
     public static object PagoProveedor(int proveedorId, int cuentaBancariaId, string fecha, params object[] aplicaciones) => new
     {
         proveedorId,

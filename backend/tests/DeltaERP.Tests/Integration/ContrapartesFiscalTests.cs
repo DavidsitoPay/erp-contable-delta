@@ -18,7 +18,8 @@ public class ContrapartesFiscalTests
         _pg = pg;
     }
 
-    private static Dictionary<string, object?> Cuerpo(string tipo, string? nit, string regimenIva = "GENERAL", bool esResidente = true) => new()
+    private static Dictionary<string, object?> Cuerpo(
+        string tipo, string? nit, string regimenIva = "GENERAL", bool esResidente = true, string? tipoRentaNr = null) => new()
     {
         ["tipo"] = tipo,
         ["nombre"] = $"{tipo} fiscal {TestData.Sufijo()}",
@@ -28,6 +29,7 @@ public class ContrapartesFiscalTests
         ["esResidente"] = esResidente,
         ["esAgenteRetencionIva"] = true,
         ["tipoAgenteIva"] = "AGENTE_PRIVADO",
+        ["tipoRentaNrCodigo"] = tipoRentaNr,
     };
 
     private async Task<HttpClient> ClienteAsync() => _pg.CreateApiClient(await _pg.Data.CrearUsuarioAsync());
@@ -37,7 +39,7 @@ public class ContrapartesFiscalTests
     {
         var client = await ClienteAsync();
 
-        var response = await client.PostAsJsonAsync(Ruta, Cuerpo("Proveedor", " 12345679 ", "PEQUENO_CONTRIBUYENTE", esResidente: false));
+        var response = await client.PostAsJsonAsync(Ruta, Cuerpo("Proveedor", " 12345679 ", "PEQUENO_CONTRIBUYENTE", esResidente: false, tipoRentaNr: "NR_REGALIAS"));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var id = (await response.LeerJsonAsync()).GetProperty("id").GetInt32();
@@ -48,6 +50,57 @@ public class ContrapartesFiscalTests
             guardada.GetProperty("regimenIsr").GetString(),
             guardada.GetProperty("esResidente").GetBoolean(),
             guardada.GetProperty("esAgenteRetencionIva").GetBoolean()));
+    }
+
+    [Theory]
+    [InlineData(null, "Un proveedor no residente exige tipo de renta")]
+    [InlineData("NR_NO_EXISTE", "El tipo de renta indicado no existe")]
+    public async Task Crear_ProveedorNoResidenteConTipoDeRentaInvalido_Responde400(string? tipoRenta, string fragmento)
+    {
+        var client = await ClienteAsync();
+
+        var response = await client.PostAsJsonAsync(Ruta, Cuerpo("Proveedor", "1234567-9", esResidente: false, tipoRentaNr: tipoRenta));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(fragmento, await response.LeerErrorAsync());
+    }
+
+    [Theory]
+    [InlineData(" nr_regalias ", false, "NR_REGALIAS")]
+    [InlineData("NR_NO_EXISTE", true, null)]
+    public async Task Crear_TipoDeRentaNrSeNormalizaOSeDescartaSegunResidencia(string tipoRenta, bool esResidente, string? codigoGuardado)
+    {
+        var client = await ClienteAsync();
+
+        var response = await client.PostAsJsonAsync(Ruta, Cuerpo("Proveedor", "1234567-9", esResidente: esResidente, tipoRentaNr: tipoRenta));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var id = (await response.LeerJsonAsync()).GetProperty("id").GetInt32();
+        var guardada = await client.GetFromJsonAsync<JsonElement>($"{Ruta}/{id}");
+        Assert.Equal(codigoGuardado, guardada.GetProperty("tipoRentaNrCodigo").GetString());
+    }
+
+    [Fact]
+    public async Task Crear_ResidenteConTipoDeRentaNr_NoGuardaElCodigo()
+    {
+        var client = await ClienteAsync();
+
+        var response = await client.PostAsJsonAsync(Ruta, Cuerpo("Proveedor", "1234567-9", esResidente: true, tipoRentaNr: "NR_REGALIAS"));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var id = (await response.LeerJsonAsync()).GetProperty("id").GetInt32();
+        Assert.Equal(1L, await _pg.Data.ScalarAsync<long>("SELECT COUNT(*) FROM contraparte WHERE id = $1 AND tipo_renta_nr_codigo IS NULL", id));
+    }
+
+    [Fact]
+    public async Task Crear_NoResidenteExentoConFundamentoSinTipoDeRenta_Responde201()
+    {
+        var client = await ClienteAsync();
+
+        var response = await client.PostAsJsonAsync(
+            Ruta, Cuerpo("Proveedor", "1234567-9", esResidente: false).Con("regimenIsr", "EXENTO").Con("isrFundamento", "Art. 8"));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
 
     [Fact]

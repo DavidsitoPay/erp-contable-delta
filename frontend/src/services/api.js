@@ -78,6 +78,7 @@ export const cxpApi = {
   listarPagos: () => api.get("/cxp/pagos"),
   crearPago: (pago) => api.post("/cxp/pagos", pago),
   retencionPrevia: (cuerpo) => api.post("/cxp/facturas/retencion-previa", cuerpo),
+  retencionPreviaPago: (cuerpo) => api.post("/cxp/pagos/retencion-previa", cuerpo),
   resolverRevisionRetencion: (id, motivo) => api.post(`/cxp/facturas/${idRuta(id)}/revision-retencion`, { motivo }),
 };
 

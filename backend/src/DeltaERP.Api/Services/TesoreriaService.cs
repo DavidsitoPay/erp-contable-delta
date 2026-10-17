@@ -20,7 +20,8 @@ public sealed record PagoBancario(
     int? TipoCambioId,
     decimal TipoCambio,
     DiferencialLiquidacion Diferencial,
-    bool UsaLiquidacion)
+    bool UsaLiquidacion,
+    decimal RetenidoOriginal = 0m)
 {
     public decimal Neto => Contrapartidas.Sum(c => c.Monto) - Retenciones.Sum(r => r.Monto);
 
@@ -28,7 +29,7 @@ public sealed record PagoBancario(
 
     public decimal TotalValorGtq => Aplicaciones.Sum(a => a.ValorGtq);
 
-    public decimal MontoNetoDocumento => UsaLiquidacion ? TotalAplicado : Neto;
+    public decimal MontoNetoDocumento => UsaLiquidacion ? TotalAplicado - RetenidoOriginal : Neto;
 
     public decimal? TipoCambioPago => TipoCambioId is null ? null : TipoCambio;
 
@@ -349,7 +350,8 @@ public class TesoreriaService
         DateOnly fecha,
         IReadOnlyCollection<DocumentoPagable> documentos,
         IReadOnlyList<AplicacionEntrada> entradas,
-        IReadOnlyList<(int CuentaId, decimal Monto)>? retenciones = null)
+        IReadOnlyList<(int CuentaId, decimal Monto)>? retenciones = null,
+        decimal retenidoOriginal = 0m)
     {
         if (cuentaBancariaId is null)
         {
@@ -387,13 +389,13 @@ public class TesoreriaService
         {
             return (null, errorLiquidacion);
         }
-        if (TesoreriaRules.ValidarCobroNeto(liquidacion.Aplicaciones.Sum(a => a.LibrosGtq), retenido.Sum(r => r.Monto)) is { } errorNeto)
+        if (TesoreriaRules.ValidarNetoPositivo(liquidacion.Aplicaciones.Sum(a => a.ValorGtq), retenido.Sum(r => r.Monto)) is { } errorNeto)
         {
             return (null, ErrorValidacion.Solicitud(errorNeto));
         }
         var contrapartidas = TesoreriaRules.AgruparPorCuentaControl(
             liquidacion.Aplicaciones.Select(l => (l.DocumentoId, Monto: l.LibrosGtq)).ToList(), controles);
-        return (ConstruirPago(cuenta!, periodoId, contrapartidas, retenido, liquidacion, monedas), null);
+        return (ConstruirPago(cuenta!, periodoId, contrapartidas, retenido, liquidacion, monedas, retenidoOriginal), null);
     }
 
     private async Task<(IReadOnlyDictionary<int, int> Controles, string? Error)> ResolverControlesAsync(
@@ -483,7 +485,7 @@ public class TesoreriaService
 
     private static PagoBancario ConstruirPago(
         CuentaBancaria cuenta, int periodoId, List<(int CuentaId, decimal Monto)> contrapartidas,
-        IReadOnlyList<(int CuentaId, decimal Monto)> retenido, LiquidacionPago liquidacion, MonedasPago monedas)
+        IReadOnlyList<(int CuentaId, decimal Monto)> retenido, LiquidacionPago liquidacion, MonedasPago monedas, decimal retenidoOriginal)
     {
         var usaLiquidacion = !monedas.Cuenta.EsFuncional || monedas.Documentos.Any(d => !d.EsFuncional);
         var neto = contrapartidas.Sum(c => c.Monto) - retenido.Sum(r => r.Monto);
@@ -492,14 +494,15 @@ public class TesoreriaService
         var montoBanco = neto;
         if (usaLiquidacion)
         {
-            montoBanco = totalValor;
-            montoCuenta = liquidacion.CambioCuenta is null ? totalValor : liquidacion.Aplicaciones.Sum(a => a.MontoOriginal);
+            var retenidoGtq = retenido.Sum(r => r.Monto);
+            montoBanco = totalValor - retenidoGtq;
+            montoCuenta = liquidacion.CambioCuenta is null ? montoBanco : liquidacion.Aplicaciones.Sum(a => a.MontoOriginal) - retenidoOriginal;
         }
         var monedaDocumento = monedas.Documentos[0];
         return new PagoBancario(
             cuenta, periodoId, contrapartidas, retenido, liquidacion.Aplicaciones, monedaDocumento.MonedaId, monedaDocumento.MonedaCodigo,
             montoCuenta, montoBanco, liquidacion.CambioCuenta?.TipoCambioId, liquidacion.CambioCuenta?.Tasa ?? 1m,
-            liquidacion.Diferencial, usaLiquidacion);
+            liquidacion.Diferencial, usaLiquidacion, retenidoOriginal);
     }
 
     // El orden de pago.Aplicaciones coincide con el de las aplicaciones del recibo o pago.
@@ -554,12 +557,10 @@ public class TesoreriaService
         {
             return AsientoTesoreriaBuilder.ConstruirLiquidacion(
                 new CabeceraAsiento(prefijo, fecha, pago.PeriodoId, usuarioId), esCobro, pago.Cuenta.CuentaContableId, pago.MontoBancoGtq,
-                pago.Contrapartidas, pago.Diferencial);
+                pago.Contrapartidas, pago.Diferencial, pago.Retenciones);
         }
-        return pago.Retenciones.Count == 0
-            ? AsientoTesoreriaBuilder.Construir(prefijo, fecha, pago.PeriodoId, usuarioId, tipo, pago.Cuenta.CuentaContableId, pago.Contrapartidas)
-            : AsientoTesoreriaBuilder.ConstruirCobroConRetenciones(
-                prefijo, fecha, pago.PeriodoId, usuarioId, pago.Cuenta.CuentaContableId, pago.Contrapartidas, pago.Retenciones);
+        return AsientoTesoreriaBuilder.ConstruirConRetenciones(
+            new CabeceraAsiento(prefijo, fecha, pago.PeriodoId, usuarioId), tipo, pago.Cuenta.CuentaContableId, pago.Contrapartidas, pago.Retenciones);
     }
 
     // La línea de control es la única del lado de control (débito en CxC, crédito en CxP) salvo las retenciones de la factura.

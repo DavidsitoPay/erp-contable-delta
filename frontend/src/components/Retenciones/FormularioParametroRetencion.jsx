@@ -1,5 +1,5 @@
 import { BASES_UMBRAL, CONCEPTOS_PARAMETRO } from "../../utils/etiquetasFiscales";
-import { admiteTramo, esPlazo } from "../../utils/parametrosRetencion";
+import { admiteTramo, esNoResidente, esPlazo } from "../../utils/parametrosRetencion";
 import { FormularioCatalogo } from "../Catalogo/CatalogoCrud";
 import CampoFormulario from "../CampoFormulario";
 import CamposVigencia from "../CamposVigencia";
@@ -23,12 +23,16 @@ function CamposTasa({ form, cambiar }) {
           <CampoNumerico id="par-excedente" etiqueta="Tasa sobre el excedente (%)" valor={form.tasaExcedente} onChange={cambiar("tasaExcedente")} requerido={form.tramoLimite !== ""} min="0" max="100" step="0.0001" />
         </>
       )}
-      <CampoNumerico id="par-umbral" etiqueta="Umbral mínimo" valor={form.umbralMinimo} onChange={cambiar("umbralMinimo")} min="0" step="0.01" />
-      <CampoFormulario id="par-sobre" etiqueta="Umbral sobre">
-        <select id="par-sobre" className="select" value={form.umbralSobre} onChange={cambiar("umbralSobre")}>
-          <OpcionesSelect opciones={BASES_UMBRAL} />
-        </select>
-      </CampoFormulario>
+      {!esNoResidente(form) && (
+        <>
+          <CampoNumerico id="par-umbral" etiqueta="Umbral mínimo" valor={form.umbralMinimo} onChange={cambiar("umbralMinimo")} min="0" step="0.01" />
+          <CampoFormulario id="par-sobre" etiqueta="Umbral sobre">
+            <select id="par-sobre" className="select" value={form.umbralSobre} onChange={cambiar("umbralSobre")}>
+              <OpcionesSelect opciones={BASES_UMBRAL} />
+            </select>
+          </CampoFormulario>
+        </>
+      )}
     </>
   );
 }

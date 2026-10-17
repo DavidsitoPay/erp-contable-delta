@@ -19,6 +19,7 @@ const cuentas = [
   { id: 16, codigo: "2100-1", nombre: "Pasivo hijo", tipo: "Pasivo", naturaleza: "Acreedora", activa: true, cuentaPadreId: 15 },
   { id: 17, codigo: "2107", nombre: "ISR retenido", tipo: "Pasivo", naturaleza: "Acreedora", activa: true, cuentaPadreId: null },
   { id: 18, codigo: "1106", nombre: "IVA retenido por clientes", tipo: "Activo", naturaleza: "Deudora", activa: true, cuentaPadreId: null },
+  { id: 19, codigo: "2108", nombre: "ISR retenido a no residentes", tipo: "Pasivo", naturaleza: "Acreedora", activa: true, cuentaPadreId: null },
   { id: 21, codigo: "4201", nombre: "Ganancia cambiaria realizada", tipo: "Ingreso", naturaleza: "Acreedora", activa: true, cuentaPadreId: null },
   { id: 22, codigo: "5201", nombre: "Pérdida cambiaria realizada", tipo: "Gasto", naturaleza: "Deudora", activa: true, cuentaPadreId: null },
   { id: 23, codigo: "4202", nombre: "Ganancia por revaluación", tipo: "Ingreso", naturaleza: "Acreedora", activa: true, cuentaPadreId: null },
@@ -36,6 +37,7 @@ const configCompleta = {
   cuentaIvaDebitoId: 11,
   cuentaIvaCreditoId: 12,
   cuentaIsrRetenidoPagarId: 17,
+  cuentaIsrNrRetenidoPagarId: 19,
   cuentaIvaRetenidoClientesId: 18,
   cuentaDifGananciaRealizadaId: 21,
   cuentaDifPerdidaRealizadaId: 22,
@@ -49,6 +51,7 @@ const configSinCuentas = {
   cuentaIvaDebitoId: null,
   cuentaIvaCreditoId: null,
   cuentaIsrRetenidoPagarId: null,
+  cuentaIsrNrRetenidoPagarId: null,
   cuentaIvaRetenidoClientesId: null,
   cuentaDifGananciaRealizadaId: null,
   cuentaDifPerdidaRealizadaId: null,
@@ -141,6 +144,7 @@ describe("ConfiguracionFiscal", () => {
         cuentaIvaDebitoId: 11,
         cuentaIvaCreditoId: 12,
         cuentaIsrRetenidoPagarId: null,
+        cuentaIsrNrRetenidoPagarId: null,
         cuentaIvaRetenidoClientesId: null,
         cuentaDifGananciaRealizadaId: null,
         cuentaDifPerdidaRealizadaId: null,
@@ -171,6 +175,7 @@ describe("ConfiguracionFiscal", () => {
         cuentaIvaDebitoId: null,
         cuentaIvaCreditoId: null,
         cuentaIsrRetenidoPagarId: null,
+        cuentaIsrNrRetenidoPagarId: null,
         cuentaIvaRetenidoClientesId: null,
         cuentaDifGananciaRealizadaId: null,
         cuentaDifPerdidaRealizadaId: null,
@@ -295,6 +300,37 @@ describe("ConfiguracionFiscal", () => {
       expect(configuracionFiscalApi.actualizar).toHaveBeenCalledWith(
         expect.objectContaining({ cuentaDifGananciaRealizadaId: 21, cuentaDifPerdidaRealizadaId: 22, cuentaRevalGananciaId: 23, cuentaRevalPerdidaId: 24 })
       )
+    );
+  });
+
+  it("avisa de la cuenta de ISR a no residentes cuando falta y no cuando está configurada", async () => {
+    await renderCon(configSinCuentas);
+    expect(screen.getByText(/Falta configurar la cuenta de ISR a no residentes/)).toBeInTheDocument();
+  });
+
+  it("no avisa de la cuenta de ISR a no residentes con la cuenta configurada", async () => {
+    await renderCon(configCompleta);
+    expect(screen.queryByText(/Falta configurar la cuenta de ISR a no residentes/)).toBeNull();
+    expect(screen.getByLabelText("Cuenta de ISR retenido a no residentes por pagar (Pasivo)")).toHaveValue("19");
+  });
+
+  it("ofrece para ISR a no residentes solo cuentas hoja activas de pasivo", async () => {
+    await renderCon(configSinCuentas);
+
+    const isrNr = screen.getByLabelText("Cuenta de ISR retenido a no residentes por pagar (Pasivo)");
+    expect(within(isrNr).getByRole("option", { name: "2108 - ISR retenido a no residentes" })).toBeInTheDocument();
+    expect(within(isrNr).queryByRole("option", { name: "1106 - IVA retenido por clientes" })).toBeNull();
+  });
+
+  it("guarda la cuenta de ISR a no residentes elegida", async () => {
+    configuracionFiscalApi.actualizar.mockResolvedValue({ data: configCompleta });
+    await renderCon(configSinCuentas);
+
+    fireEvent.change(screen.getByLabelText("Cuenta de ISR retenido a no residentes por pagar (Pasivo)"), { target: { value: "19" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar configuración" }));
+
+    await waitFor(() =>
+      expect(configuracionFiscalApi.actualizar).toHaveBeenCalledWith(expect.objectContaining({ cuentaIsrNrRetenidoPagarId: 19 }))
     );
   });
 });

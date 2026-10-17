@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contraparteCompleta, formularioContraparteVacio, payloadContraparte, requiereFundamento, requiereTipoAgente } from "./formularioContraparte";
+import { contraparteCompleta, formularioContraparteVacio, payloadContraparte, requiereFundamento, requiereTipoAgente, requiereTipoRenta } from "./formularioContraparte";
 
 describe("formularioContraparte", () => {
   it("el proveedor inicia con régimen de ISR No definido y el cliente conserva UTILIDADES", () => {
@@ -43,5 +43,30 @@ describe("formularioContraparte", () => {
     expect(payloadContraparte(cliente)).toMatchObject({ nit: "CF", isrFundamento: null, tipoAgenteIva: "SECTOR_PUBLICO" });
     expect(payloadContraparte(formularioContraparteVacio("Cliente"))).toMatchObject({ isrFundamento: null, tipoAgenteIva: null });
     expect(payloadContraparte({ ...formularioContraparteVacio("Proveedor"), esAgenteRetencionIva: true })).toMatchObject({ esAgenteRetencionIva: false, tipoAgenteIva: null });
+  });
+
+  it("el tipo de renta se exige solo a proveedores no residentes fuera de EXENTO", () => {
+    const noResidente = { ...formularioContraparteVacio("Proveedor"), esResidente: false };
+
+    expect(requiereTipoRenta(noResidente)).toBe(true);
+    expect(requiereTipoRenta({ ...noResidente, regimenIsr: "EXENTO" })).toBe(false);
+    expect(requiereTipoRenta(formularioContraparteVacio("Proveedor"))).toBe(false);
+    expect(requiereTipoRenta({ ...formularioContraparteVacio("Cliente"), esResidente: false })).toBe(false);
+  });
+
+  it("contraparteCompleta exige tipo de renta a proveedores no residentes", () => {
+    const noResidente = { ...formularioContraparteVacio("Proveedor"), esResidente: false, regimenIsr: "SIMPLIFICADO" };
+
+    expect(contraparteCompleta(noResidente)).toBe(false);
+    expect(contraparteCompleta({ ...noResidente, tipoRentaNrCodigo: "NR_SERVICIOS" })).toBe(true);
+    expect(contraparteCompleta({ ...noResidente, regimenIsr: "EXENTO", isrFundamento: "Res. 1" })).toBe(true);
+  });
+
+  it("payloadContraparte envía el tipo de renta solo a proveedores no residentes", () => {
+    const noResidente = { ...formularioContraparteVacio("Proveedor"), esResidente: false, tipoRentaNrCodigo: "NR_SERVICIOS" };
+
+    expect(payloadContraparte(noResidente)).toMatchObject({ tipoRentaNrCodigo: "NR_SERVICIOS" });
+    expect(payloadContraparte({ ...noResidente, esResidente: true })).toMatchObject({ tipoRentaNrCodigo: null });
+    expect(payloadContraparte({ ...formularioContraparteVacio("Cliente"), esResidente: false, tipoRentaNrCodigo: "NR_SERVICIOS" })).toMatchObject({ tipoRentaNrCodigo: null });
   });
 });

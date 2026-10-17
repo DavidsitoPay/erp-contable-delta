@@ -11,10 +11,11 @@ public class ReporteRetencionService
     public const string SentidoEfectuada = "EFECTUADA";
     public const string SentidoRecibida = "RECIBIDA";
     public static readonly string[] SentidosValidos = { SentidoEfectuada, SentidoRecibida };
-    public static readonly string[] ConceptosValidos = { Retencion.ConceptoIsr, Retencion.ConceptoIva };
+    public static readonly string[] ConceptosValidos = { Retencion.ConceptoIsr, Retencion.ConceptoIva, Retencion.ConceptoIsrNoResidente };
     public static readonly string[] EstadosConstanciaValidos =
     {
         RetencionRules.EstadoPendiente, RetencionRules.EstadoVencida, ConstanciaRetencion.EstadoEmitida, ConstanciaRetencion.EstadoAnulada,
+        RetencionRules.EstadoNoAplica,
     };
 
     private readonly DeltaErpDbContext _db;
@@ -65,7 +66,8 @@ public class ReporteRetencionService
             .Select(r => ConstruirFila(r, hoy, plazos))
             .Where(f => filtro.EstadoConstancia is null || f.EstadoConstancia == filtro.EstadoConstancia)
             .ToList();
-        return new ReporteRetencionRespuesta(filtro.Anio, filtro.Mes, filas, Totalizar(filas), await ConciliarAsync(inicio, filtro, delMes));
+        return new ReporteRetencionRespuesta(
+            filtro.Anio, filtro.Mes, filas, Totalizar(filas), await ConciliarAsync(inicio, filtro, delMes), TotalizarPorTipoRenta(filas));
     }
 
     private static FilaReporteRetencion ConstruirFila(VwRetencionReporte r, DateOnly hoy, List<ParametroRetencion> plazos)
@@ -73,11 +75,13 @@ public class ReporteRetencionService
         var diaLimite = plazos
             .FirstOrDefault(p => VigenciaRules.EstaVigente(p.VigenteDesde, p.VigenteHasta, r.FechaDocumento))?.DiaLimite;
         var estado = RetencionRules.EstadoConstancia(r.Concepto, r.FechaDocumento, hoy, diaLimite, r.ConstanciaEstado);
-        var mismoMes = r.FechaAsiento.Year == r.FechaDocumento.Year && r.FechaAsiento.Month == r.FechaDocumento.Month;
+        var mismoMes = r.FechaAsiento.Year == r.PeriodoFiscal.Year && r.FechaAsiento.Month == r.PeriodoFiscal.Month;
         return new FilaReporteRetencion(
             r.RetencionId, r.Sentido, r.Concepto, r.ContraparteId, r.Nit, r.Nombre, r.DocumentoTipo, r.DocumentoNumero, r.DteSerie,
             r.DteNumero, r.DteUuid, r.FechaDocumento, r.FechaOperacion, r.Base, r.Tasa, RetencionRules.TasaEfectiva(r.Base, r.MontoRetenido),
-            r.MontoRetenido, r.ConstanciaId, r.ConstanciaNumero, r.ConstanciaFecha, r.Formulario, estado, !mismoMes);
+            r.MontoRetenido, r.ConstanciaId, r.ConstanciaNumero, r.ConstanciaFecha, r.Formulario, estado, !mismoMes,
+            r.TipoRentaCodigo, r.TipoRentaNombre, r.MonedaCodigo, r.MontoOrigen, r.TipoCambio, r.TipoCambioFecha, r.EnteradoGtq,
+            r.SaldoPorEnterarGtq);
     }
 
     private static List<TotalReporteRetencion> Totalizar(List<FilaReporteRetencion> filas) =>
@@ -90,7 +94,14 @@ public class ReporteRetencionService
                 g.Count(),
                 g.Sum(f => f.Base),
                 g.Sum(f => f.Monto),
-                g.Count(f => f.EstadoConstancia != ConstanciaRetencion.EstadoEmitida)))
+                g.Count(f => f.EstadoConstancia != ConstanciaRetencion.EstadoEmitida && f.EstadoConstancia != RetencionRules.EstadoNoAplica)))
+            .ToList();
+
+    private static List<TotalTipoRentaReporte> TotalizarPorTipoRenta(List<FilaReporteRetencion> filas) =>
+        filas
+            .Where(f => f.TipoRentaCodigo is not null)
+            .GroupBy(f => (Codigo: f.TipoRentaCodigo!, Nombre: f.TipoRentaNombre ?? ""))
+            .Select(g => new TotalTipoRentaReporte(g.Key.Codigo, g.Key.Nombre, g.Count(), g.Sum(f => f.Base), g.Sum(f => f.Monto)))
             .ToList();
 
     private async Task<List<ConciliacionReporteRetencion>> ConciliarAsync(
@@ -101,6 +112,7 @@ public class ReporteRetencionService
         {
             (Retencion.ConceptoIsr, SentidoEfectuada, configuracion.CuentaIsrRetenidoPagarId, true),
             (Retencion.ConceptoIva, SentidoRecibida, configuracion.CuentaIvaRetenidoClientesId, false),
+            (Retencion.ConceptoIsrNoResidente, SentidoEfectuada, configuracion.CuentaIsrNrRetenidoPagarId, true),
         };
         var conciliacion = new List<ConciliacionReporteRetencion>();
         foreach (var (concepto, sentido, cuentaId, esCredito) in objetivos)

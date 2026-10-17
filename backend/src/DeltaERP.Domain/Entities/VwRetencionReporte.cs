@@ -31,4 +31,12 @@ public class VwRetencionReporte
     public DateOnly? FechaPagoFormulario { get; set; }
     public DateOnly? PeriodoDeclarado { get; set; }
     public string? ConstanciaEstado { get; set; }
+    public string? TipoRentaCodigo { get; set; }
+    public string? TipoRentaNombre { get; set; }
+    public string? MonedaCodigo { get; set; }
+    public decimal? MontoOrigen { get; set; }
+    public decimal? TipoCambio { get; set; }
+    public DateOnly? TipoCambioFecha { get; set; }
+    public decimal EnteradoGtq { get; set; }
+    public decimal SaldoPorEnterarGtq { get; set; }
 }

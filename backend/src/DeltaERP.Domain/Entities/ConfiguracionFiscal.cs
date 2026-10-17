@@ -20,6 +20,7 @@ public class ConfiguracionFiscal
     public int? CuentaIvaDebitoId { get; set; }
     public int? CuentaIvaCreditoId { get; set; }
     public int? CuentaIsrRetenidoPagarId { get; set; }
+    public int? CuentaIsrNrRetenidoPagarId { get; set; }
     public int? CuentaIvaRetenidoClientesId { get; set; }
     public int? CuentaDifGananciaRealizadaId { get; set; }
     public int? CuentaDifPerdidaRealizadaId { get; set; }

@@ -84,6 +84,7 @@ Además de sus campos previos, tiene datos fiscales:
 | es_residente | BOOLEAN | No | TRUE por defecto |
 | es_agente_retencion_iva | BOOLEAN | No | FALSE por defecto; `ck_contraparte_agente_iva` lo liga a `tipo_agente_iva` |
 | tipo_agente_iva | VARCHAR(20) | Sí | SECTOR_PUBLICO / AGENTE_PRIVADO; solo en clientes agentes de retención de IVA (`ck_contraparte_tipo_agente`) |
+| tipo_renta_nr_codigo | VARCHAR(40) | Sí | Tipo de renta del art. 104 (código de `ParametroRetencion` con concepto ISR_NO_RESIDENTE); solo en proveedores no residentes. Sin FK: la API valida que el código exista y esté vigente hoy (RN-29) |
 
 El NIT se guarda normalizado (`cuerpo-DV`, o `CF` en clientes) y se valida en la API (RN-13). El régimen de ISR solo se evalúa en proveedores (RN-18, RN-19): los proveedores que figuraban `UTILIDADES` por defecto pasaron a `NO_DEFINIDO`; en clientes se ignora.
 
@@ -122,6 +123,7 @@ Fila única (`CHECK (id = 1)`); `trg_configuracionfiscal_no_eliminable` impide b
 | cuenta_iva_debito_id | INT | Sí | FK -> CuentaContable(id) | IVA débito fiscal (Pasivo, Acreedora) |
 | cuenta_iva_credito_id | INT | Sí | FK -> CuentaContable(id) | IVA crédito fiscal (Activo, Deudora); distinta de la de débito |
 | cuenta_isr_retenido_pagar_id | INT | Sí | FK -> CuentaContable(id) | ISR retenido por pagar (Pasivo, Acreedora) |
+| cuenta_isr_nr_retenido_pagar_id | INT | Sí | FK -> CuentaContable(id) | ISR retenido a no residentes por pagar (Pasivo, Acreedora, RN-30) |
 | cuenta_iva_retenido_clientes_id | INT | Sí | FK -> CuentaContable(id) | IVA retenido por clientes (Activo, Deudora) |
 | cuenta_dif_ganancia_realizada_id | INT | Sí | FK -> CuentaContable(id) | Ganancia cambiaria realizada (Ingreso, Acreedora, RN-26) |
 | cuenta_dif_perdida_realizada_id | INT | Sí | FK -> CuentaContable(id) | Pérdida cambiaria realizada (Gasto, Deudora, RN-26) |
@@ -130,7 +132,7 @@ Fila única (`CHECK (id = 1)`); `trg_configuracionfiscal_no_eliminable` impide b
 | actualizado_en | TIMESTAMPTZ | No | | Última actualización |
 | actualizado_por | INT | Sí | FK -> Usuario(id) | Quién actualizó |
 
-Las cuentas de IVA y de retención quedan nulas tras la migración; las configura el Administrador. `ck_configuracionfiscal_cuentas_retencion` exige que las cuatro cuentas fiscales sean distintas y `ck_configuracionfiscal_cuentas_cambiarias` que las cuatro cuentas cambiarias sean distintas entre sí y de las fiscales; tipo, naturaleza, hoja y actividad se validan en la API. Las cuentas cambiarias quedan nulas tras la migración; solo el Administrador las configura, y se exigen cuando el asiento las necesita (`409` si faltan). Si `agente_retencion_iva` está marcado, el sistema solo avisa que la retención de IVA como agente no se calcula (RN-20).
+Las cuentas de IVA y de retención quedan nulas tras la migración; las configura el Administrador. `ck_configuracionfiscal_cuentas_retencion` exige que las cinco cuentas fiscales (IVA débito, IVA crédito, ISR retenido, IVA retenido por clientes e ISR a no residentes) sean distintas y `ck_configuracionfiscal_cuentas_cambiarias` que las cuatro cuentas cambiarias sean distintas entre sí y de las fiscales; tipo, naturaleza, hoja y actividad se validan en la API. Las cuentas cambiarias quedan nulas tras la migración; solo el Administrador las configura, y se exigen cuando el asiento las necesita (`409` si faltan). Si `agente_retencion_iva` está marcado, el sistema solo avisa que la retención de IVA como agente no se calcula (RN-20).
 
 ### CuentaContable
 | Campo | Tipo | Nulo | Llave | Descripción |
@@ -358,9 +360,9 @@ Función de tabla, solo lectura (`STABLE`, sin DML), que alimenta el balance gen
 | total_debito, total_credito | Acumulados de la cuenta propia más todos sus descendientes |
 | saldo | Deudora: débito - crédito; en otro caso crédito - débito |
 
-## 8. Retenciones (M10, I2)
+## 8. Retenciones (M10, I2 e I3b-1)
 
-Migración `15_retenciones.sql`. Los parámetros siguen el patrón de vigencia de `Impuesto` (RN-17); `Retencion` solo admite `INSERT`.
+Migraciones `15_retenciones.sql` y `17_retencion_no_residentes.sql`. Los parámetros siguen el patrón de vigencia de `Impuesto` (RN-17); `Retencion` solo admite `INSERT`.
 
 ### ParametroRetencion
 Una versión es una fila nueva con el mismo `codigo`.
@@ -369,7 +371,7 @@ Una versión es una fila nueva con el mismo `codigo`.
 |---|---|---|---|---|
 | id | SERIAL | No | PK | Identificador único |
 | codigo | VARCHAR(40) | No | UQ con `vigente_desde` | Código estable entre versiones |
-| concepto | VARCHAR(25) | No | | ISR_PROVEEDOR_ROS / IVA_RETENIDO_CLIENTE / PLAZO_CONSTANCIA |
+| concepto | VARCHAR(25) | No | | ISR_PROVEEDOR_ROS / IVA_RETENIDO_CLIENTE / PLAZO_CONSTANCIA / ISR_NO_RESIDENTE (el `codigo` es el tipo de renta del art. 104, RN-29) |
 | nombre | VARCHAR(120) | No | | Nombre |
 | tasa_base | DECIMAL(7,4) | Sí | | Mayor que 0 y hasta 100; nula solo en PLAZO_CONSTANCIA |
 | tramo_limite | DECIMAL(14,2) | Sí | | Límite de la tasa base (solo ISR_PROVEEDOR_ROS); va junto con `tasa_excedente` |
@@ -383,7 +385,7 @@ Una versión es una fila nueva con el mismo `codigo`.
 | vigente_hasta | DATE | Sí | | Fin de vigencia (>= inicio) |
 | activo | BOOLEAN | No | | Baja lógica |
 
-Sembrados (todos referenciales): `ISR_PROVEEDOR_ROS` (5 % hasta Q30,000 y 7 % sobre el excedente, umbral Q2,500.00 sobre la base), `IVA_CLIENTE_SECTOR_PUBLICO` (25 %, umbral Q30,000.00 sobre el total), `IVA_CLIENTE_AGENTE_PRIVADO` (15 %, umbral Q2,500.00 sobre el total) y `PLAZO_CONSTANCIA_ISR` (día 5). Triggers: `trg_parametroretencion_sin_traslape` (sin vigencias traslapadas del mismo código, incluidas las inactivas) y `trg_parametroretencion_inmutable_si_usado` (con retenciones asociadas solo cambian `nota`, `activo` y `vigente_hasta`, y este último no antes de la última `fecha_documento` usada). Ambos usan el código `55000` (409 en la API). Sin parámetro vigente en la fecha no falla la BD: responde la API (409).
+Sembrados (todos referenciales): `ISR_PROVEEDOR_ROS` (5 % hasta Q30,000 y 7 % sobre el excedente, umbral Q2,500.00 sobre la base), `IVA_CLIENTE_SECTOR_PUBLICO` (25 %, umbral Q30,000.00 sobre el total), `IVA_CLIENTE_AGENTE_PRIVADO` (15 %, umbral Q2,500.00 sobre el total) y `PLAZO_CONSTANCIA_ISR` (día 5). Los tipos de renta de no residentes (concepto ISR_NO_RESIDENTE, 12 códigos `NR_*` con tasas de 3, 5, 10, 15 y 25 %, artículo "Decreto 10-2012, art. 104", desde 2013-01-01, umbral 0 y sin tramo ni día límite) se siembran en la migración 17. Triggers: `trg_parametroretencion_sin_traslape` (sin vigencias traslapadas del mismo código, incluidas las inactivas) y `trg_parametroretencion_inmutable_si_usado` (con retenciones asociadas solo cambian `nota`, `activo` y `vigente_hasta`, y este último no antes de la última fecha usada: `fecha_operacion` en las retenciones a no residentes y `fecha_documento` en las demás). Ambos usan el código `55000` (409 en la API). Sin parámetro vigente en la fecha no falla la BD: responde la API (409).
 
 ### Retencion
 Instantánea de cada retención registrada; una retención con monto 0 no genera fila.
@@ -391,26 +393,32 @@ Instantánea de cada retención registrada; una retención con monto 0 no genera
 | Campo | Tipo | Nulo | Llave | Descripción |
 |---|---|---|---|---|
 | id | SERIAL | No | PK | Identificador único |
-| concepto | VARCHAR(15) | No | | ISR_ROS (efectuada, factura CxP) / IVA_CLIENTE (recibida, cobro CxC) |
+| concepto | VARCHAR(15) | No | | ISR_ROS (efectuada, factura CxP) / IVA_CLIENTE (recibida, cobro CxC) / ISR_NORES (efectuada, pago a proveedor no residente, RN-30) |
 | contraparte_id | INT | No | FK -> Contraparte(id) | Proveedor retenido o cliente retenedor |
-| documento_cxp_id | INT | Sí | FK -> DocumentoCxP(id) | Solo en ISR_ROS |
+| documento_cxp_id | INT | Sí | FK -> DocumentoCxP(id) | En ISR_ROS e ISR_NORES |
 | documento_cxc_id | INT | Sí | FK -> DocumentoCxC(id) | Solo en IVA_CLIENTE |
 | aplicacion_pago_cliente_id | INT | Sí | FK -> AplicacionPagoCliente(id) | Aplicación del cobro; solo en IVA_CLIENTE |
+| aplicacion_pago_proveedor_id | INT | Sí | FK -> AplicacionPagoProveedor(id) | Aplicación del pago; solo en ISR_NORES (única por aplicación, `ux_retencion_nores_aplicacion`) |
 | parametro_id | INT | No | FK -> ParametroRetencion(id) | Parámetro usado |
-| fecha_documento | DATE | No | | Fecha de la factura; el período fiscal es su mes |
-| fecha_operacion | DATE | No | | Fecha de la factura (ISR) o del cobro (IVA) |
+| fecha_documento | DATE | No | | Fecha de la factura; el período fiscal es su mes (en ISR_NORES, el de `fecha_operacion`) |
+| fecha_operacion | DATE | No | | Fecha de la factura (ISR_ROS), del cobro (IVA) o del pago (ISR_NORES) |
 | cuenta_id | INT | No | FK -> CuentaContable(id) | Cuenta de la línea de retención del asiento (instantánea) |
 | base | DECIMAL(14,2) | No | | Mayor que 0: base sin IVA (ISR) o IVA de la factura (IVA) |
 | tasa | DECIMAL(7,4) | No | | Tasa aplicada |
 | monto_calculado | DECIMAL(14,2) | No | | Cálculo del sistema |
 | monto_retenido | DECIMAL(14,2) | No | | Mayor que 0; es el que figura en el asiento (GTQ) |
 | monto_retenido_original | DECIMAL(14,2) | No | | Retención en la moneda del documento; mayor que 0 (`ck_retencion_monto_original`); igual a `monto_retenido` en documentos GTQ |
+| moneda_id | INT | Sí | FK -> Moneda(id) | Moneda del documento pagado; obligatoria en ISR_NORES |
+| monto_origen | DECIMAL(14,2) | Sí | | Monto aplicado en la moneda del documento, base de la retención antes de convertir; obligatorio en ISR_NORES |
+| tipo_cambio | DECIMAL(12,6) | Sí | | Tipo de cambio de Banguat del día del pago (1 si el documento es GTQ); solo en ISR_NORES (RN-31) |
+| tipo_cambio_fecha | DATE | Sí | | Fecha de la tasa aplicada; solo en ISR_NORES |
+| tipo_renta_codigo | VARCHAR(40) | Sí | | Tipo de renta elegido en la aplicación; obligatorio en ISR_NORES |
 | motivo_ajuste | VARCHAR(300) | Sí | | Obligatorio en ISR_ROS si `monto_retenido` difiere de `monto_calculado` (`ck_retencion_ajuste`) |
-| asiento_id | INT | No | FK -> AsientoContable(id) | Asiento de la factura (ISR) o del cobro (IVA) |
+| asiento_id | INT | No | FK -> AsientoContable(id) | Asiento de la factura (ISR_ROS), del cobro (IVA) o del pago (ISR_NORES) |
 | registrado_por | INT | No | FK -> Usuario(id) | Quién la registró |
 | creado_en | TIMESTAMPTZ | No | | Fecha de registro |
 
-`ck_retencion_origen` exige el documento y la aplicación que corresponden a cada concepto. Índices únicos parciales: `ux_retencion_isr_documento` (una retención de ISR por factura CxP) y `ux_retencion_iva_documento` (una de IVA por factura CxC). Sin triggers propios; las validaciones cruzadas (contraparte del documento, parámetro vigente, topes) viven en la API.
+`ck_retencion_origen` exige el documento y la aplicación que corresponden a cada concepto. En ISR_NORES base, `monto_calculado` y `monto_retenido` están en GTQ (base = `monto_origen` por `tipo_cambio`) y `monto_retenido_original` es la retención en la moneda del documento. La retención de ISR_NORES no reduce el saldo del documento: `vw_saldodocumentocxp` y las funciones de límite solo restan ISR_ROS. Índices únicos parciales: `ux_retencion_isr_documento` (una retención de ISR por factura CxP) y `ux_retencion_iva_documento` (una de IVA por factura CxC). Sin triggers propios; las validaciones cruzadas (contraparte del documento, parámetro vigente, topes) viven en la API.
 
 ### ConstanciaRetencion
 Datos de la constancia de una retención; el ERP las registra, no las emite (RN-22).
@@ -492,6 +500,6 @@ Detalle por documento o cuenta bancaria. Solo admite INSERT.
 | `vw_conciliacion_resumen` | — | Saldo inicial, total marcado, saldo conciliado y diferencia de cada conciliación bancaria (fuente de la matemática de RN-10) |
 | `vw_saldodocumentocxc` | `DocumentoCxC.saldo_pendiente` | Saldo pendiente por documento de CxC: `saldo_pendiente` en la moneda del documento (importe original menos pagos aplicados y notas de crédito vigentes referenciadas) y `saldo_pendiente_gtq` (monto total menos `monto_aplicado_gtq` y notas); expone además `moneda_id` y `monto_total_original`; 0 para notas de crédito |
 | `vw_saldodocumentocxp` | `DocumentoCxP.saldo_pendiente` | Saldo pendiente por documento de CxP: monto total menos pagos aplicados, notas de crédito vigentes referenciadas y la retención de ISR (`Retencion` `ISR_ROS`); `saldo_pendiente` en la moneda del documento (resta `monto_retenido_original`), `saldo_pendiente_gtq` en quetzales (resta `monto_retenido`), más `moneda_id` y `monto_total_original`; 0 para notas de crédito |
-| `vw_retencion_reporte` | — | Una fila por retención con contraparte, documento (tipo, número, DTE), sentido (EFECTUADA si ISR_ROS, RECIBIDA si IVA_CLIENTE), `periodo_fiscal` (mes de la factura), base, tasa, montos, asiento y los datos de su constancia más relevante (la emitida primero); fuente del reporte de retenciones (RN-23) |
+| `vw_retencion_reporte` | — | Una fila por retención con contraparte, documento (tipo, número, DTE), sentido (EFECTUADA si ISR_ROS o ISR_NORES, RECIBIDA si IVA_CLIENTE), `periodo_fiscal` (mes de la factura; mes del pago en ISR_NORES), base, tasa, montos, asiento y los datos de su constancia más relevante (la emitida primero); en ISR_NORES agrega `tipo_renta_codigo` y `tipo_renta_nombre`, `moneda_codigo`, `monto_origen`, `tipo_cambio` y su fecha, y `aplicacion_pago_proveedor_id`. `enterado_gtq` (0) y `saldo_por_enterar_gtq` (la retención efectuada; 0 en IVA_CLIENTE) están reservadas para el enteramiento a SAT, que no está implementado. Fuente del reporte de retenciones (RN-23) |
 
 **Permisos de `delta_api` sobre retenciones** (declarados al final de `15_retenciones.sql`): `parametroretencion` y `constanciaretencion` con `SELECT`, `INSERT` y `UPDATE`; `retencion` solo con `SELECT` e `INSERT` (sin `UPDATE` ni `DELETE`: es append-only); `vw_retencion_reporte` con `SELECT`; `USAGE` en las tres secuencias nuevas. Ninguna de las tres tablas admite `DELETE`. `contraparte`, `configuracionfiscal` y `documentocxp` conservan sus privilegios, que cubren las columnas nuevas.

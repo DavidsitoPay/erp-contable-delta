@@ -72,6 +72,7 @@ public sealed class TestData
     public const string CodigoCuentaIvaDebito = "T-IVA-DEBITO";
     public const string CodigoCuentaIvaCredito = "T-IVA-CREDITO";
     public const string CodigoCuentaIsrRetenido = "T-ISR-RETENIDO";
+    public const string CodigoCuentaIsrNrRetenido = "T-ISR-NR-RETENIDO";
     public const string CodigoCuentaIvaRetenidoClientes = "T-IVA-RET-CLIENTES";
 
     public TestData(NpgsqlDataSource db)
@@ -132,8 +133,9 @@ public sealed class TestData
     {
         await EjecutarAsync(
             "INSERT INTO cuentacontable (codigo, nombre, tipo, naturaleza) VALUES ($1, 'IVA débito fiscal (pruebas)', 'Pasivo', 'Acreedora'), ($2, 'IVA crédito fiscal (pruebas)', 'Activo', 'Deudora'), " +
-            "($3, 'ISR retenido por pagar (pruebas)', 'Pasivo', 'Acreedora'), ($4, 'IVA retenido por clientes (pruebas)', 'Activo', 'Deudora')",
-            CodigoCuentaIvaDebito, CodigoCuentaIvaCredito, CodigoCuentaIsrRetenido, CodigoCuentaIvaRetenidoClientes);
+            "($3, 'ISR retenido por pagar (pruebas)', 'Pasivo', 'Acreedora'), ($4, 'IVA retenido por clientes (pruebas)', 'Activo', 'Deudora'), " +
+            "($5, 'ISR retenido a no residentes (pruebas)', 'Pasivo', 'Acreedora')",
+            CodigoCuentaIvaDebito, CodigoCuentaIvaCredito, CodigoCuentaIsrRetenido, CodigoCuentaIvaRetenidoClientes, CodigoCuentaIsrNrRetenido);
         await RestaurarConfiguracionFiscalAsync();
     }
 
@@ -141,9 +143,10 @@ public sealed class TestData
         EjecutarAsync(
             "UPDATE configuracionfiscal SET nit_empresa = $1, nombre_legal = 'Delta de Pruebas, S.A.', regimen_isr = 'UTILIDADES', agente_retencion_iva = FALSE, tipo_agente_iva = NULL, " +
             "cuenta_iva_debito_id = (SELECT id FROM cuentacontable WHERE codigo = $2), cuenta_iva_credito_id = (SELECT id FROM cuentacontable WHERE codigo = $3), " +
-            "cuenta_isr_retenido_pagar_id = (SELECT id FROM cuentacontable WHERE codigo = $4), cuenta_iva_retenido_clientes_id = (SELECT id FROM cuentacontable WHERE codigo = $5), cuenta_dif_ganancia_realizada_id = NULL, " +
+            "cuenta_isr_retenido_pagar_id = (SELECT id FROM cuentacontable WHERE codigo = $4), cuenta_iva_retenido_clientes_id = (SELECT id FROM cuentacontable WHERE codigo = $5), " +
+            "cuenta_isr_nr_retenido_pagar_id = (SELECT id FROM cuentacontable WHERE codigo = $6), cuenta_dif_ganancia_realizada_id = NULL, " +
             "cuenta_dif_perdida_realizada_id = NULL, cuenta_reval_ganancia_id = NULL, cuenta_reval_perdida_id = NULL WHERE id = 1",
-            NitValido, CodigoCuentaIvaDebito, CodigoCuentaIvaCredito, CodigoCuentaIsrRetenido, CodigoCuentaIvaRetenidoClientes);
+            NitValido, CodigoCuentaIvaDebito, CodigoCuentaIvaCredito, CodigoCuentaIsrRetenido, CodigoCuentaIvaRetenidoClientes, CodigoCuentaIsrNrRetenido);
 
     public Task ConfigurarCuentasFiscalesAsync(int? debitoId, int? creditoId) =>
         EjecutarAsync(
@@ -154,6 +157,23 @@ public sealed class TestData
         EjecutarAsync(
             "UPDATE configuracionfiscal SET cuenta_isr_retenido_pagar_id = $1::int, cuenta_iva_retenido_clientes_id = $2::int WHERE id = 1",
             (object?)isrRetenidoId ?? DBNull.Value, (object?)ivaRetenidoClientesId ?? DBNull.Value);
+
+    public Task ConfigurarCuentaIsrNrAsync(int? cuentaId) =>
+        EjecutarAsync("UPDATE configuracionfiscal SET cuenta_isr_nr_retenido_pagar_id = $1::int WHERE id = 1", (object?)cuentaId ?? DBNull.Value);
+
+    public Task<int> CrearProveedorNoResidenteAsync(string? tipoRenta, string regimenIsr = "SIMPLIFICADO", string? fundamento = null) =>
+        ScalarAsync<int>(
+            "INSERT INTO contraparte (tipo, nombre, nit, regimen_iva, regimen_isr, isr_fundamento, es_residente, tipo_renta_nr_codigo) VALUES ('Proveedor', $1, $2, 'GENERAL', $3, $4::varchar, FALSE, $5::varchar) RETURNING id",
+            $"Proveedor NR {Sufijo()}", NitValido, regimenIsr, (object?)fundamento ?? DBNull.Value, (object?)tipoRenta ?? DBNull.Value);
+
+    public async Task<string> SembrarParametroNrVencidoAsync()
+    {
+        var codigo = $"NR_T{Sufijo().ToUpperInvariant()}";
+        await EjecutarAsync(
+            "INSERT INTO parametroretencion (codigo, concepto, nombre, tasa_base, umbral_minimo, umbral_sobre, articulo_legal, vigente_desde, vigente_hasta) " +
+            "VALUES ($1, 'ISR_NO_RESIDENTE', 'Tipo de renta vencido (pruebas)', 7, 0, 'BASE', 'Prueba', DATE '2000-01-01', DATE '2000-12-31')", codigo);
+        return codigo;
+    }
 
     public Task MarcarEmpresaComoAgenteIvaAsync() =>
         EjecutarAsync("UPDATE configuracionfiscal SET agente_retencion_iva = TRUE, tipo_agente_iva = 'SECTOR_PUBLICO' WHERE id = 1");

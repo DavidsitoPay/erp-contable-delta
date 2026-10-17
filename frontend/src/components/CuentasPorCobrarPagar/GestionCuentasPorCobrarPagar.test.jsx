@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { centrosCostoApi, contrapartesApi, cuentasApi, cuentasBancariasApi, impuestosApi, periodosApi, tiposCambioApi } from "../../services/api";
+import { centrosCostoApi, contrapartesApi, cuentasApi, cuentasBancariasApi, impuestosApi, parametrosRetencionApi, periodosApi, tiposCambioApi } from "../../services/api";
 import { formatoDiferencial, formatoMoneda, formatoQuetzales } from "../../utils/formato";
 import GestionCuentasPorCobrarPagar from "./GestionCuentasPorCobrarPagar";
 
@@ -10,6 +10,7 @@ vi.mock("../../services/api", () => ({
   cuentasApi: { listar: vi.fn() },
   cuentasBancariasApi: { listar: vi.fn() },
   impuestosApi: { listar: vi.fn() },
+  parametrosRetencionApi: { listar: vi.fn().mockResolvedValue({ data: [] }) },
   periodosApi: { listar: vi.fn() },
   tiposCambioApi: { consultar: vi.fn() },
 }));
@@ -127,6 +128,27 @@ function configConRetencionIva(sugerencia) {
 }
 
 const sugerenciaIva = { aplica: true, motivo: null, clienteAgente: true, ivaRetenible: 12, sugerido: 12, yaRetenida: false };
+
+const tiposRentaNr = [
+  { id: 3, codigo: "SERV", nombre: "Servicios", tasaBase: 15 },
+  { id: 4, codigo: "OTRO", nombre: "Otros", tasaBase: 10 },
+];
+const previaNr = { aplica: true, lineas: [], totalBaseGtq: 40, totalRetencionGtq: 6, netoBancoGtq: 34, advertencias: [] };
+
+async function prepararPagoNoResidente(retencionPreviaPago, documentos = facturasCxp) {
+  const config = crearConfigCxp();
+  config.api.listarFacturas = vi.fn().mockResolvedValue({ data: documentos });
+  contrapartesApi.listar.mockResolvedValue({ data: [{ id: 5, nombre: "ACME", regimenIva: "GENERAL", esResidente: false, tipoRentaNrCodigo: "SERV" }] });
+  parametrosRetencionApi.listar.mockResolvedValue({ data: tiposRentaNr });
+  api.retencionPreviaPago = retencionPreviaPago;
+  await renderCargado(config, "P-1");
+  fireEvent.click(screen.getByRole("button", { name: "Pagos" }));
+  fireEvent.change(await screen.findByLabelText("Proveedor"), { target: { value: "5" } });
+  await within(screen.getByLabelText("Cuenta bancaria")).findByRole("option", { name: "BAC 123" });
+  fireEvent.change(screen.getByLabelText("Cuenta bancaria"), { target: { value: "7" } });
+  fireEvent.change(screen.getByLabelText("Método de pago"), { target: { value: "Transferencia" } });
+  fireEvent.change(screen.getByLabelText("Monto a aplicar a P-1"), { target: { value: "40" } });
+}
 
 describe("GestionCuentasPorCobrarPagar", () => {
   beforeEach(() => {
@@ -371,6 +393,63 @@ describe("GestionCuentasPorCobrarPagar", () => {
 
     await waitFor(() => expect(api.crearPago).toHaveBeenCalledTimes(1));
     expect(api.crearPago.mock.calls[0][0].aplicaciones).toEqual([{ documentoId: 1, montoAplicado: 100 }]);
+  });
+
+  it("a un proveedor no residente muestra el tipo de renta por factura, consulta la previa y registra el pago con el tipo elegido", async () => {
+    await prepararPagoNoResidente(vi.fn().mockResolvedValue({ data: previaNr }));
+
+    expect(screen.getByRole("combobox", { name: "Tipo de renta de P-1" })).toHaveValue("SERV");
+    await waitFor(() =>
+      expect(api.retencionPreviaPago).toHaveBeenCalledWith({
+        proveedorId: 5,
+        fecha: expect.any(String),
+        aplicaciones: [{ documentoId: 21, montoAplicado: 40, tipoRentaCodigo: "SERV" }],
+      })
+    );
+    expect(await screen.findByText(`Neto al banco: ${formatoMoneda.format(34)}`)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Tipo de renta de P-1" }), { target: { value: "OTRO" } });
+    await waitFor(() =>
+      expect(api.retencionPreviaPago).toHaveBeenLastCalledWith({
+        proveedorId: 5,
+        fecha: expect.any(String),
+        aplicaciones: [{ documentoId: 21, montoAplicado: 40, tipoRentaCodigo: "OTRO" }],
+      })
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Registrar pago" }));
+
+    await waitFor(() => expect(api.crearPago).toHaveBeenCalledTimes(1));
+    expect(api.crearPago).toHaveBeenCalledWith({
+      proveedorId: 5,
+      cuentaBancariaId: 7,
+      fecha: expect.any(String),
+      metodoPago: "Transferencia",
+      referenciaBancaria: null,
+      aplicaciones: [{ documentoId: 21, montoAplicado: 40, tipoRentaCodigo: "OTRO" }],
+    });
+  });
+
+  it("un 409 de la previa muestra el motivo y impide registrar el pago a un proveedor no residente", async () => {
+    await prepararPagoNoResidente(vi.fn().mockRejectedValue({ response: { status: 409, data: { error: "Falta el tipo de renta." } } }));
+
+    expect(await screen.findByText("Falta el tipo de renta.")).toHaveClass("error-chip");
+    expect(screen.getByRole("button", { name: "Registrar pago" })).toBeDisabled();
+    expect(api.crearPago).not.toHaveBeenCalled();
+  });
+
+  it("a un proveedor no residente no ofrece tipo de renta para una nota de crédito aplicada", async () => {
+    const notaCredito = { ...base, id: 23, numero: "NC-1", tipoDocumento: "NotaCredito", proveedorId: 5, proveedorNombre: "ACME", montoTotal: 20, saldoPendiente: 20, montoRetencionIsr: 0, revisionRetencion: "NINGUNA", revisionMotivo: null, estado: "Vigente" };
+    await prepararPagoNoResidente(vi.fn().mockResolvedValue({ data: previaNr }), [...facturasCxp, notaCredito]);
+    fireEvent.change(screen.getByLabelText("Monto a aplicar a NC-1"), { target: { value: "20" } });
+
+    await waitFor(() =>
+      expect(api.retencionPreviaPago).toHaveBeenLastCalledWith(
+        expect.objectContaining({ aplicaciones: expect.arrayContaining([expect.objectContaining({ documentoId: 23 })]) })
+      )
+    );
+    expect(screen.getByRole("combobox", { name: "Tipo de renta de P-1" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Tipo de renta de NC-1" })).toBeNull();
   });
 
   describe("cobros en moneda extranjera", () => {

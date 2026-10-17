@@ -50,6 +50,7 @@ export const TIPOS_AGENTE_IVA_CLIENTE = [
 export const CONCEPTOS_PARAMETRO = [
   { valor: "ISR_PROVEEDOR_ROS", etiqueta: "ISR a proveedores del régimen simplificado" },
   { valor: "IVA_RETENIDO_CLIENTE", etiqueta: "IVA retenido por clientes" },
+  { valor: "ISR_NO_RESIDENTE", etiqueta: "ISR a no residentes (art. 104)" },
   { valor: "PLAZO_CONSTANCIA", etiqueta: "Plazo de la constancia" },
 ];
 
@@ -66,6 +67,7 @@ export const SENTIDOS_RETENCION = [
 export const CONCEPTOS_RETENCION = [
   { valor: "ISR_ROS", etiqueta: "ISR a proveedores" },
   { valor: "IVA_CLIENTE", etiqueta: "IVA retenido por clientes" },
+  { valor: "ISR_NORES", etiqueta: "ISR a no residentes" },
 ];
 
 export const ESTADOS_CONSTANCIA = [
@@ -73,6 +75,7 @@ export const ESTADOS_CONSTANCIA = [
   { valor: "VENCIDA", etiqueta: "Vencida" },
   { valor: "EMITIDA", etiqueta: "Emitida" },
   { valor: "ANULADA", etiqueta: "Anulada" },
+  { valor: "NO_APLICA", etiqueta: "No aplica" },
 ];
 
 export const FORMULARIOS_CONSTANCIA = [

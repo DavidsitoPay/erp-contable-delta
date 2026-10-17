@@ -10,11 +10,13 @@ const AVISO_CUENTAS = "Falta configurar las cuentas de IVA: no se podrán regist
 const AVISO_CUENTAS_RETENCION =
   "Falta configurar las cuentas de retención: no se podrán registrar facturas de compra con retención de ISR ni cobros con IVA retenido por el cliente.";
 const AVISO_AGENTE = "La retención de IVA como agente no está disponible en esta versión.";
+const AVISO_CUENTA_NR = "Falta configurar la cuenta de ISR a no residentes: no se podrán registrar pagos a proveedores no residentes.";
 
 const CAMPOS_CUENTA = [
   { campo: "cuentaIvaDebitoId", id: "cf-iva-debito", etiqueta: "Cuenta de IVA débito fiscal (Pasivo)", tipo: "Pasivo" },
   { campo: "cuentaIvaCreditoId", id: "cf-iva-credito", etiqueta: "Cuenta de IVA crédito fiscal (Activo)", tipo: "Activo" },
   { campo: "cuentaIsrRetenidoPagarId", id: "cf-isr-retenido", etiqueta: "Cuenta de ISR retenido por pagar (Pasivo)", tipo: "Pasivo" },
+  { campo: "cuentaIsrNrRetenidoPagarId", id: "cf-isr-nr-retenido", etiqueta: "Cuenta de ISR retenido a no residentes por pagar (Pasivo)", tipo: "Pasivo" },
   { campo: "cuentaIvaRetenidoClientesId", id: "cf-iva-retenido", etiqueta: "Cuenta de IVA retenido por clientes (Activo)", tipo: "Activo" },
   { campo: "cuentaDifGananciaRealizadaId", id: "cf-dif-ganancia", etiqueta: "Ganancia cambiaria realizada (Ingreso)", tipo: "Ingreso" },
   { campo: "cuentaDifPerdidaRealizadaId", id: "cf-dif-perdida", etiqueta: "Pérdida cambiaria realizada (Gasto)", tipo: "Gasto" },
@@ -182,6 +184,7 @@ function ConfiguracionFiscal() {
         {faltanCuentasRetencion && <p className="warning-chip">{AVISO_CUENTAS_RETENCION}</p>}
         {faltanCuentasCambiarias && <p className="warning-chip">{AVISO_CUENTAS_CAMBIARIAS}</p>}
         {form.agenteRetencionIva && <p className="warning-chip">{AVISO_AGENTE}</p>}
+        {!config.cuentaIsrNrRetenidoPagarId && <p className="warning-chip">{AVISO_CUENTA_NR}</p>}
         {error && <p className="error-chip">{error}</p>}
         {guardado && <p className="success-chip">Configuración guardada.</p>}
 

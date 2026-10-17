@@ -1,20 +1,22 @@
 import { useEffect, useState } from "react";
-import { centrosCostoApi, contrapartesApi, cuentasApi, cuentasBancariasApi, periodosApi } from "../../services/api";
+import { centrosCostoApi, contrapartesApi, cuentasApi, cuentasBancariasApi, parametrosRetencionApi, periodosApi } from "../../services/api";
 import { esMonedaExtranjera, monedaDe } from "../../utils/cambio";
 import { cuentasHoja } from "../../utils/cuentas";
 import { hoyIso, monto } from "../../utils/formato";
 import { perfilActual, puedeGestionarTesoreria } from "../../utils/perfiles";
-import { aplicacionesConRetencion, hayErrorRetencionIva, resumenCobro } from "../../utils/retenciones";
+import { aplicacionesConRetencion, aplicacionesConTipoRenta, hayErrorRetencionIva, resumenCobro, tipoRentaInicial } from "../../utils/retenciones";
 import FormularioMotivo from "../FormularioMotivo";
 import SelectCuentaBancaria from "../Tesoreria/SelectCuentaBancaria";
 import FormularioFactura from "./FormularioFactura";
 import PanelLiquidacion from "./PanelLiquidacion";
+import PanelRetencionIsrNoResidente from "./PanelRetencionIsrNoResidente";
 import ResumenCobro from "./ResumenCobro";
 import ResumenLiquidacion from "./ResumenLiquidacion";
 import TablaAplicaciones from "./TablaAplicaciones";
 import TablaFacturas from "./TablaFacturas";
 import TablaPagos from "./TablaPagos";
 import { useLiquidacionPago } from "./useLiquidacionPago";
+import { useRetencionPreviaPago } from "./useRetencionPreviaPago";
 import { useRetencionesCobro } from "./useRetencionesCobro";
 
 // config aísla las diferencias de terminología/cuenta de control entre CxC y
@@ -51,6 +53,8 @@ function GestionCuentasPorCobrarPagar({ config }) {
   const [montosAplicados, setMontosAplicados] = useState({}); // documentoId -> string
   const [soloPorRevisar, setSoloPorRevisar] = useState(false);
   const [revisionDe, setRevisionDe] = useState(null);
+  const [tiposRenta, setTiposRenta] = useState([]);
+  const [tiposRentaPago, setTiposRentaPago] = useState({}); // documentoId -> código
   const retencionesCobro = useRetencionesCobro(api);
 
   async function cargarFacturas() {
@@ -72,6 +76,9 @@ function GestionCuentasPorCobrarPagar({ config }) {
     void cargarPagos();
     if (puedeRegistrarPagos) {
       void cuentasBancariasApi.listar().then(({ data }) => setCuentasBancarias(data));
+      if (config.retencionIsr) {
+        void parametrosRetencionApi.listar({ concepto: "ISR_NO_RESIDENTE", vigenteEn: hoyIso() }).then(({ data }) => setTiposRenta(data)).catch(() => setTiposRenta([]));
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tipoContraparte]);
@@ -87,6 +94,8 @@ function GestionCuentasPorCobrarPagar({ config }) {
     (f) => String(f[campoContraparteId]) === String(pagoContraparteId) && f.estado === "Vigente" && f.saldoPendiente > 0
   );
   const clienteAgente = Boolean(contrapartes.find((c) => String(c.id) === String(pagoContraparteId))?.esAgenteRetencionIva);
+  const proveedor = contrapartes.find((c) => String(c.id) === String(pagoContraparteId));
+  const proveedorNr = conRetencionIsr && proveedor?.esResidente === false;
 
   function actualizarMontoAplicado(documentoId, valor) {
     setMontosAplicados((prev) => ({ ...prev, [documentoId]: valor }));
@@ -99,6 +108,7 @@ function GestionCuentasPorCobrarPagar({ config }) {
   function seleccionarContraparte(valor) {
     setPagoContraparteId(valor);
     setMontosAplicados({});
+    setTiposRentaPago({});
     retencionesCobro.reiniciar();
     liquidacion.reiniciar();
   }
@@ -125,6 +135,11 @@ function GestionCuentasPorCobrarPagar({ config }) {
     esCobro: Boolean(config.esCobro),
   });
 
+  const aplicacionesPago = proveedorNr
+    ? aplicacionesConTipoRenta(liquidacion.conEfectivo(aplicacionesConMonto), tiposRentaPago, tipoRentaInicial(proveedor))
+    : liquidacion.conEfectivo(aplicacionesConMonto);
+  const previaNr = useRetencionPreviaPago({ api, activo: proveedorNr, proveedorId: pagoContraparteId, fecha: pagoFecha, aplicaciones: aplicacionesPago });
+
   const puedeEnviarPago =
     !enviandoPago &&
     pagoContraparteId !== "" &&
@@ -133,7 +148,8 @@ function GestionCuentasPorCobrarPagar({ config }) {
     aplicacionesConMonto.length > 0 &&
     resumenPago.neto > 0 &&
     !retencionInvalida &&
-    liquidacion.listo;
+    liquidacion.listo &&
+    !(proveedorNr && (previaNr.bloqueada || previaNr.error !== ""));
 
   async function resolverRevision(motivo) {
     await api.resolverRevisionRetencion(revisionDe.id, motivo);
@@ -153,12 +169,13 @@ function GestionCuentasPorCobrarPagar({ config }) {
         fecha: pagoFecha,
         metodoPago: pagoMetodo.trim(),
         referenciaBancaria: pagoReferencia || null,
-        aplicaciones: liquidacion.conEfectivo(aplicacionesConMonto),
+        aplicaciones: aplicacionesPago,
       });
       setAdvertenciasPago(data?.advertencias ?? []);
       setPagoMetodo("");
       setPagoReferencia("");
       setMontosAplicados({});
+      setTiposRentaPago({});
       retencionesCobro.reiniciar();
       liquidacion.reiniciar();
       await Promise.all([cargarFacturas(), cargarPagos()]);
@@ -245,6 +262,18 @@ function GestionCuentasPorCobrarPagar({ config }) {
                   onMonto={actualizarMontoAplicado}
                   retencionIva={retencionIva}
                   liquidacion={liquidacion.tabla}
+                />
+              )}
+
+              {proveedorNr && aplicacionesConMonto.length > 0 && (
+                <PanelRetencionIsrNoResidente
+                  estado={previaNr}
+                  aplicaciones={aplicacionesConMonto}
+                  facturas={facturasDeLaContraparte}
+                  tiposRenta={tiposRenta}
+                  tipos={tiposRentaPago}
+                  porDefecto={tipoRentaInicial(proveedor)}
+                  onTipo={(id, valor) => setTiposRentaPago((p) => ({ ...p, [id]: valor }))}
                 />
               )}
 

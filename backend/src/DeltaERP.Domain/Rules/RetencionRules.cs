@@ -28,6 +28,7 @@ public sealed record ResultadoAjusteIsr(decimal Monto, string? MotivoAjuste, str
 public static class RetencionRules
 {
     public const string EstadoPendiente = "PENDIENTE";
+    public const string EstadoNoAplica = "NO_APLICA";
     public const string EstadoVencida = "VENCIDA";
     public const int LongitudMaximaMotivo = 300;
 
@@ -130,6 +131,10 @@ public static class RetencionRules
     public static string EstadoConstancia(
         string concepto, DateOnly fechaDocumento, DateOnly hoy, int? diaLimite, string? estadoConstanciaEmitida)
     {
+        if (concepto == Retencion.ConceptoIsrNoResidente)
+        {
+            return EstadoNoAplica;
+        }
         if (estadoConstanciaEmitida is not null)
         {
             return estadoConstanciaEmitida;
@@ -155,10 +160,17 @@ public static class RetencionRules
         }
         if (!proveedor.EsResidente)
         {
-            return SinRetencion(
-                EstadoRetencionIsr.PendienteRevision,
-                $"El proveedor {proveedor.Nombre} es no residente; la retención a no residentes no está disponible en esta versión.",
-                baseSinIva);
+            if (proveedor.RegimenIsr == Contraparte.RegimenIsrExento)
+            {
+                return SinRetencion(
+                    EstadoRetencionIsr.NoAplica, $"El proveedor tiene renta exenta (fundamento: {proveedor.IsrFundamento}).", baseSinIva);
+            }
+            return string.IsNullOrEmpty(proveedor.TipoRentaNrCodigo)
+                ? SinRetencion(
+                    EstadoRetencionIsr.PendienteRevision,
+                    $"El proveedor {proveedor.Nombre} es no residente y no tiene tipo de renta definido; no se puede determinar la retención al pago.",
+                    baseSinIva)
+                : SinRetencion(EstadoRetencionIsr.NoAplica, "El proveedor es no residente: el ISR se retiene al registrar el pago.", baseSinIva);
         }
         if (proveedor.RegimenIva == Contraparte.RegimenIvaPequenoContribuyente)
         {
