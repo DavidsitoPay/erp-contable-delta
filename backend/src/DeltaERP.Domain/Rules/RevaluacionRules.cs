@@ -64,7 +64,7 @@ public static class RevaluacionRules
     }
 
     public static IReadOnlyList<LineaRevaluacion> Invertir(IReadOnlyList<LineaRevaluacion> lineas) =>
-        lineas.Select(l => new LineaRevaluacion(l.CuentaId, l.Credito, l.Debito)).ToList();
+        lineas.Select(l => l with { Debito = l.Credito, Credito = l.Debito }).ToList();
 
     public static DateOnly UltimoDiaDelMes(int anio, int mes) => new(anio, mes, DateTime.DaysInMonth(anio, mes));
 

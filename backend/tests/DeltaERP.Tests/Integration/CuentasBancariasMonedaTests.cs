@@ -312,7 +312,7 @@ public class CuentasBancariasMonedaTests
         descripcion = "Transferencia de prueba",
     };
 
-    private Task<(HttpStatusCode Estado, JsonElement Cuerpo)> TransferirAsync(HttpClient client, object payload) =>
+    private static Task<(HttpStatusCode Estado, JsonElement Cuerpo)> TransferirAsync(HttpClient client, object payload) =>
         client.EnviarAsync($"{RutaMovimientos}/transferencias", payload);
 
     [Fact]

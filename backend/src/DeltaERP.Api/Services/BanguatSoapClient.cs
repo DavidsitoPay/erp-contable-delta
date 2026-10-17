@@ -25,7 +25,7 @@ public sealed class BanguatSoapClient : IBanguatClient
         int codigoMoneda, DateOnly desde, DateOnly hasta, CancellationToken ct = default)
     {
         var sobre = ConstruirSobre(codigoMoneda, desde, hasta);
-        for (var intento = 0; ; intento++)
+        for (var intento = 0; intento < _opciones.Reintentos; intento++)
         {
             try
             {
@@ -33,12 +33,16 @@ public sealed class BanguatSoapClient : IBanguatClient
             }
             catch (Exception ex) when (EsTransitorio(ex, ct))
             {
-                if (intento >= _opciones.Reintentos)
-                {
-                    throw new BanguatNoDisponibleException(MensajeSinRespuesta, ex);
-                }
                 await Task.Delay(_opciones.EsperaReintentoMs, ct);
             }
+        }
+        try
+        {
+            return BanguatXml.Parsear(await EnviarAsync(sobre, ct));
+        }
+        catch (Exception ex) when (EsTransitorio(ex, ct))
+        {
+            throw new BanguatNoDisponibleException(MensajeSinRespuesta, ex);
         }
     }
 

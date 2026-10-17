@@ -79,7 +79,7 @@ public class TipoCambioService
     public async Task<TipoCambioDto?> ObtenerDtoAsync(int id)
     {
         var filas = await ConsultarHistorialAsync(t => t.Id == id, true);
-        return filas.FirstOrDefault();
+        return filas.Count > 0 ? filas[0] : null;
     }
 
     public async Task<(IReadOnlyList<TipoCambioDto>? Filas, ErrorValidacion? Error)> HistorialAsync(
@@ -353,7 +353,7 @@ public class TipoCambioService
         await _db.SaveChangesAsync();
     }
 
-    private Task DarDeBajaFilaAsync(int id) =>
+    private Task<int> DarDeBajaFilaAsync(int id) =>
         _db.TiposCambio.Where(t => t.Id == id).ExecuteUpdateAsync(s => s.SetProperty(t => t.Activa, false));
 
     private async Task<ErrorValidacion?> ValidarReemplazableAsync(HistorialTipoCambio? existente)

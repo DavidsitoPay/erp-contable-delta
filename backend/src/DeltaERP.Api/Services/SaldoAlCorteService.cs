@@ -63,7 +63,7 @@ public class SaldoAlCorteService
         return resultado;
     }
 
-    private static int ControlDe(int? asientoId, IReadOnlyDictionary<int, int> controles) =>
+    private static int ControlDe(int? asientoId, Dictionary<int, int> controles) =>
         asientoId is { } id && controles.TryGetValue(id, out var control) ? control : 0;
 
     public async Task<IReadOnlyList<SaldoBancoAlCorte>> BancosAsync(DateOnly corte, int monedaId)

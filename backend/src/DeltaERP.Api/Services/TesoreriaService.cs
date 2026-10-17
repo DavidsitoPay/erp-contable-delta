@@ -331,7 +331,7 @@ public class TesoreriaService
         var transferenciaId = Guid.NewGuid();
         var descripcion = req.Descripcion!.Trim();
         var egreso = ConCambio(NuevoMovimiento(origen.Id, req.Fecha, MovimientoTesoreria.TipoEgreso, req.Monto, descripcion, req.Referencia, MovimientoTesoreria.OrigenTransferencia), valorOrigen, cambioOrigen);
-        var ingreso = ConCambio(NuevoMovimiento(destino.Id, req.Fecha, MovimientoTesoreria.TipoIngreso, req.MontoDestino!.Value, descripcion, req.Referencia, MovimientoTesoreria.OrigenTransferencia), valorDestino, cambioDestino);
+        var ingreso = ConCambio(NuevoMovimiento(destino.Id, req.Fecha, MovimientoTesoreria.TipoIngreso, req.MontoDestino.Value, descripcion, req.Referencia, MovimientoTesoreria.OrigenTransferencia), valorDestino, cambioDestino);
         egreso.TransferenciaId = transferenciaId;
         ingreso.TransferenciaId = transferenciaId;
         await _auditoria.EjecutarAsync(usuarioId, "registrar_transferencia_tesoreria", TablaMovimientos, async () =>
@@ -505,13 +505,12 @@ public class TesoreriaService
     // El orden de pago.Aplicaciones coincide con el de las aplicaciones del recibo o pago.
     public static void AplicarLiquidacion(IReadOnlyList<IAplicacionPago> aplicaciones, PagoBancario pago)
     {
-        for (var i = 0; i < aplicaciones.Count; i++)
+        foreach (var (aplicacion, liquidada) in aplicaciones.Zip(pago.Aplicaciones))
         {
-            var liquidada = pago.Aplicaciones[i];
-            aplicaciones[i].MontoAplicadoGtq = liquidada.LibrosGtq;
-            aplicaciones[i].ValorGtq = liquidada.ValorGtq;
-            aplicaciones[i].DiferencialGtq = liquidada.ResultadoGtq;
-            aplicaciones[i].TipoCambioPagoId = pago.TipoCambioId;
+            aplicacion.MontoAplicadoGtq = liquidada.LibrosGtq;
+            aplicacion.ValorGtq = liquidada.ValorGtq;
+            aplicacion.DiferencialGtq = liquidada.ResultadoGtq;
+            aplicacion.TipoCambioPagoId = pago.TipoCambioId;
         }
     }
 
