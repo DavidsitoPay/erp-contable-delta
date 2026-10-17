@@ -168,7 +168,7 @@ public sealed class TestData
 
     public async Task<string> SembrarParametroNrVencidoAsync()
     {
-        var codigo = $"NR_T{Sufijo()}";
+        var codigo = $"NR_T{Sufijo().ToUpperInvariant()}";
         await EjecutarAsync(
             "INSERT INTO parametroretencion (codigo, concepto, nombre, tasa_base, umbral_minimo, umbral_sobre, articulo_legal, vigente_desde, vigente_hasta) " +
             "VALUES ($1, 'ISR_NO_RESIDENTE', 'Tipo de renta vencido (pruebas)', 7, 0, 'BASE', 'Prueba', DATE '2000-01-01', DATE '2000-12-31')", codigo);

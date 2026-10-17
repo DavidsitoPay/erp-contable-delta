@@ -74,10 +74,10 @@ public class PagosCxPRetencionNoResidenteTests
         Assert.Equal((c.FacturaId, 462m), (retencion.GetProperty("documentoId").GetInt32(), Dec(retencion, "monto")));
         var id = retencion.GetProperty("retencionId").GetInt32();
         Assert.Equal(
-            ("ISR_NORES", 3080m, 15m, 462m, 60m, 400m, 7.7m, c.M.Jueves, "NR_REGALIAS"),
+            ("ISR_NORES", 3080m, 15m, 462m, 60m, 400m, 7.7m, c.M.Jueves.ToDateTime(TimeOnly.MinValue), "NR_REGALIAS"),
             (await Fila<string>(id, "concepto"), await Fila<decimal>(id, "base"), await Fila<decimal>(id, "tasa"), await Fila<decimal>(id, "monto_retenido"),
                 await Fila<decimal>(id, "monto_retenido_original"), await Fila<decimal>(id, "monto_origen"), await Fila<decimal>(id, "tipo_cambio"),
-                await Fila<DateOnly>(id, "tipo_cambio_fecha"), await Fila<string>(id, "tipo_renta_codigo")));
+                await Fila<DateTime>(id, "tipo_cambio_fecha"), await Fila<string>(id, "tipo_renta_codigo")));
         var asientoId = await AsientoDePagoAsync(cuerpo);
         Assert.Equal((2618m, 462m, 3040m), (
             await _pg.Data.CreditoAsync(asientoId, c.M.BancoUsdContableId), await _pg.Data.CreditoAsync(asientoId, cuentaNr),
@@ -114,8 +114,8 @@ public class PagosCxPRetencionNoResidenteTests
 
         Assert.Equal(HttpStatusCode.Created, estado);
         var id = cuerpo.GetProperty("retenciones")[0].GetProperty("retencionId").GetInt32();
-        Assert.Equal((1000m, 150m, 1m, c.M.Jueves), (
-            await Fila<decimal>(id, "base"), await Fila<decimal>(id, "monto_retenido"), await Fila<decimal>(id, "tipo_cambio"), await Fila<DateOnly>(id, "tipo_cambio_fecha")));
+        Assert.Equal((1000m, 150m, 1m, c.M.Jueves.ToDateTime(TimeOnly.MinValue)), (
+            await Fila<decimal>(id, "base"), await Fila<decimal>(id, "monto_retenido"), await Fila<decimal>(id, "tipo_cambio"), await Fila<DateTime>(id, "tipo_cambio_fecha")));
         Assert.Equal(850m, await _pg.Data.ScalarAsync<decimal>("SELECT monto FROM movimientotesoreria WHERE pago_proveedor_id = $1", cuerpo.GetProperty("id").GetInt32()));
     }
 

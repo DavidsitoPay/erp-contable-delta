@@ -150,6 +150,7 @@ public class ReporteRetencionesTests
         try
         {
             await _pg.Data.ConfigurarCuentasRetencionAsync(null, null);
+            await _pg.Data.ConfigurarCuentaIsrNrAsync(null);
 
             var reporte = await ConsultarAsync(client, $"anio={AnioSinMovimientos}&mes=3");
 
