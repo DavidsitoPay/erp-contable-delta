@@ -107,7 +107,7 @@ public class EnteramientoEsquemaTests
         var omitidos = await _pg.Data.ScalarAsync<long>(
             "SELECT COUNT(*) FROM feriado WHERE fecha IN (DATE '2026-06-30', DATE '2026-08-15')");
 
-        Assert.Equal(21L, sembrados);
+        Assert.Equal(22L, sembrados);
         Assert.False(ejercito);
         Assert.True(nochebuena);
         Assert.Equal(0L, omitidos);

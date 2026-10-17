@@ -25,10 +25,10 @@ function renderCon() {
 
 async function llenar() {
   await screen.findByRole("option", { name: /Banco Industrial/ });
-  fireEvent.change(screen.getByLabelText("Formulario"), { target: { value: "SAT-1331" } });
+  fireEvent.change(screen.getByLabelText("Formulario SAT"), { target: { value: "SAT-1331" } });
   fireEvent.change(screen.getByLabelText("Fecha de pago"), { target: { value: "2026-10-10" } });
-  fireEvent.change(screen.getByLabelText("Número de boleta"), { target: { value: "B-1" } });
-  fireEvent.change(screen.getByLabelText("Cuenta bancaria"), { target: { value: "1" } });
+  fireEvent.change(screen.getByLabelText("Boleta de pago No."), { target: { value: "B-1" } });
+  fireEvent.change(screen.getByLabelText("Cuenta bancaria de pago (GTQ)"), { target: { value: "1" } });
 }
 
 describe("FormularioEnteramiento", () => {
@@ -41,7 +41,7 @@ describe("FormularioEnteramiento", () => {
   it("ofrece solo cuentas en quetzales", async () => {
     renderCon();
 
-    await waitFor(() => expect(within(screen.getByLabelText("Cuenta bancaria")).getAllByRole("option")).toHaveLength(2));
+    await waitFor(() => expect(within(screen.getByLabelText("Cuenta bancaria de pago (GTQ)")).getAllByRole("option")).toHaveLength(2));
   });
 
   it("indica cuando no hay cuentas en quetzales", async () => {
@@ -59,7 +59,7 @@ describe("FormularioEnteramiento", () => {
     expect(await screen.findByText("ISR por pagar")).toBeInTheDocument();
     expect(enteramientosApi.vistaPrevia).toHaveBeenCalledWith({ periodo: "2026-10-01", monto: 150, cuentaBancariaId: 1 });
 
-    fireEvent.change(screen.getByLabelText("Número de boleta"), { target: { value: "B-2" } });
+    fireEvent.change(screen.getByLabelText("Boleta de pago No."), { target: { value: "B-2" } });
 
     expect(screen.queryByText("ISR por pagar")).toBeNull();
   });
@@ -83,7 +83,7 @@ describe("FormularioEnteramiento", () => {
   it("mantiene deshabilitado el registro hasta completar la boleta", async () => {
     renderCon();
     await llenar();
-    fireEvent.change(screen.getByLabelText("Número de boleta"), { target: { value: "  " } });
+    fireEvent.change(screen.getByLabelText("Boleta de pago No."), { target: { value: "  " } });
 
     expect(screen.getByRole("button", { name: "Registrar enteramiento" })).toBeDisabled();
   });

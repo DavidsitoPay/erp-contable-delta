@@ -27,6 +27,7 @@ public sealed class PostgresFixture : IAsyncLifetime
         "16_multimoneda.sql",
         "17_retencion_no_residentes.sql",
         "18_enteramiento_ajuste_feriado.sql",
+        "19_feriado_sat_inhabil_2026.sql",
     };
 
     public NpgsqlDataSource DataSource { get; private set; } = null!;

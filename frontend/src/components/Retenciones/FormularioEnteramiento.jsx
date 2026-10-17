@@ -53,22 +53,24 @@ function FormularioEnteramiento({ saldo, onRegistrado, onCancelar }) {
     <>
       <h3>{`Enterar ISR del período ${saldo.periodo.slice(0, 7)}`}</h3>
       <FormularioCatalogo onSubmit={handleSubmit} cargando={enviando || !enteramientoValido(form)} error={error} etiquetaBoton="Registrar enteramiento">
-        <CampoFormulario id="ent-formulario" etiqueta="Formulario">
+        <CampoFormulario id="ent-formulario" etiqueta="Formulario SAT">
           <select id="ent-formulario" className="select" value={form.formulario} onChange={cambiar("formulario")} required>
-            <option value="">Selecciona formulario</option>
+            <option value="">Selecciona el formulario SAT</option>
             <OpcionesSelect opciones={FORMULARIOS_ENTERAMIENTO} />
           </select>
         </CampoFormulario>
         <CampoFormulario id="ent-pago" etiqueta="Fecha de pago">
           <input id="ent-pago" type="date" className="input" min={saldo.periodo} max={hoyGuatemala()} value={form.fechaPago} onChange={cambiar("fechaPago")} required />
+          <small className="nota-fiscal">No puede ser anterior al período ni posterior a hoy.</small>
         </CampoFormulario>
-        <CampoFormulario id="ent-boleta" etiqueta="Número de boleta">
+        <CampoFormulario id="ent-boleta" etiqueta="Boleta de pago No.">
           <input id="ent-boleta" className="input" maxLength={40} value={form.boleta} onChange={cambiar("boleta")} required />
         </CampoFormulario>
-        <CampoFormulario id="ent-monto" etiqueta="Monto">
+        <CampoFormulario id="ent-monto" etiqueta="Monto a enterar (GTQ)">
           <input id="ent-monto" type="number" step="0.01" className="input" value={form.monto} onChange={cambiar("monto")} required />
+          <small className="nota-fiscal">Máximo: saldo por enterar del período.</small>
         </CampoFormulario>
-        <SelectCuentaBancaria etiqueta="Cuenta bancaria" valor={form.cuentaBancariaId} onChange={(v) => { setForm({ ...form, cuentaBancariaId: v }); setVista(null); }} cuentasBancarias={cuentas} />
+        <SelectCuentaBancaria etiqueta="Cuenta bancaria de pago (GTQ)"valor={form.cuentaBancariaId} onChange={(v) => { setForm({ ...form, cuentaBancariaId: v }); setVista(null); }} cuentasBancarias={cuentas} />
         {cuentas.length === 0 && <small className="nota-fiscal">No hay cuentas bancarias activas en quetzales.</small>}
         <button type="button" className="btn btn-outline" onClick={previsualizar} disabled={enviando || !enteramientoValido(form)}>
           Vista previa
