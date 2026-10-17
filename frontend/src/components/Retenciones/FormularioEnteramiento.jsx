@@ -20,7 +20,9 @@ function FormularioEnteramiento({ saldo, onRegistrado, onCancelar }) {
   };
 
   useEffect(() => {
-    cuentasBancariasApi.listar().then(({ data }) => setCuentas(cuentasGtq(data)));
+    cuentasBancariasApi.listar()
+      .then(({ data }) => setCuentas(cuentasGtq(data)))
+      .catch((err) => setError(mensajeError(err, "No se pudieron cargar las cuentas bancarias.")));
   }, []);
 
   async function previsualizar() {

@@ -35,7 +35,8 @@ public class FeriadosControllerTests
         var listado = (await client.GetFromJsonAsync<JsonElement>($"{Ruta}?anio={Anio}")).EnumerateArray().Single(f => f.GetProperty("fecha").GetString() == fecha);
         var eliminado = await client.DeleteAsync($"{Ruta}/{fecha}");
         var otraVez = await client.DeleteAsync($"{Ruta}/{fecha}");
-        var inexistente = await client.PutAsJsonAsync($"{Ruta}/{new DateOnly(Anio, 3, 2).Dia()}", new { nombre = "x", medioDia = false });
+        var fechaInexistente = new DateOnly(Anio, 3, 2).Dia();
+        var inexistente = await client.PutAsJsonAsync($"{Ruta}/{fechaInexistente}", new { fecha = fechaInexistente, nombre = "x", medioDia = false });
 
         Assert.Equal(
             new[] { HttpStatusCode.Created, HttpStatusCode.Conflict, HttpStatusCode.OK, HttpStatusCode.NoContent, HttpStatusCode.NotFound, HttpStatusCode.NotFound },
@@ -59,7 +60,7 @@ public class FeriadosControllerTests
 
         var lectura = await contador.GetAsync($"{Ruta}?anio={Anio}");
         var (alta, _) = await contador.EnviarAsync(Ruta, new { fecha, nombre = "x", medioDia = false });
-        var cambio = await contador.PutAsJsonAsync($"{Ruta}/{fecha}", new { nombre = "x", medioDia = false });
+        var cambio = await contador.PutAsJsonAsync($"{Ruta}/{fecha}", new { fecha, nombre = "x", medioDia = false });
         var baja = await contador.DeleteAsync($"{Ruta}/{fecha}");
 
         Assert.Equal(

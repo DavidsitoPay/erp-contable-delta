@@ -4,7 +4,7 @@ namespace DeltaERP.Tests.Unit;
 
 public class DiaHabilRulesTests
 {
-    private static IReadOnlySet<DateOnly> Set(string csv) =>
+    private static HashSet<DateOnly> Set(string csv) =>
         csv.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(DateOnly.Parse).ToHashSet();
 
     [Theory]

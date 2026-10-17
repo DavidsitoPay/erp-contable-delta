@@ -1,10 +1,11 @@
+using System.Text.Json.Serialization;
 using DeltaERP.Domain.Entities;
 
 namespace DeltaERP.Api.Models;
 
-public sealed record SolicitudEnteramiento(string? Formulario, DateOnly Periodo, DateOnly FechaPago, string? Boleta, decimal Monto, int CuentaBancariaId);
+public sealed record SolicitudEnteramiento(string? Formulario, [property: JsonRequired] DateOnly Periodo, [property: JsonRequired] DateOnly FechaPago, string? Boleta, [property: JsonRequired] decimal Monto, [property: JsonRequired] int CuentaBancariaId);
 
-public sealed record SolicitudVistaPreviaEnteramiento(DateOnly Periodo, decimal Monto, int CuentaBancariaId);
+public sealed record SolicitudVistaPreviaEnteramiento([property: JsonRequired] DateOnly Periodo, [property: JsonRequired] decimal Monto, [property: JsonRequired] int CuentaBancariaId);
 
 public sealed record LineaPartidaDto(int CuentaId, string Codigo, string Nombre, decimal Debe, decimal Haber);
 
@@ -31,7 +32,7 @@ public sealed record AjusteRetencionDto(
 
 public sealed record SolicitudResolverAjuste(string? Motivo, string? Referencia);
 
-public sealed record FeriadoDto(DateOnly Fecha, string? Nombre, bool MedioDia)
+public sealed record FeriadoDto([property: JsonRequired] DateOnly Fecha, string? Nombre, [property: JsonRequired] bool MedioDia)
 {
     public static FeriadoDto Desde(Feriado f) => new(f.Fecha, f.Nombre, f.MedioDia);
 }

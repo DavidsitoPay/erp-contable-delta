@@ -17,18 +17,19 @@ public static class DiaHabilRules
     public static DateOnly DecimoDiaHabil(DateOnly periodo, IReadOnlySet<DateOnly> inhabiles)
     {
         var dia = new DateOnly(periodo.Year, periodo.Month, 1).AddMonths(1);
-        for (var contados = 0; ; dia = dia.AddDays(1))
+        var contados = 0;
+        while (true)
         {
-            if (dia.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday || inhabiles.Contains(dia))
-            {
-                continue;
-            }
-            if (++contados == DiaHabilLimite)
+            if (EsHabil(dia, inhabiles) && ++contados == DiaHabilLimite)
             {
                 return dia;
             }
+            dia = dia.AddDays(1);
         }
     }
+
+    private static bool EsHabil(DateOnly dia, IReadOnlySet<DateOnly> inhabiles) =>
+        dia.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday) && !inhabiles.Contains(dia);
 
     public static int DiasParaVencer(DateOnly hoy, DateOnly vence) => vence.DayNumber - hoy.DayNumber;
 
@@ -39,6 +40,10 @@ public static class DiaHabilRules
             return SinSaldo;
         }
         var dias = DiasParaVencer(hoy, vence);
-        return dias < 0 ? Vencido : dias <= DiasAlerta ? PorVencer : AlDia;
+        if (dias < 0)
+        {
+            return Vencido;
+        }
+        return dias <= DiasAlerta ? PorVencer : AlDia;
     }
 }

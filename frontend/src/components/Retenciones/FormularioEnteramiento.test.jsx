@@ -73,6 +73,13 @@ describe("FormularioEnteramiento", () => {
     expect(await screen.findByText("No se pudo calcular la vista previa.")).toBeInTheDocument();
   });
 
+  it("muestra error si no carga las cuentas bancarias", async () => {
+    vi.mocked(cuentasBancariasApi.listar).mockRejectedValue(new Error("red"));
+    renderCon();
+
+    expect(await screen.findByText("No se pudieron cargar las cuentas bancarias.")).toBeInTheDocument();
+  });
+
   it("mantiene deshabilitado el registro hasta completar la boleta", async () => {
     renderCon();
     await llenar();
