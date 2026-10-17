@@ -95,9 +95,9 @@ public static class TesoreriaRules
     public static string? ValidarEscalaPago(IEnumerable<decimal> montos) =>
         montos.Any(m => Math.Round(m, 2) != m) ? "Los montos del pago no pueden tener más de 2 decimales." : null;
 
-    public static string? ValidarCobroNeto(decimal totalAplicado, decimal retenido) =>
+    public static string? ValidarNetoPositivo(decimal totalAplicado, decimal retenido) =>
         retenido > 0 && totalAplicado - retenido <= 0
-            ? "El cobro neto (total aplicado menos IVA retenido) debe ser mayor a cero."
+            ? "El neto (total aplicado menos retenciones) debe ser mayor a cero."
             : null;
 
     public static string? ValidarMarca(ConciliacionBancaria conciliacion, MovimientoTesoreria? movimiento)

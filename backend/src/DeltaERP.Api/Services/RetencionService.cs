@@ -6,6 +6,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DeltaERP.Api.Services;
 
+public sealed record EntradaIsrNr(int DocumentoId, decimal Monto, decimal? ValorEfectivoGtq, string? TipoRentaCodigo);
+
+public sealed record LineaIsrNr(
+    int DocumentoId, DateOnly FechaDocumento, ParametroRetencion Parametro, int MonedaId, string MonedaCodigo, decimal MontoOrigen,
+    decimal TipoCambio, DateOnly TipoCambioFecha, decimal BaseGtq, decimal RetencionGtq, decimal RetencionOrigen, decimal ValorGtq, int Indice);
+
+public sealed record PreparacionIsrNr(bool Aplica, string? MotivoNoAplica, IReadOnlyList<LineaIsrNr> Lineas, int? CuentaId, IReadOnlyList<string> Advertencias)
+{
+    public static PreparacionIsrNr NoAplica(string motivo) => new(false, motivo, [], null, []);
+
+    public decimal TotalRetencionGtq => Lineas.Sum(l => l.RetencionGtq);
+
+    public decimal TotalRetencionOrigen => Lineas.Sum(l => l.RetencionOrigen);
+
+    public IReadOnlyList<(int CuentaId, decimal Monto)> ParaAsiento() =>
+        CuentaId is { } cuenta && Lineas.Count > 0 ? [(cuenta, TotalRetencionGtq)] : [];
+}
+
 public sealed record RetencionIsrPreparada(
     EstadoRetencionIsr Estado,
     string? Motivo,
@@ -58,12 +76,137 @@ public class RetencionService
     private readonly DeltaErpDbContext _db;
     private readonly ConfiguracionFiscalService _configuracion;
     private readonly ConstanciaRetencionService _constancias;
+    private readonly TipoCambioService _tiposCambio;
+    private readonly TimeProvider _reloj;
 
-    public RetencionService(DeltaErpDbContext db, ConfiguracionFiscalService configuracion, ConstanciaRetencionService constancias)
+    public RetencionService(
+        DeltaErpDbContext db, ConfiguracionFiscalService configuracion, ConstanciaRetencionService constancias,
+        TipoCambioService tiposCambio, TimeProvider reloj)
     {
         _db = db;
         _configuracion = configuracion;
         _constancias = constancias;
+        _tiposCambio = tiposCambio;
+        _reloj = reloj;
+    }
+
+    // RN-29, RN-30 y RN-31; unico punto de calculo para retencion-previa y para CrearPago.
+    public async Task<(PreparacionIsrNr Preparacion, ErrorValidacion? Error)> PrepararIsrNoResidenteAsync(
+        Contraparte proveedor, DateOnly fecha, IReadOnlyCollection<DocumentoPagable> documentos, IReadOnlyList<EntradaIsrNr> entradas)
+    {
+        if (!RetencionNoResidenteRules.Aplica(proveedor))
+        {
+            return (PreparacionIsrNr.NoAplica(proveedor.EsResidente ? "El proveedor es residente." : "El proveedor tiene renta exenta."), null);
+        }
+        var ids = entradas.Select(e => e.DocumentoId).Distinct().ToList();
+        var facturas = documentos.Where(d => ids.Contains(d.Id) && !d.EsNotaCredito).ToDictionary(d => d.Id);
+        var fechas = await _db.DocumentosCxP.AsNoTracking().Where(d => ids.Contains(d.Id)).ToDictionaryAsync(d => d.Id, d => d.Fecha);
+        var monedas = await _db.Monedas.AsNoTracking().ToDictionaryAsync(m => m.Id, m => m.Codigo);
+        var cache = new Dictionary<string, ParametroRetencion>();
+        var lineas = new List<LineaIsrNr>();
+        for (var i = 0; i < entradas.Count; i++)
+        {
+            var e = entradas[i];
+            if (!facturas.TryGetValue(e.DocumentoId, out var documento))
+            {
+                continue;
+            }
+            var codigo = RetencionNoResidenteRules.CodigoRenta(proveedor, e.TipoRentaCodigo);
+            if (codigo is null)
+            {
+                return (PreparacionIsrNr.NoAplica(string.Empty),
+                    ErrorValidacion.Conflicto($"El proveedor {proveedor.Nombre} es no residente: indique el tipo de renta (art. 104) para retener el ISR."));
+            }
+            var (parametro, errorParametro) = await ResolverParametroAsync(codigo, fecha, cache);
+            if (parametro is null)
+            {
+                return (PreparacionIsrNr.NoAplica(string.Empty), errorParametro);
+            }
+            // RN-31
+            var (cambio, errorCambio) = await _tiposCambio.ResolverParaDocumentoAsync(monedas[documento.MonedaId], fecha);
+            if (cambio is null)
+            {
+                return (PreparacionIsrNr.NoAplica(string.Empty), errorCambio);
+            }
+            lineas.Add(ConstruirLinea(e, documento.Id, documento.MonedaId, fechas[documento.Id], parametro, cambio, i));
+        }
+        if (lineas.Count == 0)
+        {
+            return (PreparacionIsrNr.NoAplica("Las notas de crédito no generan retención."), null);
+        }
+        var configuracion = await _configuracion.ObtenerAsync();
+        var (cuentaId, errorCuenta) = await _configuracion.ResolverCuentaAsync(
+            configuracion.CuentaIsrNrRetenidoPagarId, "ISR retenido a no residentes por pagar", "pagos a proveedores no residentes");
+        if (errorCuenta is not null)
+        {
+            return (PreparacionIsrNr.NoAplica(string.Empty), errorCuenta);
+        }
+        return (new PreparacionIsrNr(true, null, lineas, cuentaId, []), null);
+    }
+
+    private async Task<(ParametroRetencion? Parametro, ErrorValidacion? Error)> ResolverParametroAsync(
+        string codigo, DateOnly fecha, Dictionary<string, ParametroRetencion> cache)
+    {
+        if (cache.TryGetValue(codigo, out var enCache))
+        {
+            return (enCache, null);
+        }
+        var encontrado = await _db.ParametrosRetencion.FirstOrDefaultAsync(p =>
+            p.Codigo == codigo && p.Concepto == ParametroRetencion.ConceptoIsrNoResidente && p.Activo && p.VigenteDesde <= fecha
+            && (p.VigenteHasta == null || p.VigenteHasta >= fecha));
+        if (encontrado is not null)
+        {
+            cache[codigo] = encontrado;
+            return (encontrado, null);
+        }
+        var existe = await _db.ParametrosRetencion.AnyAsync(p => p.Codigo == codigo && p.Concepto == ParametroRetencion.ConceptoIsrNoResidente);
+        return (null, existe
+            ? ErrorValidacion.Conflicto($"No hay un parametro de retencion de ISR a no residentes ({codigo}) vigente el {VigenciaRules.Iso(fecha)}. Solicite al Administrador del sistema que lo configure.")
+            : ErrorValidacion.Solicitud($"El tipo de renta {codigo} no existe en el catalogo de ISR a no residentes."));
+    }
+
+    private static LineaIsrNr ConstruirLinea(
+        EntradaIsrNr e, int documentoId, int monedaId, DateOnly fechaDocumento, ParametroRetencion parametro, TipoCambioAplicable cambio, int indice)
+    {
+        var baseGtq = RetencionNoResidenteRules.BaseGtq(e.Monto, cambio.Tasa);
+        var tasa = parametro.TasaBase ?? 0m;
+        return new LineaIsrNr(
+            documentoId, fechaDocumento, parametro, monedaId, cambio.MonedaCodigo, e.Monto, cambio.Tasa, cambio.Fecha, baseGtq,
+            RetencionNoResidenteRules.Retencion(baseGtq, tasa), RetencionNoResidenteRules.Retencion(e.Monto, tasa), e.ValorEfectivoGtq ?? baseGtq, indice);
+    }
+
+    public async Task<IReadOnlyList<RetencionPagoRespuesta>> RegistrarIsrNoResidenteAsync(
+        PreparacionIsrNr preparacion, IReadOnlyList<AplicacionPagoProveedor> aplicaciones, int proveedorId, DateOnly fecha, int asientoId, int usuarioId)
+    {
+        if (!preparacion.Aplica || preparacion.CuentaId is not { } cuentaId)
+        {
+            return [];
+        }
+        var retenciones = preparacion.Lineas.Select(l => new Retencion
+        {
+            Concepto = Retencion.ConceptoIsrNoResidente, ContraparteId = proveedorId, DocumentoCxpId = l.DocumentoId,
+            AplicacionPagoProveedorId = aplicaciones[l.Indice].Id, ParametroId = l.Parametro.Id,
+            FechaDocumento = l.FechaDocumento, FechaOperacion = fecha, CuentaId = cuentaId, Base = l.BaseGtq, Tasa = l.Parametro.TasaBase ?? 0m,
+            MontoCalculado = l.RetencionGtq, MontoRetenido = l.RetencionGtq, MontoRetenidoOriginal = l.RetencionOrigen, MonedaId = l.MonedaId,
+            MontoOrigen = l.MontoOrigen, TipoCambio = l.TipoCambio, TipoCambioFecha = l.TipoCambioFecha, TipoRentaCodigo = l.Parametro.Codigo,
+            AsientoId = asientoId, RegistradoPor = usuarioId, CreadoEn = DateTimeOffset.UtcNow,
+        }).ToList();
+        _db.Retenciones.AddRange(retenciones);
+        await _db.SaveChangesAsync();
+        return retenciones.Select(r => new RetencionPagoRespuesta(r.Id, r.DocumentoCxpId!.Value, r.MontoRetenido)).ToList();
+    }
+
+    public async Task<string?> ValidarTipoRentaNrAsync(Contraparte c)
+    {
+        if (string.IsNullOrWhiteSpace(c.TipoRentaNrCodigo))
+        {
+            return null;
+        }
+        var hoy = DateOnly.FromDateTime(_reloj.GetUtcNow().UtcDateTime);
+        var existe = await _db.ParametrosRetencion.AnyAsync(p =>
+            p.Codigo == c.TipoRentaNrCodigo && p.Concepto == ParametroRetencion.ConceptoIsrNoResidente && p.Activo
+            && p.VigenteDesde <= hoy && (p.VigenteHasta == null || p.VigenteHasta >= hoy));
+        return existe ? null : "El tipo de renta indicado no existe o no esta vigente.";
     }
 
     public async Task<ParametroRetencion?> ParametroVigenteAsync(string codigo, DateOnly fecha) =>

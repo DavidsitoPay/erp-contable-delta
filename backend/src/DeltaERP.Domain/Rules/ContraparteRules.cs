@@ -11,6 +11,17 @@ public static class ContraparteRules
     public static string? ValidarFiscal(Contraparte datos, string tipo) =>
         ValidarRegimenes(datos) ?? ValidarFundamento(datos) ?? ValidarAgente(datos) ?? ValidarNit(tipo, datos.Nit);
 
+    // RN-29
+    public static string? ValidarTipoRentaNr(Contraparte datos, string tipo) =>
+        tipo == TipoProveedor && !datos.EsResidente && datos.RegimenIsr != Contraparte.RegimenIsrExento && string.IsNullOrWhiteSpace(datos.TipoRentaNrCodigo)
+            ? "Un proveedor no residente exige tipo de renta (art. 104) o régimen de ISR EXENTO con fundamento."
+            : null;
+
+    public static string? TipoRentaNrNormalizado(Contraparte datos, string tipo) =>
+        tipo == TipoProveedor && !datos.EsResidente && !string.IsNullOrWhiteSpace(datos.TipoRentaNrCodigo)
+            ? datos.TipoRentaNrCodigo.Trim().ToUpperInvariant()
+            : null;
+
     public static string? FundamentoNormalizado(Contraparte datos) =>
         RequiereFundamento(datos.RegimenIsr) ? datos.IsrFundamento?.Trim() : null;
 

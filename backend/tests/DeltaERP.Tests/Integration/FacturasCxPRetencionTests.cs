@@ -128,6 +128,18 @@ public class FacturasCxPRetencionTests
     }
 
     [Fact]
+    public async Task CrearFactura_DeNoResidenteConTipoDeRenta_DifiereLaRetencionAlPago()
+    {
+        var (e, client) = await _pg.PrepararAsync();
+        var proveedor = await _pg.Data.CrearProveedorNoResidenteAsync("NR_REGALIAS");
+
+        var (_, _, cuerpo) = await client.RegistrarCompraAsync(CompraConIva(e, proveedor, 11200m));
+
+        Assert.Equal(("NoAplica", 0m), Estado(cuerpo));
+        Assert.Contains("se retiene al registrar el pago", cuerpo.GetProperty("retencionIsr").GetProperty("motivo").GetString());
+    }
+
+    [Fact]
     public async Task CrearFactura_DePequenoContribuyente_NoRetieneIsr()
     {
         var (e, client) = await _pg.PrepararAsync();

@@ -183,6 +183,51 @@ public class CxPController : FacturaControllerBase
         return Ok(resultado);
     }
 
+    [HttpPost("pagos/retencion-previa")]
+    [Authorize(Roles = Roles.RegistroPagos)]
+    public async Task<IActionResult> RetencionPreviaPago([FromBody] SolicitudRetencionPreviaPago solicitud)
+    {
+        var (proveedor, errorProveedor) = await _validacion.ValidarTerceroAsync(solicitud.ProveedorId, "Proveedor");
+        if (proveedor is null)
+        {
+            return BadRequest(new { error = errorProveedor });
+        }
+
+        var aplicaciones = solicitud.Aplicaciones.Select(a => (a.DocumentoId, a.MontoAplicado)).ToList();
+        var documentos = await CargarDocumentosPagablesAsync(aplicaciones.Select(a => a.DocumentoId).Distinct());
+
+        var errorAplicaciones = PagoRules.ValidarAplicaciones("proveedor", solicitud.ProveedorId, aplicaciones, documentos);
+        if (errorAplicaciones is not null)
+        {
+            return BadRequest(new { error = errorAplicaciones });
+        }
+
+        var entradas = solicitud.Aplicaciones.Select(a => new EntradaIsrNr(a.DocumentoId, a.MontoAplicado, a.ValorEfectivoGtq, a.TipoRentaCodigo)).ToList();
+        var (preparacion, errorNr) = await _retenciones.PrepararIsrNoResidenteAsync(proveedor, solicitud.Fecha, documentos, entradas);
+        if (errorNr is not null)
+        {
+            return this.Fallo(errorNr);
+        }
+
+        if (!preparacion.Aplica)
+        {
+            return Ok(new RetencionPreviaPagoRespuesta(false, preparacion.MotivoNoAplica, [], 0m, 0m, null, []));
+        }
+
+        var valorGtq = preparacion.Lineas.Sum(l => l.ValorGtq);
+        var errorNeto = TesoreriaRules.ValidarNetoPositivo(valorGtq, preparacion.TotalRetencionGtq);
+        if (errorNeto is not null)
+        {
+            return BadRequest(new { error = errorNeto });
+        }
+
+        var lineas = preparacion.Lineas.Select(l => new LineaRetencionPrevia(
+            l.DocumentoId, l.Parametro.Codigo, l.Parametro.Nombre, l.Parametro.TasaBase ?? 0m, l.Parametro.Id, l.MonedaCodigo, l.MontoOrigen,
+            l.TipoCambio, l.TipoCambioFecha, l.BaseGtq, l.RetencionGtq)).ToList();
+        return Ok(new RetencionPreviaPagoRespuesta(
+            true, null, lineas, preparacion.Lineas.Sum(l => l.BaseGtq), preparacion.TotalRetencionGtq, valorGtq - preparacion.TotalRetencionGtq, []));
+    }
+
     [HttpPost("pagos")]
     [Authorize(Roles = Roles.RegistroPagos)]
     public async Task<IActionResult> CrearPago([FromBody] PagoProveedorCabecera pago)
@@ -203,14 +248,7 @@ public class CxPController : FacturaControllerBase
         }
 
         var idsDocumento = aplicaciones.Select(a => a.DocumentoId).Distinct().ToList();
-        var documentos = await (
-            from d in _db.DocumentosCxP
-            join s in _db.SaldosDocumentoCxP on d.Id equals s.DocumentoId
-            where idsDocumento.Contains(d.Id)
-            select new DocumentoPagable(
-                d.Id, d.Numero, d.ProveedorId, d.Estado, s.SaldoPendiente, d.AsientoId, d.TipoDocumento == TiposDocumento.NotaCredito,
-                d.MonedaId, d.TipoCambioAplicado, s.SaldoPendienteGtq, d.MontoTotalOriginal)
-            ).ToListAsync();
+        var documentos = await CargarDocumentosPagablesAsync(idsDocumento);
 
         var errorAplicaciones = PagoRules.ValidarAplicaciones("proveedor", pago.ProveedorId, aplicaciones, documentos);
         if (errorAplicaciones is not null)
@@ -218,7 +256,15 @@ public class CxPController : FacturaControllerBase
             return BadRequest(new { error = errorAplicaciones });
         }
 
-        var (desembolso, errorDesembolso) = await _tesoreria.PrepararPagoAsync(Perfil, pago.CuentaBancariaId, pago.Fecha, documentos, entradas);
+        var entradasNr = pago.Aplicaciones.Select(a => new EntradaIsrNr(a.DocumentoId, a.MontoAplicado, a.ValorEfectivoGtq, a.TipoRentaCodigo)).ToList();
+        var (retencionNr, errorNr) = await _retenciones.PrepararIsrNoResidenteAsync(proveedor, pago.Fecha, documentos, entradasNr);
+        if (errorNr is not null)
+        {
+            return this.Fallo(errorNr);
+        }
+
+        var (desembolso, errorDesembolso) = await _tesoreria.PrepararPagoAsync(
+            Perfil, pago.CuentaBancariaId, pago.Fecha, documentos, entradas, retencionNr.ParaAsiento(), retencionNr.TotalRetencionOrigen);
         if (desembolso is null)
         {
             return this.Fallo(errorDesembolso!);
@@ -236,14 +282,17 @@ public class CxPController : FacturaControllerBase
         }
         TesoreriaService.AplicarLiquidacion(pago.Aplicaciones, desembolso);
 
+        IReadOnlyList<RetencionPagoRespuesta> retenciones = [];
         var conflicto = await this.GuardarAuditadoAsync(_auditoria, "registrar_pago_cxp", "pagoproveedorcabecera", async () =>
         {
             _db.PagosProveedor.Add(pago);
             await _db.SaveChangesAsync();
-            await _tesoreria.RegistrarMovimientoDePagoAsync(
+            var asientoId = await _tesoreria.RegistrarMovimientoDePagoAsync(
                 desembolso, Perfil, pago.Fecha, $"Pago {pago.Id} - {proveedor.Nombre}", pago.ReferenciaBancaria, pago.Id, usuarioId);
+            retenciones = await _retenciones.RegistrarIsrNoResidenteAsync(retencionNr, pago.Aplicaciones.ToList(), pago.ProveedorId, pago.Fecha, asientoId, usuarioId);
 
-            return $"Pago {pago.Id} (proveedor {proveedor.Nombre}) registrado, monto {pago.MontoTotal}{TesoreriaService.DescribirDiferencial(desembolso)}";
+            var isrNr = retencionNr.Aplica ? $", ISR no residente Q{retencionNr.TotalRetencionGtq}" : string.Empty;
+            return $"Pago {pago.Id} (proveedor {proveedor.Nombre}) registrado, monto {pago.MontoTotal}{TesoreriaService.DescribirDiferencial(desembolso)}{isrNr}";
         });
 
         var aplicacionesGuardadas = pago.Aplicaciones
@@ -255,6 +304,20 @@ public class CxPController : FacturaControllerBase
             new { },
             new PagoProveedorRespuesta(
                 pago.Id, pago.ProveedorId, pago.Fecha, pago.MontoTotal, pago.MetodoPago, pago.ReferenciaBancaria, pago.CuentaBancariaId,
-                aplicacionesGuardadas, desembolso.MonedaDocumentoCodigo, pago.MontoTotalGtq, desembolso.MontoCuenta, desembolso.DiferencialRealizado));
+                aplicacionesGuardadas, desembolso.MonedaDocumentoCodigo, pago.MontoTotalGtq, desembolso.MontoCuenta, desembolso.DiferencialRealizado,
+                retenciones));
+    }
+
+    private async Task<List<DocumentoPagable>> CargarDocumentosPagablesAsync(IEnumerable<int> ids)
+    {
+        var idsDocumento = ids.ToList();
+        return await (
+            from d in _db.DocumentosCxP
+            join s in _db.SaldosDocumentoCxP on d.Id equals s.DocumentoId
+            where idsDocumento.Contains(d.Id)
+            select new DocumentoPagable(
+                d.Id, d.Numero, d.ProveedorId, d.Estado, s.SaldoPendiente, d.AsientoId, d.TipoDocumento == TiposDocumento.NotaCredito,
+                d.MonedaId, d.TipoCambioAplicado, s.SaldoPendienteGtq, d.MontoTotalOriginal)
+            ).ToListAsync();
     }
 }

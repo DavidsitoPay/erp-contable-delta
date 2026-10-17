@@ -58,6 +58,7 @@ FROM (VALUES
     ('1.2.01', 'Mobiliario y equipo',                '1.2'),
     ('2.1.01', 'Proveedores (cuentas por pagar)',    '2.1'),
     ('2.1.02', 'IVA por pagar',                      '2.1'),
+    ('2.1.03', 'ISR retenido a no residentes por pagar', '2.1'),
     ('3.1.01', 'Capital social',                     '3.1'),
     ('3.1.02', 'Utilidades retenidas',               '3.1'),
     ('4.1.01', 'Ventas de mercadería',               '4.1'),
@@ -99,6 +100,7 @@ INSERT INTO contraparte (tipo, nombre, nit, direccion) VALUES
 UPDATE configuracionfiscal
 SET cuenta_iva_debito_id  = (SELECT id FROM cuentacontable WHERE codigo = '2.1.02'),
     cuenta_iva_credito_id = (SELECT id FROM cuentacontable WHERE codigo = '1.1.05'),
+    cuenta_isr_nr_retenido_pagar_id = (SELECT id FROM cuentacontable WHERE codigo = '2.1.03'),
     actualizado_en        = now()
 WHERE id = 1;
 

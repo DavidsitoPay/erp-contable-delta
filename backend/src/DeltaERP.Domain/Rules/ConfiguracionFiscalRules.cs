@@ -15,7 +15,8 @@ public sealed record DatosConfiguracionFiscal(
     int? CuentaDifGananciaRealizadaId = null,
     int? CuentaDifPerdidaRealizadaId = null,
     int? CuentaRevalGananciaId = null,
-    int? CuentaRevalPerdidaId = null);
+    int? CuentaRevalPerdidaId = null,
+    int? CuentaIsrNrRetenidoPagarId = null);
 
 public static class ConfiguracionFiscalRules
 {
@@ -55,14 +56,15 @@ public static class ConfiguracionFiscalRules
             : null;
 
     private static string? ValidarCuentasRetencionDistintas(DatosConfiguracionFiscal datos) =>
-        TodasDistintas(datos.CuentaIvaDebitoId, datos.CuentaIvaCreditoId, datos.CuentaIsrRetenidoPagarId, datos.CuentaIvaRetenidoClientesId)
+        TodasDistintas(datos.CuentaIvaDebitoId, datos.CuentaIvaCreditoId, datos.CuentaIsrRetenidoPagarId, datos.CuentaIvaRetenidoClientesId, datos.CuentaIsrNrRetenidoPagarId)
             ? null
             : "Las cuentas de IVA y de retención (ISR retenido por pagar, IVA retenido por clientes) deben ser distintas entre sí.";
 
     private static string? ValidarCuentasCambiariasDistintas(DatosConfiguracionFiscal datos) =>
         TodasDistintas(
             datos.CuentaIvaDebitoId, datos.CuentaIvaCreditoId, datos.CuentaIsrRetenidoPagarId, datos.CuentaIvaRetenidoClientesId,
-            datos.CuentaDifGananciaRealizadaId, datos.CuentaDifPerdidaRealizadaId, datos.CuentaRevalGananciaId, datos.CuentaRevalPerdidaId)
+            datos.CuentaDifGananciaRealizadaId, datos.CuentaDifPerdidaRealizadaId, datos.CuentaRevalGananciaId, datos.CuentaRevalPerdidaId,
+            datos.CuentaIsrNrRetenidoPagarId)
             ? null
             : "Las cuentas de diferencial cambiario y de revaluación deben ser distintas entre sí y de las cuentas de IVA y de retención.";
 

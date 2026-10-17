@@ -18,11 +18,13 @@ public class ContrapartesController : ControllerBase
 {
     private readonly DeltaErpDbContext _db;
     private readonly AuditoriaService _auditoria;
+    private readonly RetencionService _retenciones;
 
-    public ContrapartesController(DeltaErpDbContext db, AuditoriaService auditoria)
+    public ContrapartesController(DeltaErpDbContext db, AuditoriaService auditoria, RetencionService retenciones)
     {
         _db = db;
         _auditoria = auditoria;
+        _retenciones = retenciones;
     }
 
     [HttpGet]
@@ -61,10 +63,17 @@ public class ContrapartesController : ControllerBase
             return BadRequest(new { error = errorFiscal });
         }
 
+        var errorRenta = await ValidarRentaNrAsync(contraparte, contraparte.Tipo);
+        if (errorRenta is not null)
+        {
+            return BadRequest(new { error = errorRenta });
+        }
+
         contraparte.Id = 0;
         contraparte.Nit = NitRules.Normalizar(contraparte.Nit);
         contraparte.IsrFundamento = ContraparteRules.FundamentoNormalizado(contraparte);
         contraparte.TipoAgenteIva = ContraparteRules.TipoAgenteNormalizado(contraparte);
+        contraparte.TipoRentaNrCodigo = ContraparteRules.TipoRentaNrNormalizado(contraparte, contraparte.Tipo);
         _db.Contrapartes.Add(contraparte);
         await _db.SaveChangesAsync();
         return CreatedAtAction(nameof(Obtener), new { id = contraparte.Id }, contraparte);
@@ -89,6 +98,12 @@ public class ContrapartesController : ControllerBase
             return BadRequest(new { error = errorFiscal });
         }
 
+        var errorRenta = await ValidarRentaNrAsync(cambios, contraparte.Tipo);
+        if (errorRenta is not null)
+        {
+            return BadRequest(new { error = errorRenta });
+        }
+
         // Tipo no se actualiza: cambiarlo rompería referencias ya creadas en CxC/CxP.
         var anterior = DescribirFiscal(contraparte);
         contraparte.Nombre = cambios.Nombre;
@@ -100,6 +115,7 @@ public class ContrapartesController : ControllerBase
         contraparte.EsResidente = cambios.EsResidente;
         contraparte.EsAgenteRetencionIva = cambios.EsAgenteRetencionIva;
         contraparte.TipoAgenteIva = ContraparteRules.TipoAgenteNormalizado(cambios);
+        contraparte.TipoRentaNrCodigo = ContraparteRules.TipoRentaNrNormalizado(cambios, contraparte.Tipo);
         var conflicto = await this.GuardarAuditadoAsync(_auditoria, "actualizar_contraparte", "contraparte", async () =>
         {
             await _db.SaveChangesAsync();
@@ -108,6 +124,16 @@ public class ContrapartesController : ControllerBase
         return conflicto ?? Ok(contraparte);
     }
 
+    private async Task<string?> ValidarRentaNrAsync(Contraparte datos, string tipo)
+    {
+        datos.TipoRentaNrCodigo = ContraparteRules.TipoRentaNrNormalizado(datos, tipo);
+        if (datos.TipoRentaNrCodigo is null)
+        {
+            return ContraparteRules.ValidarTipoRentaNr(datos, tipo);
+        }
+        return await _retenciones.ValidarTipoRentaNrAsync(datos);
+    }
+
     private static string DescribirFiscal(Contraparte c) =>
-        $"régimen ISR {c.RegimenIsr} (fundamento {c.IsrFundamento}), residente {c.EsResidente}, agente IVA {c.EsAgenteRetencionIva} ({c.TipoAgenteIva})";
+        $"régimen ISR {c.RegimenIsr} (fundamento {c.IsrFundamento}), residente {c.EsResidente}, agente IVA {c.EsAgenteRetencionIva} ({c.TipoAgenteIva}), tipo de renta NR {c.TipoRentaNrCodigo}";
 }

@@ -8,6 +8,7 @@ namespace DeltaERP.Api.Services;
 public class ConstanciaRetencionService
 {
     public const string MensajeNumeroDuplicado = "Ya existe una constancia emitida con ese número para el mismo tipo y retenedor.";
+    public const string MensajeSinConstanciaNr = "Las retenciones de ISR a no residentes no admiten constancia en esta version.";
     private const int LongitudMaximaNumero = 30;
     private const int LongitudMaximaMotivo = 300;
 
@@ -60,6 +61,10 @@ public class ConstanciaRetencionService
 
     public async Task<ErrorValidacion?> ValidarNuevaAsync(Retencion retencion, SolicitudConstancia datos)
     {
+        if (retencion.Concepto == Retencion.ConceptoIsrNoResidente)
+        {
+            return ErrorValidacion.Conflicto(MensajeSinConstanciaNr);
+        }
         var error = ValidarNumero(datos.Numero) ?? ValidarDatosOpcionales(datos);
         if (error is not null)
         {

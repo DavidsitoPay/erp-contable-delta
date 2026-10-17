@@ -185,7 +185,7 @@ public class CobrosCxCRetencionTests
         var (estado, cuerpo) = await v.Client.EnviarAsync(RutaPagosCxC, CobroDe(v, 12m, RetencionIva(12m)));
 
         Assert.Equal(HttpStatusCode.BadRequest, estado);
-        Assert.Contains("cobro neto", cuerpo.GetProperty("error").GetString());
+        Assert.Contains("El neto", cuerpo.GetProperty("error").GetString());
         Assert.Equal(0L, await ContarRetencionesAsync(v.FacturaId));
     }
 

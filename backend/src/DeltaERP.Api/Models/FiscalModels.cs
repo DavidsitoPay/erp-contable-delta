@@ -19,7 +19,8 @@ public sealed record ConfiguracionFiscalRespuesta(
     int? CuentaDifGananciaRealizadaId,
     int? CuentaDifPerdidaRealizadaId,
     int? CuentaRevalGananciaId,
-    int? CuentaRevalPerdidaId);
+    int? CuentaRevalPerdidaId,
+    int? CuentaIsrNrRetenidoPagarId);
 
 public sealed record ImpuestoRespuesta(
     int Id,

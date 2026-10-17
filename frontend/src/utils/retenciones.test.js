@@ -5,6 +5,7 @@ import {
   RETENCION_VACIA,
   ajusteValido,
   aplicacionesConRetencion,
+  aplicacionesConTipoRenta,
   csvRetenciones,
   descripcionEscala,
   errorRetencionIva,
@@ -18,6 +19,7 @@ import {
   resumenCobro,
   retencionActiva,
   retencionAEnviar,
+  tipoRentaInicial,
   valorRetencion,
 } from "./retenciones";
 
@@ -179,10 +181,34 @@ describe("reporte de retenciones", () => {
     const lineas = csvRetenciones(reporte).split("\r\n");
 
     expect(lineas[0]).toBe(
-      "Sentido,Impuesto,NIT,Nombre,Documento,Serie DTE,Numero DTE,UUID,Fecha documento,Fecha pago o cobro,Base,Tasa,Retencion,Constancia,Fecha constancia,Formulario,Estado constancia"
+      "Sentido,Impuesto,NIT,Nombre,Documento,Serie DTE,Numero DTE,UUID,Fecha documento,Fecha pago o cobro,Base,Tasa,Retencion,Constancia,Fecha constancia,Formulario,Estado constancia,Tipo de renta (codigo),Tipo de renta,Moneda,Monto origen,Tipo de cambio,Fecha tipo de cambio,Enterado,Saldo por enterar"
     );
-    expect(lineas[1]).toBe('Efectuada,ISR,1234567-8,"Proveedor, S.A.",F-001,A,99,uuid-1,2026-10-05,2026-10-05,40000.00,5.5,2200.00,,,,PENDIENTE');
+    expect(lineas[1]).toBe('Efectuada,ISR,1234567-8,"Proveedor, S.A.",F-001,A,99,uuid-1,2026-10-05,2026-10-05,40000.00,5.5,2200.00,,,,PENDIENTE,,,,,,,0.00,0.00');
     expect(lineas).toHaveLength(2);
+  });
+
+  it("csvRetenciones escribe ISR no residentes con su tipo de renta, moneda y tipo de cambio", () => {
+    const noResidente = {
+      filas: [
+        {
+          ...reporte.filas[0],
+          concepto: "ISR_NORES",
+          tasaEfectiva: 15,
+          tipoRentaCodigo: "SERV",
+          tipoRentaNombre: "Servicios",
+          monedaCodigo: "USD",
+          montoOrigen: 1000.5,
+          tipoCambio: 7.8,
+          tipoCambioFecha: "2026-10-05",
+          enteradoGtq: 2000,
+          saldoPorEnterarGtq: 1200,
+        },
+      ],
+    };
+
+    expect(csvRetenciones(noResidente).split("\r\n")[1]).toBe(
+      'Efectuada,ISR no residentes,1234567-8,"Proveedor, S.A.",F-001,A,99,uuid-1,2026-10-05,2026-10-05,40000.00,15,2200.00,,,,PENDIENTE,SERV,Servicios,USD,1000.5,7.8,2026-10-05,2000.00,1200.00'
+    );
   });
 
   it("csvRetenciones sin filas deja solo el encabezado y usa la tasa base si no hay tasa efectiva", () => {
@@ -212,5 +238,26 @@ describe("reporte de retenciones", () => {
       fechaPagoFormulario: null,
       periodoDeclarado: null,
     });
+  });
+});
+
+describe("tipo de renta en el pago a no residentes", () => {
+  it("tipoRentaInicial toma el tipo del proveedor o vacío", () => {
+    expect(tipoRentaInicial({ tipoRentaNrCodigo: "SERV" })).toBe("SERV");
+    expect(tipoRentaInicial({ tipoRentaNrCodigo: null })).toBe("");
+    expect(tipoRentaInicial(undefined)).toBe("");
+  });
+
+  it("aplicacionesConTipoRenta usa el tipo elegido por factura y, si no hay, el de por defecto", () => {
+    const aplicaciones = [
+      { documentoId: 1, montoAplicado: 10 },
+      { documentoId: 2, montoAplicado: 20 },
+    ];
+
+    expect(aplicacionesConTipoRenta(aplicaciones, { 2: "OTRO" }, "SERV")).toEqual([
+      { documentoId: 1, montoAplicado: 10, tipoRentaCodigo: "SERV" },
+      { documentoId: 2, montoAplicado: 20, tipoRentaCodigo: "OTRO" },
+    ]);
+    expect(aplicacionesConTipoRenta(aplicaciones, {}, "")).toEqual(aplicaciones);
   });
 });

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { contrapartesApi } from "../../services/api";
+import { contrapartesApi, parametrosRetencionApi } from "../../services/api";
 import { REGIMENES_ISR_CONTRAPARTE, REGIMENES_IVA, TIPOS_AGENTE_IVA_CLIENTE, etiquetaDe } from "../../utils/etiquetasFiscales";
 import { contraparteCompleta, formularioContraparteVacio, payloadContraparte } from "../../utils/formularioContraparte";
-import { mensajeError } from "../../utils/formato";
+import { hoyIso, mensajeError } from "../../utils/formato";
 import { mensajeNit } from "../../utils/nit";
 import CamposFiscalesContraparte from "./CamposFiscalesContraparte";
 
@@ -16,6 +16,7 @@ function Contrapartes() {
   const [form, setForm] = useState(formularioContraparteVacio("Cliente"));
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [tiposRenta, setTiposRenta] = useState([]);
 
   const esProveedor = tipo === "Proveedor";
   const encabezados = esProveedor ? [...ENCABEZADOS, "Régimen ISR"] : ENCABEZADOS;
@@ -31,6 +32,10 @@ function Contrapartes() {
     setForm(formularioContraparteVacio(tipo));
     setError("");
   }, [tipo]);
+
+  useEffect(() => {
+    void parametrosRetencionApi.listar({ concepto: "ISR_NO_RESIDENTE", vigenteEn: hoyIso() }).then(({ data }) => setTiposRenta(data)).catch(() => setTiposRenta([]));
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -64,7 +69,7 @@ function Contrapartes() {
         <input className="input" placeholder="Nombre" aria-label="Nombre" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
         <input className="input" placeholder={esProveedor ? "NIT" : "NIT (opcional, CF si no tiene)"} aria-label="NIT" value={form.nit} onChange={(e) => setForm({ ...form, nit: e.target.value })} />
         <input className="input" placeholder="Dirección (opcional)" aria-label="Dirección" value={form.direccion} onChange={(e) => setForm({ ...form, direccion: e.target.value })} />
-        <CamposFiscalesContraparte form={form} onCambio={setForm} />
+        <CamposFiscalesContraparte form={form} onCambio={setForm} tiposRenta={tiposRenta} />
         <button type="submit" disabled={cargando || nitMensaje !== "" || !contraparteCompleta(form)} className="btn btn-primary">
           Agregar {tipo.toLowerCase()}
         </button>

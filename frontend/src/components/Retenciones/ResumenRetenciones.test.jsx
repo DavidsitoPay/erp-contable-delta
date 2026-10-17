@@ -33,4 +33,21 @@ describe("ResumenRetenciones", () => {
 
     expect(screen.getByText(/no se explican por cobros en otro mes/)).toBeInTheDocument();
   });
+
+  it("muestra los totales por tipo de renta de los no residentes", () => {
+    const totalesTipoRenta = [{ tipoRentaCodigo: "SERV", tipoRentaNombre: "Servicios", cantidad: 2, base: 50000, monto: 7500 }];
+    render(<ResumenRetenciones reporte={{ filas: [], totales, conciliacion: conciliacionCuadrada, totalesTipoRenta }} />);
+
+    expect(screen.getByText("Totales por tipo de renta")).toBeInTheDocument();
+    const fila = within(screen.getByText("Servicios").closest("tr"));
+    expect(fila.getByText("2")).toBeInTheDocument();
+    expect(fila.getByText(formatoMoneda.format(50000))).toBeInTheDocument();
+    expect(fila.getByText(formatoMoneda.format(7500))).toBeInTheDocument();
+  });
+
+  it("omite los totales por tipo de renta cuando no hay", () => {
+    render(<ResumenRetenciones reporte={{ filas: [], totales, conciliacion: conciliacionCuadrada, totalesTipoRenta: [] }} />);
+
+    expect(screen.queryByText("Totales por tipo de renta")).toBeNull();
+  });
 });

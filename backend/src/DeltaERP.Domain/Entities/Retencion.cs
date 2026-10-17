@@ -5,6 +5,7 @@ public class Retencion
 {
     public const string ConceptoIsr = "ISR_ROS";
     public const string ConceptoIva = "IVA_CLIENTE";
+    public const string ConceptoIsrNoResidente = "ISR_NORES";
 
     public int Id { get; set; }
     public string Concepto { get; set; } = string.Empty;
@@ -12,6 +13,12 @@ public class Retencion
     public int? DocumentoCxpId { get; set; }
     public int? DocumentoCxcId { get; set; }
     public int? AplicacionPagoClienteId { get; set; }
+    public int? AplicacionPagoProveedorId { get; set; }
+    public int? MonedaId { get; set; }
+    public decimal? MontoOrigen { get; set; }
+    public decimal? TipoCambio { get; set; }
+    public DateOnly? TipoCambioFecha { get; set; }
+    public string? TipoRentaCodigo { get; set; }
     public int ParametroId { get; set; }
     public DateOnly FechaDocumento { get; set; }
     public DateOnly FechaOperacion { get; set; }

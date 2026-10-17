@@ -80,4 +80,34 @@ describe("TablaRetenciones", () => {
 
     expect(screen.getByText("No hay retenciones en el período seleccionado.")).toBeInTheDocument();
   });
+
+  it("muestra tipo de renta, monto de origen y tipo de cambio, y no ofrece constancia a los no residentes", () => {
+    const noResidente = fila({
+      retencionId: 11,
+      concepto: "ISR_NORES",
+      nombre: "Proveedor Ext",
+      documentoNumero: "F-005",
+      tipoRentaNombre: "Servicios",
+      montoOrigen: 1000,
+      monedaCodigo: "USD",
+      tipoCambio: 7.8,
+      tipoCambioFecha: "2026-10-05",
+      estadoConstancia: "NO_APLICA",
+    });
+    render(<TablaRetenciones filas={[noResidente]} onAccion={vi.fn()} />);
+
+    const filaNr = within(screen.getByText("Proveedor Ext").closest("tr"));
+    expect(filaNr.getByText("ISR a no residentes")).toBeInTheDocument();
+    expect(filaNr.getByText("Servicios")).toBeInTheDocument();
+    expect(filaNr.getByText(`${formatoMoneda.format(1000)} USD`)).toBeInTheDocument();
+    expect(filaNr.getByText("7.8 (2026-10-05)")).toBeInTheDocument();
+    expect(filaNr.getByText("No aplica")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("muestra guiones en tipo de renta, monto de origen y tipo de cambio cuando no aplican", () => {
+    render(<TablaRetenciones filas={[filas[0]]} onAccion={vi.fn()} />);
+
+    expect(within(screen.getByText("Proveedor Uno").closest("tr")).getAllByText("—")).toHaveLength(4);
+  });
 });

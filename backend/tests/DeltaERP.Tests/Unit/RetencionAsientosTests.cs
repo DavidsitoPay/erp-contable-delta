@@ -66,8 +66,8 @@ public class RetencionAsientosTests
         var contrapartidas = new[] { (CuentaId: 20, Monto: 33600m) };
         var retenciones = new[] { (CuentaId: 30, Monto: 900m) };
 
-        var asiento = AsientoTesoreriaBuilder.ConstruirCobroConRetenciones(
-            "TES-CXC", new DateOnly(2025, 3, 20), 7, 9, 10, contrapartidas, retenciones);
+        var asiento = AsientoTesoreriaBuilder.ConstruirConRetenciones(
+            new CabeceraAsiento("TES-CXC", new DateOnly(2025, 3, 20), 7, 9), MovimientoTesoreria.TipoIngreso, 10, contrapartidas, retenciones);
 
         Assert.Equal(3, asiento.Lineas.Count);
         Assert.Equal((10, 32700m, 0m), Linea(asiento, 0));
@@ -78,13 +78,28 @@ public class RetencionAsientosTests
     }
 
     [Fact]
+    public void PagoConRetenciones_AcreditaBancoPorElNetoYLaRetencion()
+    {
+        var contrapartidas = new[] { (CuentaId: 20, Monto: 1000m) };
+        var retenciones = new[] { (CuentaId: 30, Monto: 150m) };
+
+        var asiento = AsientoTesoreriaBuilder.ConstruirConRetenciones(
+            new CabeceraAsiento("TES-CXP", new DateOnly(2025, 3, 20), 7, 9), MovimientoTesoreria.TipoEgreso, 10, contrapartidas, retenciones);
+
+        Assert.Equal((10, 0m, 850m), Linea(asiento, 0));
+        Assert.Equal((30, 0m, 150m), Linea(asiento, 2));
+        Assert.True(PartidaDobleValidator.EsValido(asiento, out _));
+    }
+
+    [Fact]
     public void CobroConRetenciones_NoAdmiteRetenerTodoElCobro()
     {
         var contrapartidas = new[] { (CuentaId: 20, Monto: 900m) };
         var retenciones = new[] { (CuentaId: 30, Monto: 900m) };
 
         Assert.Throws<InvalidOperationException>(() =>
-            AsientoTesoreriaBuilder.ConstruirCobroConRetenciones("TES-CXC", new DateOnly(2025, 3, 20), 7, 9, 10, contrapartidas, retenciones));
+            AsientoTesoreriaBuilder.ConstruirConRetenciones(
+                new CabeceraAsiento("TES-CXC", new DateOnly(2025, 3, 20), 7, 9), MovimientoTesoreria.TipoIngreso, 10, contrapartidas, retenciones));
     }
 
     [Theory]
@@ -92,9 +107,9 @@ public class RetencionAsientosTests
     [InlineData("100", "99.99", true)]
     [InlineData("100", "100", false)]
     [InlineData("100", "150", false)]
-    public void ValidarCobroNeto_ExigeUnNetoPositivoCuandoHayRetencion(string total, string retenido, bool valido)
+    public void ValidarNetoPositivo_ExigeUnNetoPositivoCuandoHayRetencion(string total, string retenido, bool valido)
     {
-        var error = TesoreriaRules.ValidarCobroNeto(decimal.Parse(total), decimal.Parse(retenido));
+        var error = TesoreriaRules.ValidarNetoPositivo(decimal.Parse(total), decimal.Parse(retenido));
 
         Assert.Equal(valido, error is null);
     }

@@ -217,6 +217,20 @@ public class ConfiguracionFiscalControllerTests
     }
 
     [Fact]
+    public async Task Actualizar_ConCuentaIsrNrDeTipoActivo_Responde400()
+    {
+        var e = await _pg.Data.SembrarEscenarioAsync();
+        var activo = await _pg.Data.CrearCuentaAsync("Activo", "Deudora");
+        var cuerpo = CuerpoConRetenciones(e.CuentaIvaDebito, e.CuentaIvaCredito, e.CuentaIsrRetenido, e.CuentaIvaRetenidoClientes, activo);
+        var client = _pg.CreateApiClient(e.UsuarioId, Roles.Administrador);
+
+        var response = await client.PutAsJsonAsync(Ruta, cuerpo);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("ISR retenido a no residentes", await response.LeerErrorAsync());
+    }
+
+    [Fact]
     public async Task Actualizar_ConLasCuatroCuentasCambiarias_Persiste()
     {
         var e = await _pg.Data.SembrarEscenarioAsync();
@@ -346,7 +360,7 @@ public class ConfiguracionFiscalControllerTests
         cuentaRevalPerdidaId = perdidaRevalId,
     };
 
-    private static object CuerpoConRetenciones(int debitoId, int creditoId, int? isrId, int? ivaClientesId) => new
+    private static object CuerpoConRetenciones(int debitoId, int creditoId, int? isrId, int? ivaClientesId, int? isrNrId = null) => new
     {
         nitEmpresa = "7654321-8",
         nombreLegal = "Delta Actualizada, S.A.",
@@ -357,5 +371,6 @@ public class ConfiguracionFiscalControllerTests
         cuentaIvaCreditoId = creditoId,
         cuentaIsrRetenidoPagarId = isrId,
         cuentaIvaRetenidoClientesId = ivaClientesId,
+        cuentaIsrNrRetenidoPagarId = isrNrId,
     };
 }

@@ -25,6 +25,8 @@ export const esPlazo = (form) => form.concepto === "PLAZO_CONSTANCIA";
 
 export const admiteTramo = (form) => form.concepto === "ISR_PROVEEDOR_ROS";
 
+export const esNoResidente = (form) => form.concepto === "ISR_NO_RESIDENTE";
+
 export function formularioDesdeParametro(parametro) {
   return sinVigencia({
     codigo: parametro.codigo,
@@ -51,7 +53,7 @@ export function payloadCreacion(form) {
     tasaBase: plazo ? null : Number(form.tasaBase),
     tramoLimite: conTramo ? Number(form.tramoLimite) : null,
     tasaExcedente: conTramo ? Number(form.tasaExcedente) : null,
-    umbralMinimo: plazo ? 0 : Number(form.umbralMinimo || 0),
+    umbralMinimo: plazo || esNoResidente(form) ? 0 : Number(form.umbralMinimo || 0),
     umbralSobre: form.umbralSobre,
     diaLimite: plazo ? Number(form.diaLimite) : null,
     articuloLegal: form.articuloLegal.trim(),
@@ -73,6 +75,6 @@ export function descripcionTasa(parametro) {
 }
 
 export function descripcionUmbral(parametro) {
-  if (parametro.concepto === "PLAZO_CONSTANCIA") return "—";
+  if (parametro.concepto === "PLAZO_CONSTANCIA" || parametro.concepto === "ISR_NO_RESIDENTE") return "—";
   return `${formatoMoneda.format(parametro.umbralMinimo)} · ${etiquetaDe(BASES_UMBRAL, parametro.umbralSobre)}`;
 }

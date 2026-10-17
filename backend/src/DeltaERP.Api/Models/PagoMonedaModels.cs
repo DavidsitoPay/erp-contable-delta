@@ -18,4 +18,5 @@ public sealed record PagoProveedorRespuesta(
     string Moneda,
     decimal MontoTotalGtq,
     decimal MontoCuenta,
-    DiferencialRealizadoDto DiferencialRealizado);
+    DiferencialRealizadoDto DiferencialRealizado,
+    IReadOnlyList<RetencionPagoRespuesta> Retenciones);

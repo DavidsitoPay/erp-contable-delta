@@ -2,11 +2,12 @@ import { CONCEPTOS_RETENCION, ESTADOS_CONSTANCIA, SENTIDOS_RETENCION, etiquetaDe
 import { formatoMoneda } from "../../utils/formato";
 import { TablaCatalogo } from "../Catalogo/CatalogoCrud";
 
-const ENCABEZADOS = ["Sentido", "Impuesto", "NIT", "Nombre", "Documento", "Fecha documento", "Fecha pago o cobro", "Base", "Tasa efectiva (%)", "Retención", "Constancia", "Estado"];
+const ENCABEZADOS = ["Sentido", "Impuesto", "NIT", "Nombre", "Documento", "Fecha documento", "Fecha pago o cobro", "Base", "Tasa efectiva (%)", "Retención", "Constancia", "Estado", "Tipo de renta", "Monto origen", "Tipo de cambio"];
 const CLASE_ESTADO = { PENDIENTE: "badge-warning", VENCIDA: "badge-warning", EMITIDA: "badge-ok" };
 const ESTADOS_ALERTA = new Set(["PENDIENTE", "VENCIDA"]);
 
 function AccionConstancia({ fila, onAccion }) {
+  if (fila.concepto === "ISR_NORES") return null;
   if (fila.estadoConstancia === "EMITIDA") {
     return (
       <button type="button" className="btn btn-danger-outline btn-sm" aria-label={`Anular constancia de ${fila.documentoNumero}`} onClick={() => onAccion({ tipo: "anular", fila })}>
@@ -51,6 +52,9 @@ function TablaRetenciones({ filas, onAccion }) {
             <td>
               <span className={`badge ${CLASE_ESTADO[f.estadoConstancia] ?? ""}`}>{etiquetaDe(ESTADOS_CONSTANCIA, f.estadoConstancia)}</span>
             </td>
+            <td>{f.tipoRentaNombre ?? "—"}</td>
+            <td className="numeric">{f.montoOrigen == null ? "—" : `${formatoMoneda.format(f.montoOrigen)} ${f.monedaCodigo}`}</td>
+            <td className="numeric">{f.tipoCambio == null ? "—" : `${f.tipoCambio} (${f.tipoCambioFecha})`}</td>
             <td>
               <AccionConstancia fila={f} onAccion={onAccion} />
             </td>

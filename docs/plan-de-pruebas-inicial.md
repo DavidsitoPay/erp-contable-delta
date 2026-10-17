@@ -76,7 +76,7 @@ Los casos implementados están automatizados con xUnit (backend) y Vitest (front
 ## Resumen de cobertura
 
 - **18 automatizados** (TC-01 a TC-16, TC-19, TC-20): estado Closed, AutomationStatus=Automated, ejecutados en CI.
-- **28 automatizados cerrados** (TC-21 a TC-48, Epic E10): estado Closed, ejecutados en CI; TC-34, TC-35 y TC-47 son de frontend (Vitest) y los demás de backend (xUnit). La retención a no residentes (E10-F2-H4) queda pendiente para I3b y no tiene casos; la retención de IVA como agente queda fuera de alcance porque Delta no es agente de retención de IVA.
+- **28 automatizados cerrados** (TC-21 a TC-48, Epic E10): estado Closed, ejecutados en CI; TC-34, TC-35 y TC-47 son de frontend (Vitest) y los demás de backend (xUnit). La retención a no residentes (E10-F2-H9, H10 y H13) está implementada y tiene pruebas automatizadas, pero aún no figura como caso de este plan; el ajuste por nota de crédito y el enteramiento (H11 y H12) son de I3b-2 y no están implementados; la retención de IVA como agente queda fuera de alcance porque Delta no es agente de retención de IVA.
 - **14 casos de multimoneda** (TC-49 a TC-62, Epic E10, Feature F3): estado Closed, IDs Azure 327 a 340; cubiertos por pruebas xUnit y Vitest que se ejecutan en CI, con TC-62 de frontend (Vitest) y los demás de backend.
 - **2 pendientes** (TC-17, TC-18): estado Design; dependen de la importación CSV, aún no implementada.
 

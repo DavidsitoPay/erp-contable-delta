@@ -60,4 +60,13 @@ describe("FormularioParametroRetencion", () => {
     expect(props.onCambio).toHaveBeenNthCalledWith(2, { ...props.form, vigenteDesde: "2027-01-01" });
     expect(props.onLimpiar).toHaveBeenCalledTimes(1);
   });
+
+  it("para ISR a no residentes ofrece tasa y oculta umbral mínimo, umbral sobre y tramo", () => {
+    renderFormulario({ concepto: "ISR_NO_RESIDENTE" });
+
+    expect(screen.getByLabelText("Tasa base (%)")).toBeRequired();
+    expect(screen.queryByLabelText("Tramo límite (opcional)")).toBeNull();
+    expect(screen.queryByLabelText("Umbral mínimo")).toBeNull();
+    expect(screen.queryByLabelText("Umbral sobre")).toBeNull();
+  });
 });

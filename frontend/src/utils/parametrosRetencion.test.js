@@ -102,4 +102,12 @@ describe("parametrosRetencion", () => {
     expect(descripcionUmbral({ ...isr, umbralMinimo: 30000, umbralSobre: "TOTAL" })).toBe(`${formatoMoneda.format(30000)} · Total de la factura`);
     expect(descripcionUmbral(plazo)).toBe("—");
   });
+
+  it("ISR a no residentes envía umbral mínimo 0 y no muestra umbral", () => {
+    const form = { ...formularioDesdeParametro(isr), concepto: "ISR_NO_RESIDENTE", umbralMinimo: "2500", tramoLimite: "", tasaExcedente: "", vigenteDesde: "2027-01-01" };
+    const nr = { ...isr, concepto: "ISR_NO_RESIDENTE", tramoLimite: null, tasaExcedente: null };
+
+    expect(payloadCreacion(form)).toMatchObject({ concepto: "ISR_NO_RESIDENTE", tasaBase: 5, umbralMinimo: 0, tramoLimite: null });
+    expect(descripcionUmbral(nr)).toBe("—");
+  });
 });
