@@ -196,7 +196,7 @@ describe("ReporteRetenciones", () => {
     const [nombre, contenido] = descargarCsv.mock.calls[0];
     expect(nombre).toBe("retenciones-2026-03.csv");
     expect(contenido.split("\r\n")[0]).toBe(
-      "Sentido,Impuesto,NIT,Nombre,Documento,Serie DTE,Numero DTE,UUID,Fecha documento,Fecha pago o cobro,Base,Tasa,Retencion,Constancia,Fecha constancia,Formulario,Estado constancia,Tipo de renta (codigo),Tipo de renta,Moneda,Monto origen,Tipo de cambio,Fecha tipo de cambio,Enterado,Saldo por enterar"
+      "Sentido,Impuesto,NIT,Nombre,Pais,Documento,Serie DTE,Numero DTE,UUID,Fecha documento,Fecha pago o cobro,Base,Tasa,Retencion,Constancia,Fecha constancia,Formulario,Estado constancia,Tipo de renta (codigo),Tipo de renta,Moneda,Monto origen,Tipo de cambio,Fecha tipo de cambio,Enterado,Saldo por enterar,AjustePendiente"
     );
     expect(contenido.split("\r\n")).toHaveLength(4);
   });

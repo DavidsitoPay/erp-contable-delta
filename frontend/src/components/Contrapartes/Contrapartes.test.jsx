@@ -73,7 +73,7 @@ describe("Contrapartes", () => {
     render(<Contrapartes />);
 
     expect(await screen.findByText("Sin datos")).toBeInTheDocument();
-    expect(within(screen.getByRole("table")).getAllByText("—")).toHaveLength(3);
+    expect(within(screen.getByRole("table")).getAllByText("—")).toHaveLength(4);
   });
 
   it("crea una contraparte con los valores fiscales por defecto y recarga la lista", async () => {
@@ -98,6 +98,7 @@ describe("Contrapartes", () => {
       isrFundamento: null,
       tipoAgenteIva: null,
       tipoRentaNrCodigo: null,
+      pais: null,
     });
     await waitFor(() => expect(contrapartesApi.listar).toHaveBeenCalledTimes(2));
   });
@@ -155,6 +156,7 @@ describe("Contrapartes", () => {
         isrFundamento: null,
         tipoAgenteIva: null,
         tipoRentaNrCodigo: null,
+        pais: null,
       })
     );
   });

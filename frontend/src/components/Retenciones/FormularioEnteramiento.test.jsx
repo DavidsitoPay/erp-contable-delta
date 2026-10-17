@@ -23,7 +23,8 @@ function renderCon() {
   return render(<FormularioEnteramiento saldo={saldo} onRegistrado={vi.fn()} onCancelar={vi.fn()} />);
 }
 
-function llenar() {
+async function llenar() {
+  await screen.findByRole("option", { name: /Banco Industrial/ });
   fireEvent.change(screen.getByLabelText("Formulario"), { target: { value: "SAT-1331" } });
   fireEvent.change(screen.getByLabelText("Fecha de pago"), { target: { value: "2026-11-10" } });
   fireEvent.change(screen.getByLabelText("Número de boleta"), { target: { value: "B-1" } });
@@ -52,7 +53,7 @@ describe("FormularioEnteramiento", () => {
 
   it("muestra la vista previa y la borra al cambiar un campo", async () => {
     renderCon();
-    llenar();
+    await llenar();
     fireEvent.click(screen.getByRole("button", { name: "Vista previa" }));
 
     expect(await screen.findByText("ISR por pagar")).toBeInTheDocument();
@@ -66,15 +67,15 @@ describe("FormularioEnteramiento", () => {
   it("muestra error si la vista previa falla", async () => {
     vi.mocked(enteramientosApi.vistaPrevia).mockRejectedValue(new Error("red"));
     renderCon();
-    llenar();
+    await llenar();
     fireEvent.click(screen.getByRole("button", { name: "Vista previa" }));
 
     expect(await screen.findByText("No se pudo calcular la vista previa.")).toBeInTheDocument();
   });
 
-  it("mantiene deshabilitado el registro hasta completar la boleta", () => {
+  it("mantiene deshabilitado el registro hasta completar la boleta", async () => {
     renderCon();
-    llenar();
+    await llenar();
     fireEvent.change(screen.getByLabelText("Número de boleta"), { target: { value: "  " } });
 
     expect(screen.getByRole("button", { name: "Registrar enteramiento" })).toBeDisabled();
@@ -83,7 +84,7 @@ describe("FormularioEnteramiento", () => {
   it("registra con el payload exacto y muestra el error de la API", async () => {
     vi.mocked(enteramientosApi.crear).mockRejectedValue({ response: { data: { error: "La boleta ya existe." } } });
     renderCon();
-    llenar();
+    await llenar();
     fireEvent.click(screen.getByRole("button", { name: "Registrar enteramiento" }));
 
     expect(enteramientosApi.crear).toHaveBeenCalledWith({

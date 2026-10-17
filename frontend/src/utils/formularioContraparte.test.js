@@ -58,8 +58,8 @@ describe("formularioContraparte", () => {
     const noResidente = { ...formularioContraparteVacio("Proveedor"), esResidente: false, regimenIsr: "SIMPLIFICADO" };
 
     expect(contraparteCompleta(noResidente)).toBe(false);
-    expect(contraparteCompleta({ ...noResidente, tipoRentaNrCodigo: "NR_SERVICIOS" })).toBe(true);
-    expect(contraparteCompleta({ ...noResidente, regimenIsr: "EXENTO", isrFundamento: "Res. 1" })).toBe(true);
+    expect(contraparteCompleta({ ...noResidente, tipoRentaNrCodigo: "NR_SERVICIOS", pais: "US" })).toBe(true);
+    expect(contraparteCompleta({ ...noResidente, regimenIsr: "EXENTO", isrFundamento: "Res. 1", pais: "US" })).toBe(true);
   });
 
   it("payloadContraparte envía el tipo de renta solo a proveedores no residentes", () => {

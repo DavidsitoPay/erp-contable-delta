@@ -62,7 +62,7 @@ describe("ResumenRetenciones", () => {
     expect(screen.getByText("Saldo por enterar por período")).toBeInTheDocument();
     expect(screen.getByText("2026-10")).toBeInTheDocument();
     expect(screen.getByText(formatoMoneda.format(1234))).toBeInTheDocument();
-    expect(screen.getByText(formatoMoneda.format(987))).toBeInTheDocument();
+    expect(screen.getAllByText(formatoMoneda.format(987))).toHaveLength(2);
   });
 
   it("omite el saldo por enterar cuando el reporte no lo trae", () => {

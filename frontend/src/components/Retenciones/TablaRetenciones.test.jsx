@@ -118,6 +118,6 @@ describe("TablaRetenciones", () => {
   it("muestra guiones en tipo de renta, monto de origen y tipo de cambio cuando no aplican", () => {
     render(<TablaRetenciones filas={[filas[0]]} onAccion={vi.fn()} />);
 
-    expect(within(screen.getByText("Proveedor Uno").closest("tr")).getAllByText("—")).toHaveLength(4);
+    expect(within(screen.getByText("Proveedor Uno").closest("tr")).getAllByText("—")).toHaveLength(5);
   });
 });

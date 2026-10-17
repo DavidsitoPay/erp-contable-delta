@@ -46,6 +46,7 @@ function renderCon() {
 
 describe("Enteramiento", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     cargarCon([saldoVencido, saldoSinSaldo], [vigente, anulado]);
     vi.mocked(enteramientosApi.anular).mockResolvedValue({ data: {} });
   });

@@ -152,11 +152,13 @@ async function prepararPagoNoResidente(retencionPreviaPago, documentos = factura
 }
 
 async function prepararAjuste() {
-  api.listarFacturas = vi.fn().mockResolvedValue({ data: [{ ...facturasCxp[0], ajusteRetencionPendiente: true }] });
+  const config = crearConfigCxp();
+  config.api.listarFacturas = vi.fn().mockResolvedValue({ data: [{ ...facturasCxp[0], ajusteRetencionPendiente: true }] });
   ajustesRetencionApi.listar.mockResolvedValue({ data: [{ id: 31, retencionId: 40, notaCreditoId: 41, documentoOrigenId: 21, notaCreditoNumero: "NC-9", documentoOrigenNumero: "P-1", montoNc: 10 }] });
-  await renderCargado(crearConfigCxp(), "P-1");
+  await renderCargado(config, "P-1");
   fireEvent.click(screen.getByRole("button", { name: "Resolver ajuste de P-1" }));
   await screen.findByLabelText("Motivo");
+  return config;
 }
 
 describe("GestionCuentasPorCobrarPagar", () => {
@@ -317,14 +319,14 @@ describe("GestionCuentasPorCobrarPagar", () => {
   });
 
   it("en cuentas por pagar resuelve el ajuste de retención desde la fila de la factura origen", async () => {
-    await prepararAjuste();
+    const config = await prepararAjuste();
 
     fireEvent.change(screen.getByLabelText("Motivo"), { target: { value: " Ajuste confirmado " } });
     fireEvent.change(screen.getByLabelText("Referencia"), { target: { value: "NC-9" } });
     fireEvent.click(screen.getByRole("button", { name: "Resolver ajuste" }));
 
     await waitFor(() => expect(ajustesRetencionApi.resolver).toHaveBeenCalledWith(31, { motivo: "Ajuste confirmado", referencia: "NC-9" }));
-    await waitFor(() => expect(api.listarFacturas).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(config.api.listarFacturas).toHaveBeenCalledTimes(2));
   });
 
   it("al cancelar el ajuste de retención cierra el diálogo", async () => {
