@@ -1783,13 +1783,32 @@ La Figura 21 muestra el contexto del sistema y servicios externos.
 ```mermaid
 C4Context
     title Contexto del sistema y servicios externos
-    Person(usr, "Usuario", "Administrador, Contador, Vendedor o Técnico")
-    System(dec, "Delta ERP Contable", "Frontend React 18 en Vercel, API ASP.NET Core 10 en Azure Container Apps y PostgreSQL 16 en Neon")
-    System_Ext(bg, "Banguat", "Servicio SOAP de tipo de cambio de referencia")
-    System_Ext(smtp, "Servidor de correo", "Notificaciones por SMTP: diseñado, no implementado")
-    Rel(usr, dec, "Usa", "HTTPS")
-    Rel(dec, bg, "Consulta el tipo de cambio", "SOAP")
-    Rel(dec, smtp, "Notifica (no implementado)", "SMTP")
+    UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="1")
+
+    Enterprise_Boundary(delta, "Delta") {
+        Person(usr, "Usuarios de Delta", "Administrador, Contador,<br/>Vendedor y Técnico")
+
+        System_Boundary(dec, "Delta ERP Contable (DEC)") {
+            System(fe, "Frontend web", "React 18 + Vite<br/>Vercel")
+            System(api, "API REST", "ASP.NET Core 10<br/>Azure Container Apps")
+            SystemDb(db, "Base de datos", "PostgreSQL 16<br/>Neon")
+        }
+    }
+
+    System_Ext(smtp, "Servidor de correo (SMTP)", "Diseñado, no implementado")
+    System_Ext(bg, "Banguat", "Servicio SOAP de tipo de<br/>cambio de referencia")
+
+    Rel(usr, fe, "Usa", "HTTPS")
+    Rel(fe, api, "Consume", "HTTPS/JSON, JWT")
+    Rel(api, db, "Lee y escribe", "Npgsql")
+    Rel(api, bg, "Consulta tipo de cambio", "SOAP")
+    Rel(api, smtp, "Notificaciones<br/>(no implementado)", "SMTP")
+
+    UpdateRelStyle(fe, api, $offsetX="0", $offsetY="-90")
+    UpdateRelStyle(api, bg, $offsetX="80")
+    UpdateRelStyle(api, smtp, $offsetX="-90", $offsetY="115")
+    UpdateRelStyle(usr, fe, $offsetX="-75", $offsetY="-50")
+    UpdateRelStyle(api, db, $offsetX="45")
 ```
 
 *Nota.* Elaboración propia.
