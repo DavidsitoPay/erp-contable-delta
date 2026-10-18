@@ -130,7 +130,9 @@ Guatemala, 18 de octubre de 2026
   - [7.10 Monitoreo](#710-monitoreo)
 - [Capítulo 8. Cierre del proyecto](#capítulo-8-cierre-del-proyecto)
   - [8.1 Reflexión sobre la aplicación de Scrum](#81-reflexión-sobre-la-aplicación-de-scrum)
-  - [8.2 Conclusión por módulo](#82-conclusión-por-módulo)
+  - [8.2 Conclusiones](#82-conclusiones)
+    - [8.2.1 Conclusión respecto del objetivo general](#821-conclusión-respecto-del-objetivo-general)
+    - [8.2.2 Conclusiones respecto de los objetivos específicos](#822-conclusiones-respecto-de-los-objetivos-específicos)
   - [8.3 Trabajo futuro y pendientes](#83-trabajo-futuro-y-pendientes)
 - [Anexos](#anexos)
   - [Anexo A. Definición de las tablas del esquema en PostgreSQL 16](#anexo-a-definición-de-las-tablas-del-esquema-en-postgresql-16)
@@ -295,112 +297,111 @@ Los diagramas se elaboraron con Mermaid 12.2.0; los tipos marcados como beta req
 
 # Índice de tablas
 
-Las tablas 1 a 104 se listan con su número y su título.
+Las tablas 1 a 103 se listan con su número y su título.
 
-- **Tabla 1.** Objetivos específicos y módulos que los materializan.
-- **Tabla 2.** Problemas identificados y respuesta implementada.
-- **Tabla 3.** Módulos en alcance.
-- **Tabla 4.** Elementos fuera de alcance o pendientes.
-- **Tabla 5.** Tecnologías por capa del sistema.
-- **Tabla 6.** Dimensiones del contexto de la empresa.
-- **Tabla 7.** Componentes del modelo de negocio: módulos funcionales.
-- **Tabla 8.** Herramientas recomendadas por proceso.
-- **Tabla 9.** Perfiles de usuario y restricciones relevantes.
-- **Tabla 10.** Valores de Delta.
-- **Tabla 11.** Objetivos estratégicos y módulos que los materializan.
-- **Tabla 12.** Requerimientos funcionales del módulo M1 (E1).
-- **Tabla 13.** Requerimientos funcionales del módulo M2 (E2).
-- **Tabla 14.** Requerimientos funcionales del módulo M3 (E3).
-- **Tabla 15.** Requerimientos funcionales del módulo M4 (E4).
-- **Tabla 16.** Requerimientos funcionales del módulo M5 (E5).
-- **Tabla 17.** Requerimientos funcionales del módulo M6 (E6).
-- **Tabla 18.** Requerimientos funcionales del módulo M7 (E7).
-- **Tabla 19.** Requerimientos funcionales del módulo M8 (E8).
-- **Tabla 20.** Requerimientos funcionales del módulo M9 (E9).
-- **Tabla 21.** Capacidades del módulo M10.
-- **Tabla 22.** Requerimientos no funcionales por categoría.
-- **Tabla 23.** Objetivos SMART.
-- **Tabla 24.** Factibilidad técnica: capacidades y brechas.
-- **Tabla 25.** Factibilidad económica: indicadores y dictamen.
-- **Tabla 26.** Obligaciones legales y fiscales y su tratamiento en el sistema.
-- **Tabla 27.** Presupuesto de talento humano.
-- **Tabla 28.** Presupuesto de infraestructura y software en la planificación.
-- **Tabla 29.** Servicios utilizados en la ejecución.
-- **Tabla 30.** Presupuesto de capacitación, gestión del cambio y otros costos directos.
-- **Tabla 31.** Resumen de la inversión.
-- **Tabla 32.** Flujo neto y valor presente a cinco años.
-- **Tabla 33.** Actividades del proyecto y entregables asociados.
-- **Tabla 34.** Duraciones estimadas de las actividades.
-- **Tabla 35.** Cronograma planificado de las actividades.
-- **Tabla 36.** Comparación entre lo planificado y lo ejecutado.
-- **Tabla 37.** Matriz de trazabilidad por módulo.
-- **Tabla 38.** Matriz de riesgos.
-- **Tabla 39.** Capas de la arquitectura.
-- **Tabla 40.** Clases representativas por capa.
-- **Tabla 41.** Interfaces y dependencias de los componentes por módulo.
-- **Tabla 42.** Recursos de la API y rutas de la aplicación por área.
-- **Tabla 43.** Límites de confianza y controles.
-- **Tabla 44.** Grupos de tablas del esquema relacional.
-- **Tabla 45.** Capacidades de PostgreSQL utilizadas en el sistema.
-- **Tabla 46.** Migraciones de base de datos.
-- **Tabla 47.** Estado del backlog en Azure Boards (17/10/2026).
-- **Tabla 48.** Épicas, características e historias.
-- **Tabla 49.** Roles y responsabilidades.
-- **Tabla 50.** Iteraciones en Azure Boards y resultados.
-- **Tabla 51.** Tareas del Sprint Backlog y estado al 19/09/2026 (día 8 de 10).
-- **Tabla 52.** Burndown del Sprint 1 (horas restantes).
-- **Tabla 53.** Retrospectiva del Sprint 1.
-- **Tabla 54.** Evolución del esquema por migración.
-- **Tabla 55.** Indicadores de seguimiento al 18/10/2026.
-- **Tabla 56.** Herramientas por capa.
-- **Tabla 57.** Flujos de trabajo de GitHub Actions.
-- **Tabla 58.** Última ejecución por flujo.
-- **Tabla 59.** Cobertura del plan de pruebas.
-- **Tabla 60.** Conteo de pruebas automatizadas.
-- **Tabla 61.** Métricas de SonarCloud en la rama `main` (consulta del 17/10/2026).
-- **Tabla 62.** Estado de los módulos al 18/10/2026.
-- **Tabla 63.** Reglas de negocio RN-01 a RN-36.
-- **Tabla 64.** Diccionario de datos de la tabla perfil.
-- **Tabla 65.** Diccionario de datos de la tabla usuario.
-- **Tabla 66.** Diccionario de datos de la tabla bitacoraauditoria.
-- **Tabla 67.** Diccionario de datos de la tabla moneda.
-- **Tabla 68.** Diccionario de datos de la tabla historialtipocambio.
-- **Tabla 69.** Diccionario de datos de la tabla periodocontable.
-- **Tabla 70.** Diccionario de datos de la tabla contraparte.
-- **Tabla 71.** Diccionario de datos de la tabla cuentacontable.
-- **Tabla 72.** Diccionario de datos de la tabla centrocosto.
-- **Tabla 73.** Diccionario de datos de la tabla asientocontable.
-- **Tabla 74.** Diccionario de datos de la tabla lineaasiento.
-- **Tabla 75.** Diccionario de datos de la tabla plantillaasiento.
-- **Tabla 76.** Diccionario de datos de la tabla lineaplantillaasiento.
-- **Tabla 77.** Diccionario de datos de la tabla documentocxc.
-- **Tabla 78.** Diccionario de datos de la tabla lineadocumentocxc.
-- **Tabla 79.** Diccionario de datos de la tabla recibopagocliente.
-- **Tabla 80.** Diccionario de datos de la tabla aplicacionpagocliente.
-- **Tabla 81.** Diccionario de datos de la tabla documentocxp.
-- **Tabla 82.** Diccionario de datos de la tabla lineadocumentocxp.
-- **Tabla 83.** Diccionario de datos de la tabla pagoproveedorcabecera.
-- **Tabla 84.** Diccionario de datos de la tabla aplicacionpagoproveedor.
-- **Tabla 85.** Diccionario de datos de la tabla cuentabancaria.
-- **Tabla 86.** Diccionario de datos de la tabla movimientotesoreria.
-- **Tabla 87.** Diccionario de datos de la tabla conciliacionbancaria.
-- **Tabla 88.** Diccionario de datos de la tabla detalleconciliacion.
-- **Tabla 89.** Diccionario de datos de la tabla saldocuentaperiodo.
-- **Tabla 90.** Diccionario de datos de la tabla impuesto.
-- **Tabla 91.** Diccionario de datos de la tabla configuracionfiscal.
-- **Tabla 92.** Diccionario de datos de la tabla parametroretencion.
-- **Tabla 93.** Diccionario de datos de la tabla retencion.
-- **Tabla 94.** Diccionario de datos de la tabla constanciaretencion.
-- **Tabla 95.** Diccionario de datos de la tabla revaluacion.
-- **Tabla 96.** Diccionario de datos de la tabla revaluacionpartida.
-- **Tabla 97.** Diccionario de datos de la tabla enteramiento.
-- **Tabla 98.** Diccionario de datos de la tabla ajuste_retencion.
-- **Tabla 99.** Diccionario de datos de la tabla feriado.
-- **Tabla 100.** Resumen de los casos de prueba.
-- **Tabla 101.** Usuarios de demostración.
-- **Tabla 102.** Lotes de datos de demostración.
-- **Tabla 103.** Capacidades por perfil.
-- **Tabla 104.** Evidencias pendientes de captura.
+- **Tabla 1.** Problemas identificados y respuesta implementada.
+- **Tabla 2.** Módulos en alcance.
+- **Tabla 3.** Elementos fuera de alcance o pendientes.
+- **Tabla 4.** Tecnologías por capa del sistema.
+- **Tabla 5.** Dimensiones del contexto de la empresa.
+- **Tabla 6.** Componentes del modelo de negocio: módulos funcionales.
+- **Tabla 7.** Herramientas recomendadas por proceso.
+- **Tabla 8.** Perfiles de usuario y restricciones relevantes.
+- **Tabla 9.** Valores de Delta.
+- **Tabla 10.** Objetivos estratégicos y módulos que los materializan.
+- **Tabla 11.** Requerimientos funcionales del módulo M1 (E1).
+- **Tabla 12.** Requerimientos funcionales del módulo M2 (E2).
+- **Tabla 13.** Requerimientos funcionales del módulo M3 (E3).
+- **Tabla 14.** Requerimientos funcionales del módulo M4 (E4).
+- **Tabla 15.** Requerimientos funcionales del módulo M5 (E5).
+- **Tabla 16.** Requerimientos funcionales del módulo M6 (E6).
+- **Tabla 17.** Requerimientos funcionales del módulo M7 (E7).
+- **Tabla 18.** Requerimientos funcionales del módulo M8 (E8).
+- **Tabla 19.** Requerimientos funcionales del módulo M9 (E9).
+- **Tabla 20.** Capacidades del módulo M10.
+- **Tabla 21.** Requerimientos no funcionales por categoría.
+- **Tabla 22.** Objetivos SMART.
+- **Tabla 23.** Factibilidad técnica: capacidades y brechas.
+- **Tabla 24.** Factibilidad económica: indicadores y dictamen.
+- **Tabla 25.** Obligaciones legales y fiscales y su tratamiento en el sistema.
+- **Tabla 26.** Presupuesto de talento humano.
+- **Tabla 27.** Presupuesto de infraestructura y software en la planificación.
+- **Tabla 28.** Servicios utilizados en la ejecución.
+- **Tabla 29.** Presupuesto de capacitación, gestión del cambio y otros costos directos.
+- **Tabla 30.** Resumen de la inversión.
+- **Tabla 31.** Flujo neto y valor presente a cinco años.
+- **Tabla 32.** Actividades del proyecto y entregables asociados.
+- **Tabla 33.** Duraciones estimadas de las actividades.
+- **Tabla 34.** Cronograma planificado de las actividades.
+- **Tabla 35.** Comparación entre lo planificado y lo ejecutado.
+- **Tabla 36.** Matriz de trazabilidad por módulo.
+- **Tabla 37.** Matriz de riesgos.
+- **Tabla 38.** Capas de la arquitectura.
+- **Tabla 39.** Clases representativas por capa.
+- **Tabla 40.** Interfaces y dependencias de los componentes por módulo.
+- **Tabla 41.** Recursos de la API y rutas de la aplicación por área.
+- **Tabla 42.** Límites de confianza y controles.
+- **Tabla 43.** Grupos de tablas del esquema relacional.
+- **Tabla 44.** Capacidades de PostgreSQL utilizadas en el sistema.
+- **Tabla 45.** Migraciones de base de datos.
+- **Tabla 46.** Estado del backlog en Azure Boards (17/10/2026).
+- **Tabla 47.** Épicas, características e historias.
+- **Tabla 48.** Roles y responsabilidades.
+- **Tabla 49.** Iteraciones en Azure Boards y resultados.
+- **Tabla 50.** Tareas del Sprint Backlog y estado al 19/09/2026 (día 8 de 10).
+- **Tabla 51.** Burndown del Sprint 1 (horas restantes).
+- **Tabla 52.** Retrospectiva del Sprint 1.
+- **Tabla 53.** Evolución del esquema por migración.
+- **Tabla 54.** Indicadores de seguimiento al 18/10/2026.
+- **Tabla 55.** Herramientas por capa.
+- **Tabla 56.** Flujos de trabajo de GitHub Actions.
+- **Tabla 57.** Última ejecución por flujo.
+- **Tabla 58.** Cobertura del plan de pruebas.
+- **Tabla 59.** Conteo de pruebas automatizadas.
+- **Tabla 60.** Métricas de SonarCloud en la rama `main` (consulta del 17/10/2026).
+- **Tabla 61.** Estado de los módulos al 18/10/2026.
+- **Tabla 62.** Reglas de negocio RN-01 a RN-36.
+- **Tabla 63.** Diccionario de datos de la tabla perfil.
+- **Tabla 64.** Diccionario de datos de la tabla usuario.
+- **Tabla 65.** Diccionario de datos de la tabla bitacoraauditoria.
+- **Tabla 66.** Diccionario de datos de la tabla moneda.
+- **Tabla 67.** Diccionario de datos de la tabla historialtipocambio.
+- **Tabla 68.** Diccionario de datos de la tabla periodocontable.
+- **Tabla 69.** Diccionario de datos de la tabla contraparte.
+- **Tabla 70.** Diccionario de datos de la tabla cuentacontable.
+- **Tabla 71.** Diccionario de datos de la tabla centrocosto.
+- **Tabla 72.** Diccionario de datos de la tabla asientocontable.
+- **Tabla 73.** Diccionario de datos de la tabla lineaasiento.
+- **Tabla 74.** Diccionario de datos de la tabla plantillaasiento.
+- **Tabla 75.** Diccionario de datos de la tabla lineaplantillaasiento.
+- **Tabla 76.** Diccionario de datos de la tabla documentocxc.
+- **Tabla 77.** Diccionario de datos de la tabla lineadocumentocxc.
+- **Tabla 78.** Diccionario de datos de la tabla recibopagocliente.
+- **Tabla 79.** Diccionario de datos de la tabla aplicacionpagocliente.
+- **Tabla 80.** Diccionario de datos de la tabla documentocxp.
+- **Tabla 81.** Diccionario de datos de la tabla lineadocumentocxp.
+- **Tabla 82.** Diccionario de datos de la tabla pagoproveedorcabecera.
+- **Tabla 83.** Diccionario de datos de la tabla aplicacionpagoproveedor.
+- **Tabla 84.** Diccionario de datos de la tabla cuentabancaria.
+- **Tabla 85.** Diccionario de datos de la tabla movimientotesoreria.
+- **Tabla 86.** Diccionario de datos de la tabla conciliacionbancaria.
+- **Tabla 87.** Diccionario de datos de la tabla detalleconciliacion.
+- **Tabla 88.** Diccionario de datos de la tabla saldocuentaperiodo.
+- **Tabla 89.** Diccionario de datos de la tabla impuesto.
+- **Tabla 90.** Diccionario de datos de la tabla configuracionfiscal.
+- **Tabla 91.** Diccionario de datos de la tabla parametroretencion.
+- **Tabla 92.** Diccionario de datos de la tabla retencion.
+- **Tabla 93.** Diccionario de datos de la tabla constanciaretencion.
+- **Tabla 94.** Diccionario de datos de la tabla revaluacion.
+- **Tabla 95.** Diccionario de datos de la tabla revaluacionpartida.
+- **Tabla 96.** Diccionario de datos de la tabla enteramiento.
+- **Tabla 97.** Diccionario de datos de la tabla ajuste_retencion.
+- **Tabla 98.** Diccionario de datos de la tabla feriado.
+- **Tabla 99.** Resumen de los casos de prueba.
+- **Tabla 100.** Usuarios de demostración.
+- **Tabla 101.** Lotes de datos de demostración.
+- **Tabla 102.** Capacidades por perfil.
+- **Tabla 103.** Evidencias pendientes de captura.
 
 ---
 
@@ -464,27 +465,19 @@ La identidad, la trayectoria y el giro de negocio de Delta se aprecian en la pá
 
 ### 1.3.1 Objetivo general
 
-Diseñar, construir y poner en operación un sistema ERP orientado al control contable interno de Delta, que centralice el registro de las transacciones financieras y sustituya el manejo manual y fragmentado en hojas de cálculo, correo electrónico y documentación en papel. El sistema persigue mejorar la trazabilidad, la confiabilidad y la oportunidad de la información financiera utilizada en la toma de decisiones.
+- Diseñar, construir y poner en operación un sistema ERP orientado al control contable interno de Delta, que centralice el registro de las transacciones financieras, sustituya el manejo manual y fragmentado en hojas de cálculo, correo electrónico y documentación en papel, y mejore la trazabilidad, la confiabilidad y la oportunidad de la información financiera utilizada en la toma de decisiones.
 
 ### 1.3.2 Objetivos específicos
 
-Cada objetivo específico se vincula con los módulos que lo materializan (Tabla 1).
-
-**Tabla 1**
-
-*Objetivos específicos y módulos que los materializan*
-
-| N.º | Objetivo específico | Módulos y épicas |
-|---|---|---|
-| 1 | Establecer un catálogo contable parametrizable (cuentas, centros de costo y periodos) y un registro de asientos con partida doble verificada por la base de datos | M1 (E1), M2 (E2) |
-| 2 | Generar libros contables y auxiliares en tiempo real a partir de los asientos, sin saldos editables | M3 (E3) |
-| 3 | Controlar las cuentas por cobrar y por pagar con facturas, notas de crédito, cobros y pagos que generan su asiento contable de forma automática | M4 (E4), M5 (E5) |
-| 4 | Administrar la tesorería, las cuentas bancarias y la conciliación bancaria | M6 (E6) |
-| 5 | Producir el balance general y el estado de resultados con información actualizada | M7 (E7) |
-| 6 | Garantizar el acceso por perfil y la trazabilidad de las operaciones mediante una bitácora de auditoría inmutable | M8 (E8) |
-| 7 | Cumplir las obligaciones fiscales guatemaltecas relevantes para Delta: IVA, registro de datos de documentos tributarios electrónicos (DTE de FEL), retenciones de ISR e IVA, retención a no residentes, enteramiento y multimoneda con tipo de cambio de Banguat | M10 (E10) |
-| 8 | Incorporar la carga inicial de catálogos y saldos desde hojas de cálculo con validación previa de consistencia | M9 (E9), pendiente |
-| 9 | Aplicar prácticas de integración y entrega continuas con puertas de calidad automatizadas | Transversal (7) |
+1. Establecer un catálogo contable parametrizable (cuentas, centros de costo y periodos) y un registro de asientos con partida doble verificada por la base de datos.
+2. Generar libros contables y auxiliares en tiempo real a partir de los asientos, sin saldos editables.
+3. Controlar las cuentas por cobrar y por pagar con facturas, notas de crédito, cobros y pagos que generan su asiento contable de forma automática.
+4. Administrar la tesorería, las cuentas bancarias y la conciliación bancaria.
+5. Producir el balance general y el estado de resultados con información actualizada.
+6. Garantizar el acceso por perfil y la trazabilidad de las operaciones mediante una bitácora de auditoría inmutable.
+7. Cumplir las obligaciones fiscales guatemaltecas relevantes para Delta: IVA, registro de datos de documentos tributarios electrónicos (DTE de FEL), retenciones de ISR e IVA, retención a no residentes, enteramiento y multimoneda con tipo de cambio de Banguat.
+8. Incorporar la carga inicial de catálogos y saldos desde hojas de cálculo con validación previa de consistencia.
+9. Aplicar prácticas de integración y entrega continuas con puertas de calidad automatizadas.
 
 ## 1.4 Justificación
 
@@ -501,9 +494,9 @@ La solución utiliza tecnologías que el equipo y la empresa dominan en gran med
 
 Delta opera su control contable interno sin una fuente única de información. Seis problemas caracterizan esa situación, y el sistema incorpora una respuesta a cada uno.
 
-La Tabla 2 presenta los problemas identificados y respuesta implementada.
+La Tabla 1 presenta los problemas identificados y respuesta implementada.
 
-**Tabla 2**
+**Tabla 1**
 
 *Problemas identificados y respuesta implementada*
 
@@ -547,11 +540,11 @@ ishikawa-beta
 
 ## 1.6 Alcance
 
-La Fase 1 abarca el control contable interno de una sola empresa. Las Tablas 3 y 4 delimitan lo que se encuentra dentro y fuera del alcance, con el estado verificado al 18 de octubre de 2026.
+La Fase 1 abarca el control contable interno de una sola empresa. Las Tablas 2 y 3 delimitan lo que se encuentra dentro y fuera del alcance, con el estado verificado al 18 de octubre de 2026.
 
 ### 1.6.1 Módulos en alcance
 
-**Tabla 3**
+**Tabla 2**
 
 *Módulos en alcance*
 
@@ -569,7 +562,7 @@ La Fase 1 abarca el control contable interno de una sola empresa. Las Tablas 3 y
 
 ### 1.6.2 Fuera de alcance o pendiente
 
-**Tabla 4**
+**Tabla 3**
 
 *Elementos fuera de alcance o pendientes*
 
@@ -597,9 +590,9 @@ El tablero de Azure Boards pone en correspondencia los módulos M1 a M10 con las
 
 ### 1.7.1 Herramientas por capa
 
-La Tabla 5 asigna una tecnología y una función a cada una de las doce capas y herramientas, del frontend al editor de código.
+La Tabla 4 asigna una tecnología y una función a cada una de las doce capas y herramientas, del frontend al editor de código.
 
-**Tabla 5**
+**Tabla 4**
 
 *Tecnologías por capa del sistema*
 
@@ -629,9 +622,9 @@ La planificación y el inicio del desarrollo se realizaron sobre .NET 8. El 17 d
 
 ## 2.1 Contexto de la empresa
 
-Delta es una organización de más de tres décadas de trayectoria con capacidad técnica reconocida. El análisis FODA del modelo digital propuesto identificó los elementos que resume la Tabla 6.
+Delta es una organización de más de tres décadas de trayectoria con capacidad técnica reconocida. El análisis FODA del modelo digital propuesto identificó los elementos que resume la Tabla 5.
 
-**Tabla 6**
+**Tabla 5**
 
 *Dimensiones del contexto de la empresa*
 
@@ -665,9 +658,9 @@ La infraestructura planificada inicialmente contemplaba servidores propios con u
 
 ## 2.5 Componentes del modelo
 
-Los componentes del modelo son los diez módulos funcionales del sistema, agrupados por función (Tabla 7).
+Los componentes del modelo son los diez módulos funcionales del sistema, agrupados por función (Tabla 6).
 
-**Tabla 7**
+**Tabla 6**
 
 *Componentes del modelo de negocio: módulos funcionales*
 
@@ -784,9 +777,9 @@ El registro de un asiento con partida doble verificada se evidencia en la Figura
 
 ## 2.7 Herramientas recomendadas por proceso
 
-La Tabla 8 asocia ocho procesos, del registro de asientos al hospedaje, con la herramienta o el mecanismo que los soporta.
+La Tabla 7 asocia ocho procesos, del registro de asientos al hospedaje, con la herramienta o el mecanismo que los soporta.
 
-**Tabla 8**
+**Tabla 7**
 
 *Herramientas recomendadas por proceso*
 
@@ -803,9 +796,9 @@ La Tabla 8 asocia ocho procesos, del registro de asientos al hospedaje, con la h
 
 ## 2.8 Impacto organizacional
 
-El sistema define cuatro perfiles de usuario. El menú de la aplicación se adapta al perfil y el servidor valida el permiso en cada operación, según las restricciones de la Tabla 9.
+El sistema define cuatro perfiles de usuario. El menú de la aplicación se adapta al perfil y el servidor valida el permiso en cada operación, según las restricciones de la Tabla 8.
 
-**Tabla 9**
+**Tabla 8**
 
 *Perfiles de usuario y restricciones relevantes*
 
@@ -862,9 +855,9 @@ Ser la empresa guatemalteca de referencia en transformación digital y desarroll
 
 ## 3.4 Valores
 
-Seis valores, de la innovación a la mejora continua, orientan la conducta de Delta (Tabla 10).
+Seis valores, de la innovación a la mejora continua, orientan la conducta de Delta (Tabla 9).
 
-**Tabla 10**
+**Tabla 9**
 
 *Valores de Delta*
 
@@ -879,9 +872,9 @@ Seis valores, de la innovación a la mejora continua, orientan la conducta de De
 
 ## 3.5 Objetivos estratégicos
 
-La Tabla 11 relaciona cada objetivo estratégico con el módulo que lo materializa.
+La Tabla 10 relaciona cada objetivo estratégico con el módulo que lo materializa.
 
-**Tabla 11**
+**Tabla 10**
 
 *Objetivos estratégicos y módulos que los materializan*
 
@@ -936,11 +929,11 @@ Los requerimientos de Delta ERP Contable (DEC) se identifican con los códigos R
 
 ### 4.1.1 Requerimientos funcionales por módulo
 
-Las Tablas 12 a 20 detallan los requerimientos funcionales de los módulos M1 a M9, con su identificador y su estado de implementación.
+Las Tablas 11 a 19 detallan los requerimientos funcionales de los módulos M1 a M9, con su identificador y su estado de implementación.
 
 **M1. Catálogo y parametrización contable (E1)**
 
-**Tabla 12**
+**Tabla 11**
 
 *Requerimientos funcionales del módulo M1 (E1)*
 
@@ -956,7 +949,7 @@ Las Tablas 12 a 20 detallan los requerimientos funcionales de los módulos M1 a 
 
 **M2. Registro de transacciones (E2)**
 
-**Tabla 13**
+**Tabla 12**
 
 *Requerimientos funcionales del módulo M2 (E2)*
 
@@ -969,7 +962,7 @@ Las Tablas 12 a 20 detallan los requerimientos funcionales de los módulos M1 a 
 
 **M3. Libros y auxiliares (E3)**
 
-**Tabla 14**
+**Tabla 13**
 
 *Requerimientos funcionales del módulo M3 (E3)*
 
@@ -983,7 +976,7 @@ Las Tablas 12 a 20 detallan los requerimientos funcionales de los módulos M1 a 
 
 **M4. Cuentas por cobrar (E4)**
 
-**Tabla 15**
+**Tabla 14**
 
 *Requerimientos funcionales del módulo M4 (E4)*
 
@@ -1000,7 +993,7 @@ Las Tablas 12 a 20 detallan los requerimientos funcionales de los módulos M1 a 
 
 **M5. Cuentas por pagar (E5)**
 
-**Tabla 16**
+**Tabla 15**
 
 *Requerimientos funcionales del módulo M5 (E5)*
 
@@ -1014,7 +1007,7 @@ Las Tablas 12 a 20 detallan los requerimientos funcionales de los módulos M1 a 
 
 **M6. Tesorería y bancos (E6)**
 
-**Tabla 17**
+**Tabla 16**
 
 *Requerimientos funcionales del módulo M6 (E6)*
 
@@ -1029,7 +1022,7 @@ Las Tablas 12 a 20 detallan los requerimientos funcionales de los módulos M1 a 
 
 **M7. Reportes y estados financieros (E7)**
 
-**Tabla 18**
+**Tabla 17**
 
 *Requerimientos funcionales del módulo M7 (E7)*
 
@@ -1044,7 +1037,7 @@ Las Tablas 12 a 20 detallan los requerimientos funcionales de los módulos M1 a 
 
 **M8. Seguridad y auditoría (E8)**
 
-**Tabla 19**
+**Tabla 18**
 
 *Requerimientos funcionales del módulo M8 (E8)*
 
@@ -1061,7 +1054,7 @@ Las Tablas 12 a 20 detallan los requerimientos funcionales de los módulos M1 a 
 
 **M9. Carga inicial e importación (E9)**
 
-**Tabla 20**
+**Tabla 19**
 
 *Requerimientos funcionales del módulo M9 (E9)*
 
@@ -1071,9 +1064,9 @@ Las Tablas 12 a 20 detallan los requerimientos funcionales de los módulos M1 a 
 
 **M10. Fiscal y multimoneda (E10)**
 
-El módulo M10 recoge las capacidades tributarias y cambiarias que el negocio exigió durante la ejecución. Se organiza en tres funcionalidades (Tabla 21).
+El módulo M10 recoge las capacidades tributarias y cambiarias que el negocio exigió durante la ejecución. Se organiza en tres funcionalidades (Tabla 20).
 
-**Tabla 21**
+**Tabla 20**
 
 *Capacidades del módulo M10*
 
@@ -1085,9 +1078,9 @@ El módulo M10 recoge las capacidades tributarias y cambiarias que el negocio ex
 
 ### 4.1.2 Requerimientos no funcionales
 
-Los 46 requerimientos no funcionales se agrupan en diez categorías (Tabla 22). La columna Estado distingue lo cumplido con evidencia de lo pendiente de medición formal.
+Los 46 requerimientos no funcionales se agrupan en diez categorías (Tabla 21). La columna Estado distingue lo cumplido con evidencia de lo pendiente de medición formal.
 
-**Tabla 22**
+**Tabla 21**
 
 *Requerimientos no funcionales por categoría*
 
@@ -1144,9 +1137,9 @@ Los 46 requerimientos no funcionales se agrupan en diez categorías (Tabla 22). 
 
 Los objetivos del proyecto se formulan con los criterios específico (E), medible (M), alcanzable (A), relevante (R) y temporal (T). El plazo común es el 19 de octubre de 2026, fecha de cierre del sprint 3.
 
-La Tabla 23 contrasta cada uno de los seis objetivos con los cinco criterios SMART y con la evidencia que lo respalda.
+La Tabla 22 contrasta cada uno de los seis objetivos con los cinco criterios SMART y con la evidencia que lo respalda.
 
-**Tabla 23**
+**Tabla 22**
 
 *Objetivos SMART*
 
@@ -1198,9 +1191,9 @@ La factibilidad se evaluó en cuatro dimensiones. Las tres primeras se calificar
 
 ### 4.4.1 Factibilidad técnica
 
-La dimensión técnica es la más favorable porque Delta desarrolla software sobre la plataforma elegida. La Tabla 24 contrasta cada capacidad requerida con la situación de la organización y el resultado de la ejecución.
+La dimensión técnica es la más favorable porque Delta desarrolla software sobre la plataforma elegida. La Tabla 23 contrasta cada capacidad requerida con la situación de la organización y el resultado de la ejecución.
 
-**Tabla 24**
+**Tabla 23**
 
 *Factibilidad técnica: capacidades y brechas*
 
@@ -1219,9 +1212,9 @@ El dimensionamiento de planificación supuso un volumen inferior a tres mil asie
 
 La inversión total estimada en la planificación asciende a Q129,591.00. El 81.3 % corresponde a talento humano interno y el componente de licencias de software es nulo por el uso de tecnologías de código abierto y planes gratuitos.
 
-Seis indicadores, desde la inversión total de Q129,591.00 hasta la relación costo-beneficio, sustentan el dictamen de factibilidad económica (Tabla 25).
+Seis indicadores, desde la inversión total de Q129,591.00 hasta la relación costo-beneficio, sustentan el dictamen de factibilidad económica (Tabla 24).
 
-**Tabla 25**
+**Tabla 24**
 
 *Factibilidad económica: indicadores y dictamen*
 
@@ -1246,9 +1239,9 @@ La calificación global de las tres dimensiones es 4.50 sobre 5.00, equivalente 
 
 ### 4.4.4 Factibilidad legal y fiscal
 
-El sistema opera sobre la normativa tributaria guatemalteca aplicable a Delta. La Tabla 26 relaciona cada obligación con el tratamiento implementado.
+El sistema opera sobre la normativa tributaria guatemalteca aplicable a Delta. La Tabla 25 relaciona cada obligación con el tratamiento implementado.
 
-**Tabla 26**
+**Tabla 25**
 
 *Obligaciones legales y fiscales y su tratamiento en el sistema*
 
@@ -1281,9 +1274,9 @@ El presupuesto es un estimado de planificación. Cuantifica los recursos necesar
 
 ### 4.5.2 Talento humano
 
-La Tabla 27 totaliza las horas y el costo de cinco roles, con una tarifa por hora para cada uno.
+La Tabla 26 totaliza las horas y el costo de cinco roles, con una tarifa por hora para cada uno.
 
-**Tabla 27**
+**Tabla 26**
 
 *Presupuesto de talento humano*
 
@@ -1298,9 +1291,9 @@ La Tabla 27 totaliza las horas y el costo de cinco roles, con una tarifa por hor
 
 ### 4.5.3 Infraestructura y software
 
-La Tabla 28 detalla el presupuesto de planificación. La ejecución sustituyó los servidores propios por servicios de nube. La Tabla 29 relaciona cada rubro con el servicio efectivamente utilizado.
+La Tabla 27 detalla el presupuesto de planificación. La ejecución sustituyó los servidores propios por servicios de nube. La Tabla 28 relaciona cada rubro con el servicio efectivamente utilizado.
 
-**Tabla 28**
+**Tabla 27**
 
 *Presupuesto de infraestructura y software en la planificación*
 
@@ -1314,7 +1307,7 @@ La Tabla 28 detalla el presupuesto de planificación. La ejecución sustituyó l
 | Docker, Azure DevOps y GitHub | Edición comunitaria y planes gratuitos | Q0.00 |
 | **Total de infraestructura y software** | | **Q6,750.00** |
 
-**Tabla 29**
+**Tabla 28**
 
 *Servicios utilizados en la ejecución*
 
@@ -1331,9 +1324,9 @@ El costo de Azure no se pudo expresar en cifra: la suscripción es del tipo Azur
 
 ### 4.5.4 Capacitación, gestión del cambio y otros costos directos
 
-Seis conceptos, de la facilitación de la capacitación al transporte, componen este presupuesto (Tabla 30).
+Seis conceptos, de la facilitación de la capacitación al transporte, componen este presupuesto (Tabla 29).
 
-**Tabla 30**
+**Tabla 29**
 
 *Presupuesto de capacitación, gestión del cambio y otros costos directos*
 
@@ -1349,9 +1342,9 @@ Seis conceptos, de la facilitación de la capacitación al transporte, componen 
 
 ### 4.5.5 Resumen de la inversión
 
-El talento humano concentra el 81.3 % de la inversión. La Tabla 31 completa la distribución con los demás rubros y la reserva de contingencia del 10 %.
+El talento humano concentra el 81.3 % de la inversión. La Tabla 30 completa la distribución con los demás rubros y la reserva de contingencia del 10 %.
 
-**Tabla 31**
+**Tabla 30**
 
 *Resumen de la inversión*
 
@@ -1387,9 +1380,9 @@ treemap-beta
 
 ### 4.5.6 Análisis costo-beneficio
 
-El flujo neto de cada año, del año 0 al 5, se descuenta al 12 % para obtener el valor presente (Tabla 32).
+El flujo neto de cada año, del año 0 al 5, se descuenta al 12 % para obtener el valor presente (Tabla 31).
 
-**Tabla 32**
+**Tabla 31**
 
 *Flujo neto y valor presente a cinco años*
 
@@ -1417,9 +1410,9 @@ La fecha base del cronograma es el lunes 20 de julio de 2026, con semana laboral
 
 ### 4.6.1 Actividades del proyecto
 
-Dieciocho actividades, identificadas con letras, se vinculan cada una con su entregable (Tabla 33).
+Dieciocho actividades, identificadas con letras, se vinculan cada una con su entregable (Tabla 32).
 
-**Tabla 33**
+**Tabla 32**
 
 *Actividades del proyecto y entregables asociados*
 
@@ -1446,9 +1439,9 @@ Dieciocho actividades, identificadas con letras, se vinculan cada una con su ent
 
 ### 4.6.2 Duraciones estimadas
 
-Cada actividad se estima con tres valores (optimista, más probable y pesimista), de los que se derivan la duración esperada y su varianza (Tabla 34).
+Cada actividad se estima con tres valores (optimista, más probable y pesimista), de los que se derivan la duración esperada y su varianza (Tabla 33).
 
-**Tabla 34**
+**Tabla 33**
 
 *Duraciones estimadas de las actividades*
 
@@ -1480,9 +1473,9 @@ La ruta crítica está formada por las actividades A, C, D, F, G, I, J, M, N, O,
 
 ### 4.6.4 Cronograma planificado
 
-Las fechas de inicio y fin, la duración en días y la holgura de cada actividad ordenan el cronograma planificado (Tabla 35).
+Las fechas de inicio y fin, la duración en días y la holgura de cada actividad ordenan el cronograma planificado (Tabla 34).
 
-**Tabla 35**
+**Tabla 34**
 
 *Cronograma planificado de las actividades*
 
@@ -1606,9 +1599,9 @@ gantt
 
 La Figura 15 muestra la ruta crítica planificada (actividades A, C, D, F, G, I, J, M, N, O, Q y R, con fin esperado el 22/10/2026) y las iteraciones registradas en Azure Boards. Las actividades con holgura (B, E, H, K, L y P) se dibujan sin marca de ruta crítica. El diagrama no representa la holgura disponible, que se resume en el apartado 4.6.3. La planificación original preveía tres sprints; Azure Boards registra un cuarto, del 20/10/2026 al 02/11/2026, que no había iniciado.
 
-La Tabla 36 compara lo planificado con lo ejecutado.
+La Tabla 35 compara lo planificado con lo ejecutado.
 
-**Tabla 36**
+**Tabla 35**
 
 *Comparación entre lo planificado y lo ejecutado*
 
@@ -1624,9 +1617,9 @@ El 17 de octubre de 2026 concentró veintidós de los 106 commits del repositori
 
 ## 4.8 Matriz de trazabilidad
 
-La matriz enlaza cada módulo con sus requerimientos funcionales, las reglas de negocio que lo gobiernan, las migraciones y tablas que lo sostienen, los puntos de acceso de la API, las pantallas del frontend y los casos de prueba que lo verifican. Permite recorrer el camino objetivo, épica, requerimiento, regla, diseño, tabla, historia y caso de prueba sin pérdida de continuidad (Tabla 37).
+La matriz enlaza cada módulo con sus requerimientos funcionales, las reglas de negocio que lo gobiernan, las migraciones y tablas que lo sostienen, los puntos de acceso de la API, las pantallas del frontend y los casos de prueba que lo verifican. Permite recorrer el camino objetivo, épica, requerimiento, regla, diseño, tabla, historia y caso de prueba sin pérdida de continuidad (Tabla 36).
 
-**Tabla 37**
+**Tabla 36**
 
 *Matriz de trazabilidad por módulo*
 
@@ -1721,9 +1714,9 @@ requirementDiagram
 
 La matriz usa una escala cualitativa de tres niveles (Baja, Media y Alta) para la probabilidad y el impacto. La escala es un criterio del equipo y no representa probabilidades numéricas.
 
-La Tabla 38 registra nueve riesgos, de R1 a R9, con su probabilidad e impacto, la respuesta adoptada y el estado.
+La Tabla 37 registra nueve riesgos, de R1 a R9, con su probabilidad e impacto, la respuesta adoptada y el estado.
 
-**Tabla 38**
+**Tabla 37**
 
 *Matriz de riesgos*
 
@@ -1767,9 +1760,9 @@ El diseño de DEC describe tres capas desacopladas, un modelo de datos relaciona
 
 ## 5.1 Arquitectura general y contexto
 
-DEC se estructura en tres capas (Tabla 39).
+DEC se estructura en tres capas (Tabla 38).
 
-**Tabla 39**
+**Tabla 38**
 
 *Capas de la arquitectura*
 
@@ -2291,9 +2284,9 @@ classDiagram
 
 *Nota.* Elaboración propia.
 
-Cuatro grupos de clases, de las entidades a los controladores, se distribuyen por capa con su responsabilidad (Tabla 40).
+Cuatro grupos de clases, de las entidades a los controladores, se distribuyen por capa con su responsabilidad (Tabla 39).
 
-**Tabla 40**
+**Tabla 39**
 
 *Clases representativas por capa*
 
@@ -2615,9 +2608,9 @@ flowchart TB
 
 *Nota.* Elaboración propia.
 
-La Tabla 41 detalla la interfaz que ofrece y las dependencias de seis componentes, de la aplicación web a la base de datos.
+La Tabla 40 detalla la interfaz que ofrece y las dependencias de seis componentes, de la aplicación web a la base de datos.
 
-**Tabla 41**
+**Tabla 40**
 
 *Interfaces y dependencias de los componentes por módulo*
 
@@ -2787,9 +2780,9 @@ La constancia de retención se deriva además en la API como pendiente o vencida
 
 La API expone recursos en JSON bajo el prefijo `api/`. La autorización se declara por operación con los perfiles descritos en la sección 5.2. La navegación del frontend se organiza en un menú fijo con cinco desplegables, filtrado según el perfil.
 
-Nueve áreas, de la autenticación a los reportes, relacionan sus recursos de la API con las rutas de la aplicación (Tabla 42).
+Nueve áreas, de la autenticación a los reportes, relacionan sus recursos de la API con las rutas de la aplicación (Tabla 41).
 
-**Tabla 42**
+**Tabla 41**
 
 *Recursos de la API y rutas de la aplicación por área*
 
@@ -2847,9 +2840,9 @@ Cinco flujos de GitHub Actions automatizan la entrega. El flujo de pruebas se ej
 
 ## 5.10 Red y seguridad
 
-La seguridad es una responsabilidad compartida entre la capa de lógica y la capa de datos. Cuatro límites de confianza delimitan los controles (Tabla 43).
+La seguridad es una responsabilidad compartida entre la capa de lógica y la capa de datos. Cuatro límites de confianza delimitan los controles (Tabla 42).
 
-**Tabla 43**
+**Tabla 42**
 
 *Límites de confianza y controles*
 
@@ -3037,9 +3030,9 @@ erDiagram
 
 El esquema contiene 36 tablas de dominio, organizadas en nueve grupos, más una tabla de control de migraciones. Ninguna tabla almacena un saldo editable: los saldos de cuentas, documentos y cuentas bancarias se derivan de vistas. La única tabla de saldos, el consolidado por periodo, es inmutable y se escribe una sola vez desde el procedimiento de cierre. El Anexo C contiene el diccionario completo con tipo, restricción y descripción de cada columna.
 
-La Tabla 44 presenta los grupos de tablas del esquema relacional.
+La Tabla 43 presenta los grupos de tablas del esquema relacional.
 
-**Tabla 44**
+**Tabla 43**
 
 *Grupos de tablas del esquema relacional*
 
@@ -3092,9 +3085,9 @@ El listado de tablas del esquema public en Neon confirma que el esquema desplega
 
 ## 5.13 Motor de base de datos: PostgreSQL 16
 
-DEC usa PostgreSQL 16 sobre Neon por la combinación de lógica procedimental, transacciones con DDL y ramas de copia sobre escritura. La Tabla 45 relaciona cada capacidad con su uso en el sistema.
+DEC usa PostgreSQL 16 sobre Neon por la combinación de lógica procedimental, transacciones con DDL y ramas de copia sobre escritura. La Tabla 44 relaciona cada capacidad con su uso en el sistema.
 
-**Tabla 45**
+**Tabla 44**
 
 *Capacidades de PostgreSQL utilizadas en el sistema*
 
@@ -3221,9 +3214,9 @@ El rol se crea sin inicio de sesión ni contraseña en el script; el inicio de s
 
 **Las 19 migraciones**
 
-Diecinueve migraciones, numeradas de 01 a 19, indican el contenido y las tablas nuevas de cada una (Tabla 46).
+Diecinueve migraciones, numeradas de 01 a 19, indican el contenido y las tablas nuevas de cada una (Tabla 45).
 
-**Tabla 46**
+**Tabla 45**
 
 *Migraciones de base de datos*
 
@@ -3275,9 +3268,9 @@ El desarrollo de Delta ERP Contable (DEC) se gestionó con Scrum sobre Azure Boa
 
 El backlog tiene tres niveles: épica, característica (Feature) e historia de usuario (Product Backlog Item, PBI). Cada épica agrupa un módulo funcional. Cada característica reúne las historias que la implementan. Cada historia lleva criterios de aceptación, prioridad (1 es la más alta), esfuerzo estimado en horas y valor de negocio.
 
-La Tabla 47 contabiliza los elementos del backlog por tipo, de épicas a casos de prueba, según su estado Hecho o Nuevo.
+La Tabla 46 contabiliza los elementos del backlog por tipo, de épicas a casos de prueba, según su estado Hecho o Nuevo.
 
-**Tabla 47**
+**Tabla 46**
 
 *Estado del backlog en Azure Boards (17/10/2026)*
 
@@ -3291,9 +3284,9 @@ La Tabla 47 contabiliza los elementos del backlog por tipo, de épicas a casos d
 
 La única épica abierta es E9 (importación de catálogo y saldos): su característica y sus dos historias están en estado Nuevo. El resto del backlog está cerrado. El equipo gestionó el trabajo a nivel de historia (PBI) y no lo descompuso en elementos de tipo Task. Azure Boards registra 0 Tasks, por lo que el avance por sprint se mide en historias cerradas (apartado 6.3).
 
-La Tabla 48 presenta las épicas, características e historias.
+La Tabla 47 presenta las épicas, características e historias.
 
-**Tabla 48**
+**Tabla 47**
 
 *Épicas, características e historias*
 
@@ -3358,9 +3351,9 @@ La jerarquía de la épica E10 enlaza épica, característica e historia con su 
 
 ## 6.2 Roles Scrum
 
-La Tabla 49 asigna los roles Product Owner, Scrum Master y Equipo de desarrollo a sus integrantes y responsabilidades.
+La Tabla 48 asigna los roles Product Owner, Scrum Master y Equipo de desarrollo a sus integrantes y responsabilidades.
 
-**Tabla 49**
+**Tabla 48**
 
 *Roles y responsabilidades*
 
@@ -3375,9 +3368,9 @@ La Tabla 49 asigna los roles Product Owner, Scrum Master y Equipo de desarrollo 
 
 Se creó una iteración por sprint en Azure Boards, con fechas fijas de dos semanas. Los sprints 1 a 3 se definieron en la planificación inicial del proyecto. La cuarta iteración, del 20/10/2026 al 02/11/2026, se creó a continuación de la tercera y no forma parte de los tres sprints planificados.
 
-La Tabla 50 resume las cuatro iteraciones con sus fechas, su estado al 18 de octubre de 2026 y las historias de cada una.
+La Tabla 49 resume las cuatro iteraciones con sus fechas, su estado al 18 de octubre de 2026 y las historias de cada una.
 
-**Tabla 50**
+**Tabla 49**
 
 *Iteraciones en Azure Boards y resultados*
 
@@ -3421,13 +3414,13 @@ xychart-beta
 
 *Nota.* Elaboración propia.
 
-La configuración del proyecto registra cuatro iteraciones, Sprint 1 a Sprint 4, con las fechas de la Tabla 50 (Figura 55).
+La configuración del proyecto registra cuatro iteraciones, Sprint 1 a Sprint 4, con las fechas de la Tabla 49 (Figura 55).
 
 **Figura 55**
 
 *Iteraciones Sprint 1 a Sprint 4 en Azure Boards*
 
-> [Insertar captura: Azure Boards > Project Settings > Project configuration > Iterations, mostrando Sprint 1 a Sprint 4 con sus fechas de inicio y fin. Perfil: Scrum Master (Alejandro Ochoa). Acción previa: ninguna. Demuestra: existencia de cuatro iteraciones con las fechas de la Tabla 50. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_settings/work-team?type=iterations]
+> [Insertar captura: Azure Boards > Project Settings > Project configuration > Iterations, mostrando Sprint 1 a Sprint 4 con sus fechas de inicio y fin. Perfil: Scrum Master (Alejandro Ochoa). Acción previa: ninguna. Demuestra: existencia de cuatro iteraciones con las fechas de la Tabla 49. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_settings/work-team?type=iterations]
 
 ## 6.4 Sprint 1 (08/09/2026 al 21/09/2026)
 
@@ -3435,9 +3428,9 @@ La configuración del proyecto registra cuatro iteraciones, Sprint 1 a Sprint 4,
 
 **Sprint Backlog.** El sprint se estimó en 108 horas. Al registrar el alcance real ya construido, el backlog del sprint creció a 152 horas en 17 tareas, con un máximo de 16 horas por tarea. Este desglose corresponde al plan del sprint. En Azure Boards el trabajo se gestionó a nivel de historia y no se registran elementos de tipo Task.
 
-La Tabla 51 presenta las tareas del Sprint Backlog y estado al 19/09/2026 (día 8 de 10).
+La Tabla 50 presenta las tareas del Sprint Backlog y estado al 19/09/2026 (día 8 de 10).
 
-**Tabla 51**
+**Tabla 50**
 
 *Tareas del Sprint Backlog y estado al 19/09/2026 (día 8 de 10)*
 
@@ -3463,9 +3456,9 @@ La Tabla 51 presenta las tareas del Sprint Backlog y estado al 19/09/2026 (día 
 
 La decisión de la tarea 12 se mantuvo en las iteraciones posteriores: el backend es una sola aplicación ASP.NET Core modular. El dominio contable exige transacciones atómicas entre asientos, cuentas por cobrar, cuentas por pagar y tesorería.
 
-**Burndown.** El sprint se siguió con horas restantes por día. La Tabla 52 recoge los datos hasta el día 8.
+**Burndown.** El sprint se siguió con horas restantes por día. La Tabla 51 recoge los datos hasta el día 8.
 
-**Tabla 52**
+**Tabla 51**
 
 *Burndown del Sprint 1 (horas restantes)*
 
@@ -3498,9 +3491,9 @@ El Burndown del Sprint 1 contrasta el avance del sprint con la línea ideal (Fig
 
 **Retrospectiva.**
 
-La Tabla 53 contrapone lo que funcionó con lo que no funcionó y fija una acción de mejora.
+La Tabla 52 contrapone lo que funcionó con lo que no funcionó y fija una acción de mejora.
 
-**Tabla 53**
+**Tabla 52**
 
 *Retrospectiva del Sprint 1*
 
@@ -3572,9 +3565,9 @@ La base opera con dos roles. El propietario solo aplica migraciones. El rol de l
 
 El esquema se construye con 19 scripts de migración numerados. El procedimiento de migración aplica solo los que no figuran en la tabla de control de migraciones (`schema_migrations`), en orden y cada uno dentro de una sola transacción. Si un script falla, la transacción se revierte y el script no se registra como aplicado. Una migración ya aplicada no se edita: la corrección se hace con un script nuevo.
 
-La Tabla 54 agrupa las 19 migraciones en siete registros con su fecha de creación.
+La Tabla 53 agrupa las 19 migraciones en siete registros con su fecha de creación.
 
-**Tabla 54**
+**Tabla 53**
 
 *Evolución del esquema por migración*
 
@@ -3608,7 +3601,7 @@ La rama development contiene las 37 tablas base (36 de dominio y la de control) 
 
 ## 6.7 Equipo de trabajo
 
-El equipo lo forman cuatro estudiantes de Ingeniería en Sistemas de la Universidad Mariano Gálvez de Guatemala, en el curso Seminario de Tecnologías de Información, bajo la cátedra de Erick Aguilar. La distribución de módulos se resume en la Tabla 49 y en la columna de asignación del backlog. La actividad del repositorio ofrece una medida de la carga: 106 commits entre el 16/09 y el 17/10/2026 y 34 Pull Request fusionados, todos hacia la rama principal. El primero se fusionó el 24/09 y el último el 18/10 (hora UTC).
+El equipo lo forman cuatro estudiantes de Ingeniería en Sistemas de la Universidad Mariano Gálvez de Guatemala, en el curso Seminario de Tecnologías de Información, bajo la cátedra de Erick Aguilar. La distribución de módulos se resume en la Tabla 48 y en la columna de asignación del backlog. La actividad del repositorio ofrece una medida de la carga: 106 commits entre el 16/09 y el 17/10/2026 y 34 Pull Request fusionados, todos hacia la rama principal. El primero se fusionó el 24/09 y el último el 18/10 (hora UTC).
 
 ## 6.8 Comunicación del equipo
 
@@ -3623,9 +3616,9 @@ El seguimiento combina cuatro fuentes:
 3. **GitHub Actions:** resultado de cada ejecución de pruebas, controles de calidad y despliegue (capítulo 7).
 4. **SonarCloud:** Quality Gate, cobertura, duplicación e incidencias sobre `main` (apartado 7.9).
 
-La Tabla 55 consolida siete indicadores, entre ellos épicas e historias cerradas, commits y cobertura de código nuevo, con su fuente.
+La Tabla 54 consolida siete indicadores, entre ellos épicas e historias cerradas, commits y cobertura de código nuevo, con su fuente.
 
-**Tabla 55**
+**Tabla 54**
 
 *Indicadores de seguimiento al 18/10/2026*
 
@@ -3645,9 +3638,9 @@ El sistema se despliega en servicios administrados independientes, uno por capa,
 
 ## 7.1 Herramientas y arquitectura de despliegue
 
-Cada una de las siete capas se asocia con una tecnología y con el servicio donde se ejecuta (Tabla 56).
+Cada una de las siete capas se asocia con una tecnología y con el servicio donde se ejecuta (Tabla 55).
 
-**Tabla 56**
+**Tabla 55**
 
 *Herramientas por capa*
 
@@ -3763,13 +3756,13 @@ El extracto muestra la separación entre compilación y ejecución. La imagen fi
 
 ## 7.5 Conexión del código con el pipeline
 
-El pipeline toma el código de GitHub directamente. No hay una copia sincronizada en otro repositorio. Los eventos que disparan los flujos son el push a `dev`, el Pull Request hacia `main` y el push a `main`. La Tabla 57 relaciona cada evento con el flujo que dispara.
+El pipeline toma el código de GitHub directamente. No hay una copia sincronizada en otro repositorio. Los eventos que disparan los flujos son el push a `dev`, el Pull Request hacia `main` y el push a `main`. La Tabla 56 relaciona cada evento con el flujo que dispara.
 
 ## 7.6 Pipelines de integración y despliegue continuo
 
 Se definieron cinco flujos de trabajo en GitHub Actions. GitHub Actions no requiere un servidor propio, reside junto al repositorio y permite la autenticación federada con Azure.
 
-**Tabla 57**
+**Tabla 56**
 
 *Flujos de trabajo de GitHub Actions*
 
@@ -3873,9 +3866,9 @@ En un Pull Request hacia main, el control de migraciones contra copia de producc
 
 ## 7.7 Ejecución del pipeline y resultados
 
-La Tabla 58 resume la última ejecución observada de cada flujo, tomada de GitHub Actions el 18/10/2026 (hora UTC).
+La Tabla 57 resume la última ejecución observada de cada flujo, tomada de GitHub Actions el 18/10/2026 (hora UTC).
 
-**Tabla 58**
+**Tabla 57**
 
 *Última ejecución por flujo*
 
@@ -3907,9 +3900,9 @@ La ejecución del flujo de pruebas de backend y frontend completa los gates en v
 
 **Plan de pruebas.** Los casos de prueba son elementos de trabajo de tipo Test Case en Azure Boards, con pasos (acción y resultado esperado) y prioridad de 1 a 4. Cada caso se vincula a la historia que verifica, mediante la relación de hijo (TC-01 a TC-18) o la relación "Tested By" (desde TC-19). Azure Test Plans contiene además un plan de pruebas ("Plan de pruebas - Delta ERP Contable", activo) con 10 suites estáticas: una raíz sin casos y nueve de módulos (M1 a M9). El plan tiene 18 casos asignados, dos por cada suite de módulo. Los 46 casos restantes de los 64 definidos permanecen como elementos Test Case enlazados a sus historias, fuera de las suites. La trazabilidad entre casos, historias y estado se gestiona mediante los elementos Test Case enlazados.
 
-La Tabla 59 presenta la cobertura del plan de pruebas.
+La Tabla 58 presenta la cobertura del plan de pruebas.
 
-**Tabla 59**
+**Tabla 58**
 
 *Cobertura del plan de pruebas*
 
@@ -3926,9 +3919,9 @@ La suma automatizada es 18 + 28 + 14 + 2 = 62 casos cerrados y ejecutados en int
 
 La consulta a Azure Boards devolvió 62 elementos Test Case en estado Closed. Sumados a los dos casos en estado Design (TC-17 y TC-18), completan los 64 casos definidos (62 + 2 = 64).
 
-**Pruebas automatizadas.** El análisis del código de pruebas produce los conteos de la Tabla 60.
+**Pruebas automatizadas.** El análisis del código de pruebas produce los conteos de la Tabla 59.
 
-**Tabla 60**
+**Tabla 59**
 
 *Conteo de pruebas automatizadas*
 
@@ -3944,9 +3937,9 @@ No se declara un número de ejecuciones acumuladas. El resultado de cada ejecuci
 
 SonarCloud analiza el backend en C#, el frontend y el código SQL del repositorio en cada Pull Request y en cada push a `main`. La carpeta de scripts SQL se excluye del análisis de SonarCloud, porque su analizador SQL es para Oracle PL/SQL. Los scripts tampoco se miden por duplicación, ya que las correcciones redefinen objetos y repiten por diseño cuerpos de scripts anteriores.
 
-La Tabla 61 recoge diez métricas de SonarCloud sobre `main`, entre ellas el Quality Gate, la cobertura y las líneas duplicadas del código nuevo.
+La Tabla 60 recoge diez métricas de SonarCloud sobre `main`, entre ellas el Quality Gate, la cobertura y las líneas duplicadas del código nuevo.
 
-**Tabla 61**
+**Tabla 60**
 
 *Métricas de SonarCloud en la rama `main` (consulta del 17/10/2026)*
 
@@ -3965,13 +3958,13 @@ La Tabla 61 recoge diez métricas de SonarCloud sobre `main`, entre ellas el Qua
 
 La cobertura de 98,5 % corresponde a la condición de código nuevo del Quality Gate, y la métrica global de la rama también es 98,5 %. Las incidencias que SonarCloud detectó en los Pull Request (por ejemplo, las de los Pull Request 18, 25, 30, 33, 38, 40 y 42) se corrigieron antes de fusionar, según el historial de commits.
 
-El panel de SonarCloud de la rama main exhibe las métricas de la Tabla 61 (Figura 71).
+El panel de SonarCloud de la rama main exhibe las métricas de la Tabla 60 (Figura 71).
 
 **Figura 71**
 
 *Panel de SonarCloud de la rama main*
 
-> [Insertar captura: SonarCloud > proyecto DavidsitoPay_erp-contable-delta > rama `main` > "Overall Code", con el Quality Gate (Passed), cobertura, duplicación, issues y calificaciones. Perfil: colaborador del proyecto en SonarCloud. Acción previa: seleccionar la rama main. Demuestra: las métricas de la Tabla 61. Enlace: https://sonarcloud.io/project/overview?id=DavidsitoPay_erp-contable-delta&branch=main]
+> [Insertar captura: SonarCloud > proyecto DavidsitoPay_erp-contable-delta > rama `main` > "Overall Code", con el Quality Gate (Passed), cobertura, duplicación, issues y calificaciones. Perfil: colaborador del proyecto en SonarCloud. Acción previa: seleccionar la rama main. Demuestra: las métricas de la Tabla 60. Enlace: https://sonarcloud.io/project/overview?id=DavidsitoPay_erp-contable-delta&branch=main]
 
 El análisis por Pull Request en SonarCloud muestra el Quality Gate antes de la fusión (Figura 72).
 
@@ -4023,11 +4016,17 @@ La reflexión se limita a hechos observables en la aplicación de Scrum.
 
 **Decisión de arquitectura.** El backend modular único, definido en el Sprint 1, permitió mantener transacciones atómicas entre los módulos contables y fiscales. No se detectó un caso en que la decisión obligara a rehacer la estructura.
 
-## 8.2 Conclusión por módulo
+## 8.2 Conclusiones
 
-La Tabla 62 relaciona cada módulo con su estado y con la evidencia que lo respalda.
+### 8.2.1 Conclusión respecto del objetivo general
 
-**Tabla 62**
+El objetivo general se alcanzó en lo esencial. Delta ERP Contable (DEC) está en producción y centraliza el registro contable con nueve de los diez módulos operativos. Se aplican 35 de las 36 reglas de negocio (RN-01 a RN-36); RN-11 depende del módulo M9 pendiente. El modelo de datos comprende 36 tablas en 19 migraciones versionadas. Los cuatro perfiles (Administrador del sistema, Contador, Vendedor y Técnico) tienen permisos validados en el servidor y en la base de datos. El backend se despliega en Azure Container Apps y el frontend en Vercel mediante un flujo automatizado. Quedan sin construir la carga inicial (M9), las notificaciones por correo electrónico y varios requerimientos parciales o no incorporados (apartado 8.3).
+
+### 8.2.2 Conclusiones respecto de los objetivos específicos
+
+La Tabla 61 resume el estado de cada módulo al cierre.
+
+**Tabla 61**
 
 *Estado de los módulos al 18/10/2026*
 
@@ -4044,7 +4043,15 @@ La Tabla 62 relaciona cada módulo con su estado y con la evidencia que lo respa
 | M9 Importación de catálogo y saldos | E9 | Pendiente | TC-17 y TC-18 en estado Design |
 | M10 Parámetros fiscales, retenciones y multimoneda | E10 | Operativo | TC-21 a TC-64 cerrados |
 
-Nueve de los diez módulos están operativos, algunos con requerimientos parciales o no incorporados (sección 4.1 y apartado 8.3). Se aplican 35 de las 36 reglas de negocio; RN-11 depende de M9. El modelo de datos tiene 36 tablas en 19 migraciones versionadas. Los cuatro perfiles (Administrador del sistema, Contador, Vendedor y Técnico) tienen permisos validados en el servidor y en la base de datos. El sistema está desplegado en producción con un flujo automatizado de extremo a extremo, y los controles de calidad se encuentran en verde en `main`.
+1. El catálogo contable parametrizable y el registro de asientos se alcanzaron. M1 y M2 están operativos, con reversión de asientos (RN-03) y partida doble verificada por la base de datos. Los casos TC-01 a TC-04 y TC-20 están cerrados.
+2. Los libros y auxiliares se alcanzaron. M3 genera el balance y el mayor jerárquicos a partir de los asientos, sin saldos editables. Los casos TC-05, TC-06 y TC-19 están cerrados.
+3. El control de las cuentas por cobrar y por pagar se alcanzó. M4 y M5 están operativos. Los casos TC-07 a TC-10 están cerrados.
+4. La administración de tesorería y bancos se alcanzó. M6 está operativo, con conciliación bancaria (RN-10). Los casos TC-11 y TC-12 están cerrados.
+5. La producción del balance general y del estado de resultados se alcanzó. M7 está operativo y sus casos TC-13 y TC-14 están cerrados. El estado de flujo de efectivo, los indicadores de gestión y los reportes comparativos quedan sin incorporar.
+6. El acceso por perfil y la bitácora inmutable se alcanzaron en lo esencial. M8 está operativo, con autenticación JWT, cuatro perfiles y bitácora de auditoría inmutable. Los casos TC-15 y TC-16 están cerrados. Quedan parciales la administración de usuarios desde la aplicación, el cierre de sesión por inactividad, la política de contraseñas y el bloqueo por intentos fallidos.
+7. El cumplimiento de las obligaciones fiscales se alcanzó. M10 está operativo y los casos TC-21 a TC-64 están cerrados. La retención de IVA como agente de retención queda fuera del alcance porque Delta no posee esa condición.
+8. La carga inicial de catálogos y saldos no se alcanzó. M9 está diseñado y no implementado. Falta la validación de archivos CSV y la inserción transaccional, y los casos TC-17 y TC-18 permanecen en estado Design.
+9. Las prácticas de integración y entrega continuas se alcanzaron. SonarCloud reporta sobre `main` el Quality Gate aprobado, cobertura de 98,5 %, duplicación de 0,0 % y cero errores, vulnerabilidades y code smells. Se ejecutan 62 casos automatizados en integración continua (18 + 28 + 14 + 2) de los 64 definidos. Cinco flujos de GitHub Actions despliegan backend y frontend con verificación de salud posterior.
 
 ## 8.3 Trabajo futuro y pendientes
 
@@ -5154,9 +5161,9 @@ CREATE TABLE IF NOT EXISTS feriado (
 
 Cada regla se registra con el módulo que la materializa, el mecanismo donde se aplica (base de datos, API o interfaz de usuario) y su estado. Las reglas aplicadas en la base de datos se hacen cumplir con disparadores, restricciones, vistas o procedimientos almacenados; las aplicadas en la API se validan en el dominio o en los servicios.
 
-La Tabla 63 presenta las reglas de negocio RN-01 a RN-36.
+La Tabla 62 presenta las reglas de negocio RN-01 a RN-36.
 
-**Tabla 63**
+**Tabla 62**
 
 *Reglas de negocio RN-01 a RN-36*
 
@@ -5206,11 +5213,11 @@ De las 36 reglas, 35 están aplicadas y 1 (RN-11) permanece pendiente por depend
 
 ## Anexo C. Diccionario de datos
 
-Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus columnas, tipo de dato, restricciones declaradas en la columna y descripción. Las descripciones proceden del diccionario de datos vigente; un guion indica que la columna no cuenta con descripción individual. Las restricciones de tabla (llaves compuestas, verificaciones entre columnas y exclusiones) figuran en el Anexo A.
+Las Tablas 63 a 98 describen las 36 tablas de dominio. Cada una incluye sus columnas, tipo de dato, restricciones declaradas en la columna y descripción. Las descripciones proceden del diccionario de datos vigente; un guion indica que la columna no cuenta con descripción individual. Las restricciones de tabla (llaves compuestas, verificaciones entre columnas y exclusiones) figuran en el Anexo A.
 
 ### C.1 perfil
 
-**Tabla 64**
+**Tabla 63**
 
 *Diccionario de datos de la tabla perfil*
 
@@ -5221,7 +5228,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.2 usuario
 
-**Tabla 65**
+**Tabla 64**
 
 *Diccionario de datos de la tabla usuario*
 
@@ -5236,7 +5243,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.3 bitacoraauditoria
 
-**Tabla 66**
+**Tabla 65**
 
 *Diccionario de datos de la tabla bitacoraauditoria*
 
@@ -5251,7 +5258,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.4 moneda
 
-**Tabla 67**
+**Tabla 66**
 
 *Diccionario de datos de la tabla moneda*
 
@@ -5266,7 +5273,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.5 historialtipocambio
 
-**Tabla 68**
+**Tabla 67**
 
 *Diccionario de datos de la tabla historialtipocambio*
 
@@ -5289,7 +5296,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.6 periodocontable
 
-**Tabla 69**
+**Tabla 68**
 
 *Diccionario de datos de la tabla periodocontable*
 
@@ -5304,7 +5311,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.7 contraparte
 
-**Tabla 70**
+**Tabla 69**
 
 *Diccionario de datos de la tabla contraparte*
 
@@ -5326,7 +5333,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.8 cuentacontable
 
-**Tabla 71**
+**Tabla 70**
 
 *Diccionario de datos de la tabla cuentacontable*
 
@@ -5342,7 +5349,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.9 centrocosto
 
-**Tabla 72**
+**Tabla 71**
 
 *Diccionario de datos de la tabla centrocosto*
 
@@ -5355,7 +5362,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.10 asientocontable
 
-**Tabla 73**
+**Tabla 72**
 
 *Diccionario de datos de la tabla asientocontable*
 
@@ -5373,7 +5380,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.11 lineaasiento
 
-**Tabla 74**
+**Tabla 73**
 
 *Diccionario de datos de la tabla lineaasiento*
 
@@ -5388,7 +5395,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.12 plantillaasiento
 
-**Tabla 75**
+**Tabla 74**
 
 *Diccionario de datos de la tabla plantillaasiento*
 
@@ -5400,7 +5407,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.13 lineaplantillaasiento
 
-**Tabla 76**
+**Tabla 75**
 
 *Diccionario de datos de la tabla lineaplantillaasiento*
 
@@ -5414,7 +5421,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.14 documentocxc
 
-**Tabla 77**
+**Tabla 76**
 
 *Diccionario de datos de la tabla documentocxc*
 
@@ -5446,7 +5453,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.15 lineadocumentocxc
 
-**Tabla 78**
+**Tabla 77**
 
 *Diccionario de datos de la tabla lineadocumentocxc*
 
@@ -5469,7 +5476,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.16 recibopagocliente
 
-**Tabla 79**
+**Tabla 78**
 
 *Diccionario de datos de la tabla recibopagocliente*
 
@@ -5487,7 +5494,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.17 aplicacionpagocliente
 
-**Tabla 80**
+**Tabla 79**
 
 *Diccionario de datos de la tabla aplicacionpagocliente*
 
@@ -5504,7 +5511,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.18 documentocxp
 
-**Tabla 81**
+**Tabla 80**
 
 *Diccionario de datos de la tabla documentocxp*
 
@@ -5538,7 +5545,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.19 lineadocumentocxp
 
-**Tabla 82**
+**Tabla 81**
 
 *Diccionario de datos de la tabla lineadocumentocxp*
 
@@ -5561,7 +5568,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.20 pagoproveedorcabecera
 
-**Tabla 83**
+**Tabla 82**
 
 *Diccionario de datos de la tabla pagoproveedorcabecera*
 
@@ -5579,7 +5586,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.21 aplicacionpagoproveedor
 
-**Tabla 84**
+**Tabla 83**
 
 *Diccionario de datos de la tabla aplicacionpagoproveedor*
 
@@ -5596,7 +5603,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.22 cuentabancaria
 
-**Tabla 85**
+**Tabla 84**
 
 *Diccionario de datos de la tabla cuentabancaria*
 
@@ -5614,7 +5621,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.23 movimientotesoreria
 
-**Tabla 86**
+**Tabla 85**
 
 *Diccionario de datos de la tabla movimientotesoreria*
 
@@ -5638,7 +5645,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.24 conciliacionbancaria
 
-**Tabla 87**
+**Tabla 86**
 
 *Diccionario de datos de la tabla conciliacionbancaria*
 
@@ -5653,7 +5660,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.25 detalleconciliacion
 
-**Tabla 88**
+**Tabla 87**
 
 *Diccionario de datos de la tabla detalleconciliacion*
 
@@ -5665,7 +5672,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.26 saldocuentaperiodo
 
-**Tabla 89**
+**Tabla 88**
 
 *Diccionario de datos de la tabla saldocuentaperiodo*
 
@@ -5681,7 +5688,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.27 impuesto
 
-**Tabla 90**
+**Tabla 89**
 
 *Diccionario de datos de la tabla impuesto*
 
@@ -5702,7 +5709,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.28 configuracionfiscal
 
-**Tabla 91**
+**Tabla 90**
 
 *Diccionario de datos de la tabla configuracionfiscal*
 
@@ -5729,7 +5736,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.29 parametroretencion
 
-**Tabla 92**
+**Tabla 91**
 
 *Diccionario de datos de la tabla parametroretencion*
 
@@ -5753,7 +5760,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.30 retencion
 
-**Tabla 93**
+**Tabla 92**
 
 *Diccionario de datos de la tabla retencion*
 
@@ -5787,7 +5794,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.31 constanciaretencion
 
-**Tabla 94**
+**Tabla 93**
 
 *Diccionario de datos de la tabla constanciaretencion*
 
@@ -5811,7 +5818,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.32 revaluacion
 
-**Tabla 95**
+**Tabla 94**
 
 *Diccionario de datos de la tabla revaluacion*
 
@@ -5839,7 +5846,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.33 revaluacionpartida
 
-**Tabla 96**
+**Tabla 95**
 
 *Diccionario de datos de la tabla revaluacionpartida*
 
@@ -5859,7 +5866,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.34 enteramiento
 
-**Tabla 97**
+**Tabla 96**
 
 *Diccionario de datos de la tabla enteramiento*
 
@@ -5886,7 +5893,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.35 ajuste_retencion
 
-**Tabla 98**
+**Tabla 97**
 
 *Diccionario de datos de la tabla ajuste_retencion*
 
@@ -5906,7 +5913,7 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 ### C.36 feriado
 
-**Tabla 99**
+**Tabla 98**
 
 *Diccionario de datos de la tabla feriado*
 
@@ -5922,9 +5929,9 @@ Las Tablas 64 a 99 describen las 36 tablas de dominio. Cada una incluye sus colu
 
 Los casos TC-01 a TC-64 están descritos con sus pasos en Azure Boards. El resumen indica, para cada caso, la historia que verifica y su estado. Los casos con estado Cerrado están automatizados y se ejecutan en integración continua (xUnit para el backend y Vitest para el frontend).
 
-La Tabla 100 presenta el resumen de los casos de prueba.
+La Tabla 99 presenta el resumen de los casos de prueba.
 
-**Tabla 100**
+**Tabla 99**
 
 *Resumen de los casos de prueba*
 
@@ -6001,9 +6008,9 @@ Resumen: 62 casos cerrados y automatizados (18 + 28 + 14 + 2) y 2 en estado Desi
 
 El ambiente de producción contiene datos de demostración cargados manualmente con scripts específicos. Los scripts no forman parte del flujo automático de migraciones y cada uno incluye una guarda que impide ejecutarlo dos veces. Las contraseñas no se documentan; el equipo las entrega por un canal privado.
 
-Los cuatro perfiles de acceso (Administrador del sistema, Contador, Vendedor y Técnico) disponen de usuarios de demostración (Tabla 101).
+Los cuatro perfiles de acceso (Administrador del sistema, Contador, Vendedor y Técnico) disponen de usuarios de demostración (Tabla 100).
 
-**Tabla 101**
+**Tabla 100**
 
 *Usuarios de demostración*
 
@@ -6016,9 +6023,9 @@ Los cuatro perfiles de acceso (Administrador del sistema, Contador, Vendedor y T
 
 Cada usuario de demostración usa la misma contraseña que el usuario inicial de su perfil. En total son 8 usuarios, dos por perfil.
 
-La Tabla 102 distribuye los datos de demostración en cuatro lotes: datos base, tesorería, fiscal y multimoneda, y corrección de saldos.
+La Tabla 101 distribuye los datos de demostración en cuatro lotes: datos base, tesorería, fiscal y multimoneda, y corrección de saldos.
 
-**Tabla 102**
+**Tabla 101**
 
 *Lotes de datos de demostración*
 
@@ -6033,9 +6040,9 @@ La Tabla 102 distribuye los datos de demostración en cuatro lotes: datos base, 
 
 La aplicación se utiliza desde un navegador actualizado, en la dirección https://delta-erp-contable.vercel.app, sin instalación. El inicio de sesión requiere correo y contraseña. La sesión vence a los 60 minutos. La barra superior muestra el nombre del usuario, su perfil y el estado de conexión con la API. El menú se adapta al perfil y el servidor valida el permiso en cada operación; una operación no autorizada responde con el código 403.
 
-La Tabla 103 indica, para quince funciones, si cada perfil puede ejecutarlas o si la opción permanece oculta.
+La Tabla 102 indica, para quince funciones, si cada perfil puede ejecutarlas o si la opción permanece oculta.
 
-**Tabla 103**
+**Tabla 102**
 
 *Capacidades por perfil*
 
@@ -6071,9 +6078,9 @@ La Tabla 103 indica, para quince funciones, si cada perfil puede ejecutarlas o s
 
 ## Anexo G. Lista de evidencias pendientes de captura
 
-La Tabla 104 enumera las capturas de pantalla pendientes, con el perfil de acceso y el enlace directo a la página que debe mostrarse en cada una.
+La Tabla 103 enumera las capturas de pantalla pendientes, con el perfil de acceso y el enlace directo a la página que debe mostrarse en cada una.
 
-**Tabla 104**
+**Tabla 103**
 
 *Evidencias pendientes de captura*
 
