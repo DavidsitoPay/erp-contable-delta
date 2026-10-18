@@ -280,6 +280,8 @@ y de líneas no cubiertas. Ambos workflows usan Node 24. `sonarcloud-analysis.ym
 las suites con cobertura en cada Pull Request y en cada push a `main`, con la cobertura
 enviada a SonarCloud.
 
+**Gate de migraciones.** En cada PR a `main`, `migrations-check.yml` crea una rama Neon temporal desde `production`, aplica las migraciones pendientes con `database/run_migrations.sh` y borra la rama al terminar; el job `migrar-copia-prod` es check requerido en la protección de `main`.
+
 **Quality gate de SonarCloud.** El análisis espera el resultado del quality gate
 (`sonar.qualitygate.wait=true`) y su resultado determina el estado del workflow. Cobertura mínima de 80 % sobre código nuevo y
 duplicación máxima de 3 %. Quedan fuera de la cobertura `Program.cs`,
@@ -302,7 +304,7 @@ de datos PostgreSQL corre en Neon (proveedor sin servidor), con una rama `produc
 local. CI no migra la rama `development`: sus migraciones se aplican a mano y deben dejar el
 mismo registro en `schema_migrations` que escribe `run_migrations.sh`.
 
-La integración y el despliegue continuo corren en GitHub Actions, en cuatro workflows
+La integración y el despliegue continuo corren en GitHub Actions, en cinco workflows
 independientes (`.github/workflows/`):
 
 - `backend-deploy.yml`: en cada push a `main` (ignora los cambios que solo tocan
@@ -325,6 +327,8 @@ independientes (`.github/workflows/`):
   del backend y del frontend, el gate de duplicación y el de cobertura de líneas cambiadas,
   antes de que el cambio llegue a un Pull Request o a `main`. Un job `resultado` al final
   resume el estado de todos; las ejecuciones anteriores del mismo ref se cancelan.
+- `migrations-check.yml`: gate en Pull Request a `main`. Crea una rama temporal de Neon desde
+  `production`, aplica las migraciones sobre ella y la borra al terminar.
 
 Comunicación: navegador → frontend (HTTPS) → backend (HTTPS/JSON) → base de datos
 (SQL vía Npgsql/EF Core); backend → SMTP externo (notificaciones, diseñado, no
