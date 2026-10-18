@@ -585,7 +585,7 @@ La Fase 1 abarca el control contable interno de una sola empresa. La tabla sigui
 
 *Tablero de Azure Boards con las épicas E1 a E10*
 
-> [Insertar captura: tablero de Azure Boards con las diez épicas E1 a E10 y su estado. Perfil: miembro del equipo con acceso al proyecto de Azure Boards. Acción previa: abrir Boards > Backlogs, seleccionar el nivel Epics y expandir todas las épicas. Demuestra: la correspondencia entre los módulos M1 a M10 y las épicas E1 a E10, y el estado de cada una. Enlace: URL del proyecto en Azure DevOps]
+> [Insertar captura: tablero de Azure Boards con las diez épicas E1 a E10 y su estado. Perfil: miembro del equipo con acceso al proyecto de Azure Boards. Acción previa: abrir Boards > Backlogs, seleccionar el nivel Epics y expandir todas las épicas. Demuestra: la correspondencia entre los módulos M1 a M10 y las épicas E1 a E10, y el estado de cada una. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_backlogs/backlog/erp-contable-delta%20Team/Epics]
 
 ## 1.7 Herramientas tecnológicas
 
@@ -770,7 +770,7 @@ Los saldos de documentos, cuentas contables y cuentas bancarias no se almacenan 
 
 *Registro de un asiento contable balanceado*
 
-> [Insertar captura: pantalla de registro de asiento contable con líneas de débito y crédito balanceadas y el mensaje de confirmación. Perfil: usuario de demostración con perfil Contador. Acción previa: abrir la pestaña Registrar asiento, completar el periodo abierto y dos líneas con importes iguales, y confirmar. Demuestra: el registro de un asiento con partida doble verificada. Enlace: https://delta-erp-contable.vercel.app]
+> [Insertar captura: pantalla de registro de asiento contable con líneas de débito y crédito balanceadas y el mensaje de confirmación. Perfil: usuario de demostración con perfil Contador. Acción previa: abrir la pestaña Registrar asiento, completar el periodo abierto y dos líneas con importes iguales, y confirmar. Demuestra: el registro de un asiento con partida doble verificada. Enlace: https://delta-erp-contable.vercel.app/asientos]
 
 ## 2.7 Herramientas recomendadas por proceso
 
@@ -810,19 +810,19 @@ La gestión del cambio considera que el personal construyó sus propios controle
 
 *Pantalla de inicio de sesión de la aplicación desplegada*
 
-> [Insertar captura: pantalla de inicio de sesión de la aplicación desplegada, con el candado de conexión segura visible. Perfil: sin autenticar. Acción previa: abrir la dirección pública en una ventana nueva. Demuestra: el acceso público por HTTPS. Enlace: https://delta-erp-contable.vercel.app]
+> [Insertar captura: pantalla de inicio de sesión de la aplicación desplegada, con el candado de conexión segura visible. Perfil: sin autenticar. Acción previa: abrir la dirección pública en una ventana nueva. Demuestra: el acceso público por HTTPS. Enlace: https://delta-erp-contable.vercel.app/]
 
 **Figura 9**
 
 *Menú principal del perfil Administrador del sistema*
 
-> [Insertar captura: menú principal completo con el usuario de demostración con perfil Administrador del sistema. Perfil: usuario de demostración con perfil Administrador del sistema. Acción previa: iniciar sesión y desplegar cada grupo del menú. Demuestra: las opciones disponibles para el perfil de mayor privilegio. Enlace: https://delta-erp-contable.vercel.app]
+> [Insertar captura: menú principal completo con el usuario de demostración con perfil Administrador del sistema. Perfil: usuario de demostración con perfil Administrador del sistema. Acción previa: iniciar sesión y desplegar cada grupo del menú. Demuestra: las opciones disponibles para el perfil de mayor privilegio. Enlace: https://delta-erp-contable.vercel.app/]
 
 **Figura 10**
 
 *Menú principal del perfil Vendedor*
 
-> [Insertar captura: menú principal reducido con el usuario de demostración con perfil Vendedor. Perfil: usuario de demostración con perfil Vendedor. Acción previa: cerrar sesión e iniciar con el usuario Vendedor. Demuestra: que el menú se adapta al perfil y omite Registrar asiento, Tesorería y reportes. Enlace: https://delta-erp-contable.vercel.app]
+> [Insertar captura: menú principal reducido con el usuario de demostración con perfil Vendedor. Perfil: usuario de demostración con perfil Vendedor. Acción previa: cerrar sesión e iniciar con el usuario Vendedor. Demuestra: que el menú se adapta al perfil y omite Registrar asiento, Tesorería y reportes. Enlace: https://delta-erp-contable.vercel.app/]
 
 ---
 
@@ -1697,19 +1697,19 @@ Tres controles de la matriz se respaldan con evidencia visual de los flujos auto
 
 *Ejecución del flujo de migraciones contra una copia de producción*
 
-> [Insertar captura: Ejecución del flujo «Migraciones — prueba contra copia de producción» en un Pull Request hacia main, con el job de migración exitoso y el resumen de scripts aplicados. Perfil: acceso al repositorio en GitHub. Acción previa: abrir GitHub > Actions > Migraciones — prueba contra copia de producción y seleccionar una ejecución en estado exitoso (archivo .github/workflows/migrations-check.yml). Demuestra: el control de R1, es decir, que las migraciones se prueban sobre una copia de producción antes de integrarse. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions]
+> [Insertar captura: Ejecución del flujo «Migraciones — prueba contra copia de producción» en un Pull Request hacia main, con el job de migración exitoso y el resumen de scripts aplicados. Perfil: acceso al repositorio en GitHub. Acción previa: abrir GitHub > Actions > Migraciones — prueba contra copia de producción y seleccionar una ejecución en estado exitoso (archivo .github/workflows/migrations-check.yml). Demuestra: el control de R1, es decir, que las migraciones se prueban sobre una copia de producción antes de integrarse. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions/runs/39097672616]
 
 **Figura 19**
 
 *Resumen del job de cobertura de líneas cambiadas*
 
-> [Insertar captura: Resumen del job de cobertura de líneas cambiadas (diff-cover) dentro del flujo «Pruebas — backend y frontend (dev)», con el umbral de 80 % y el porcentaje alcanzado. Perfil: acceso al repositorio en GitHub. Acción previa: abrir una ejecución reciente del flujo en la rama dev y abrir el resumen del run (archivo .github/workflows/backend-build-check.yml). Demuestra: la puerta de calidad del objetivo 4 sobre las líneas modificadas. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions]
+> [Insertar captura: Resumen del job de cobertura de líneas cambiadas (diff-cover) dentro del flujo «Pruebas — backend y frontend (dev)», con el umbral de 80 % y el porcentaje alcanzado. Perfil: acceso al repositorio en GitHub. Acción previa: abrir una ejecución reciente del flujo en la rama dev y abrir el resumen del run (archivo .github/workflows/backend-build-check.yml). Demuestra: la puerta de calidad del objetivo 4 sobre las líneas modificadas. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions/runs/39097531841]
 
 **Figura 20**
 
 *Job de duplicación de código (jscpd)*
 
-> [Insertar captura: Job de duplicación (jscpd) del mismo flujo, con el resultado sin bloques duplicados de 80 tokens o más. Perfil: acceso al repositorio en GitHub. Acción previa: en la misma ejecución, abrir el job jscpd y su resumen. Demuestra: el control de R3 y el cumplimiento del objetivo 4 en duplicación. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions]
+> [Insertar captura: Job de duplicación (jscpd) del mismo flujo, con el resultado sin bloques duplicados de 80 tokens o más. Perfil: acceso al repositorio en GitHub. Acción previa: en la misma ejecución, abrir el job jscpd y su resumen. Demuestra: el control de R3 y el cumplimiento del objetivo 4 en duplicación. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions/runs/39097531841]
 
 # Capítulo 5. Diseño del sistema
 
@@ -3010,7 +3010,7 @@ El esquema contiene 36 tablas de dominio, organizadas en nueve grupos, más una 
 
 *Listado de tablas del esquema public en Neon*
 
-> [Insertar captura: Consola de Neon, rama development o production, listado de tablas del esquema public (tabla Tables o consulta con el listado de tablas), donde se vean las 36 tablas de dominio y schema_migrations. Perfil: propietario del proyecto Neon. Acción previa: abrir Neon > proyecto erp-contable-delta > Tables y elegir la rama; alternativamente ejecutar en el SQL Editor la consulta de tablas de information_schema.tables. Demuestra: que el esquema desplegado contiene las tablas descritas. Enlace: https://console.neon.tech]
+> [Insertar captura: Consola de Neon, rama development o production, listado de tablas del esquema public (tabla Tables o consulta con el listado de tablas), donde se vean las 36 tablas de dominio y schema_migrations. Perfil: propietario del proyecto Neon. Acción previa: abrir Neon > proyecto erp-contable-delta > Tables y elegir la rama; alternativamente ejecutar en el SQL Editor la consulta de tablas de information_schema.tables. Demuestra: que el esquema desplegado contiene las tablas descritas. Enlace: https://console.neon.tech/app/projects/lingering-cell-09535323/branches/br-purple-salad-b5bn7dxm/tables]
 
 ## 5.13 Motor de base de datos: PostgreSQL 16
 
@@ -3175,13 +3175,13 @@ Las tablas nuevas suman 36. Además de las migraciones, existen cuatro scripts d
 
 *Registro de migraciones en la tabla schema_migrations*
 
-> [Insertar captura: Consulta de la tabla de control schema_migrations en Neon (SELECT * FROM schema_migrations ORDER BY 1) con los 19 scripts registrados. Perfil: propietario del proyecto Neon. Acción previa: abrir Neon > SQL Editor, elegir la rama production o development y ejecutar la consulta. Demuestra: que las 19 migraciones están aplicadas y registradas. Enlace: https://console.neon.tech]
+> [Insertar captura: Consulta de la tabla de control schema_migrations en Neon (SELECT * FROM schema_migrations ORDER BY 1) con los 19 scripts registrados. Perfil: propietario del proyecto Neon. Acción previa: abrir Neon > SQL Editor, elegir la rama production o development y ejecutar la consulta. Demuestra: que las 19 migraciones están aplicadas y registradas. Enlace: https://console.neon.tech/app/projects/lingering-cell-09535323/branches/br-purple-salad-b5bn7dxm/sql-editor]
 
 **Figura 49**
 
 *Paso de aplicación de migraciones en el despliegue del backend*
 
-> [Insertar captura: Paso «Aplicar migraciones» del flujo de despliegue del backend en GitHub Actions, con el log de run_migrations.sh donde se vea la verificación de schema_migrations y los scripts aplicados u omitidos. Perfil: acceso al repositorio en GitHub. Acción previa: abrir Actions > Backend — build y despliegue a Azure Container Apps > una ejecución exitosa en main (archivo .github/workflows/backend-deploy.yml) y expandir el paso de migraciones. Demuestra: la aplicación automatizada y transaccional de las migraciones en producción. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions]
+> [Insertar captura: Paso «Aplicar migraciones» del flujo de despliegue del backend en GitHub Actions, con el log de run_migrations.sh donde se vea la verificación de schema_migrations y los scripts aplicados u omitidos. Perfil: acceso al repositorio en GitHub. Acción previa: abrir Actions > Backend — build y despliegue a Azure Container Apps > una ejecución exitosa en main (archivo .github/workflows/backend-deploy.yml) y expandir el paso de migraciones. Demuestra: la aplicación automatizada y transaccional de las migraciones en producción. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions/runs/39097887879]
 
 # Capítulo 6. Gestión ágil del proyecto con Scrum
 
@@ -3256,13 +3256,13 @@ kanban
 
 *Épicas del Product Backlog en Azure Boards*
 
-> [Insertar captura: Azure Boards > Boards > Backlogs, nivel "Epics", con las diez épicas E1 a E10 y su estado (nueve en Done, E9 en New). Perfil: Product Owner (David Recinos) en la organización drecinosg2, proyecto erp-contable-delta. Acción previa: ninguna. Demuestra: estructura del backlog y estado real por épica. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_backlogs]
+> [Insertar captura: Azure Boards > Boards > Backlogs, nivel "Epics", con las diez épicas E1 a E10 y su estado (nueve en Done, E9 en New). Perfil: Product Owner (David Recinos) en la organización drecinosg2, proyecto erp-contable-delta. Acción previa: ninguna. Demuestra: estructura del backlog y estado real por épica. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_backlogs/backlog/erp-contable-delta%20Team/Epics]
 
 **Figura 52**
 
 *Jerarquía de la épica E10 en el Backlog de Azure Boards*
 
-> [Insertar captura: Azure Boards > Backlogs, nivel "Backlog items", con la jerarquía expandida de la épica E10 hasta sus características E10-F1, E10-F2 y E10-F3 y sus historias, con las columnas Estado, Iteration Path y Effort. Perfil: Product Owner. Acción previa: mostrar las columnas indicadas y expandir los niveles. Demuestra: trazabilidad épica, característica e historia con estimación. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_backlogs]
+> [Insertar captura: Azure Boards > Backlogs, nivel "Backlog items", con la jerarquía expandida de la épica E10 hasta sus características E10-F1, E10-F2 y E10-F3 y sus historias, con las columnas Estado, Iteration Path y Effort. Perfil: Product Owner. Acción previa: mostrar las columnas indicadas y expandir los niveles. Demuestra: trazabilidad épica, característica e historia con estimación. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_backlogs/backlog/erp-contable-delta%20Team/Backlog%20items]
 
 ## 6.2 Roles Scrum
 
@@ -3388,7 +3388,7 @@ El equipo se mantuvo por encima de la línea ideal durante el sprint. La causa r
 
 *Burndown del Sprint 1*
 
-> [Insertar captura: Azure Boards > Boards > Sprints > Sprint 1, vista "Analytics"/burndown de la iteración con las horas restantes por día. Perfil: Scrum Master. Acción previa: abrir la iteración Sprint 1. Si la vista de Analytics no está disponible en la organización gratuita, capturar el Taskboard del Sprint 1 con las tareas en Done y marcar el burndown como no disponible. Demuestra: avance del sprint frente a la línea ideal. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_sprints/taskboard]
+> [Insertar captura: Azure Boards > Boards > Sprints > Sprint 1, vista "Analytics"/burndown de la iteración con las horas restantes por día. Perfil: Scrum Master. Acción previa: abrir la iteración Sprint 1. Si la vista de Analytics no está disponible en la organización gratuita, capturar el Taskboard del Sprint 1 con las tareas en Done y marcar el burndown como no disponible. Demuestra: avance del sprint frente a la línea ideal. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_sprints/taskboard/erp-contable-delta%20Team/erp-contable-delta/Sprint%201]
 
 **Daily Scrum.** En cada reunión diaria se respondieron tres preguntas: qué se hizo, qué se hará y qué impedimentos existen. En la primera semana (08 al 12/09) el Product Owner priorizó el backlog y coordinó la corrección del modelo de datos, el Scrum Master configuró el repositorio y las ramas, José Rodolfo López preparó los contenedores y Luis David Reyes escribió el script completo de la base de datos. En la segunda semana (15 al 19/09) se configuró Azure Boards con las épicas, se construyó el pipeline de compilación y se inició el backend contable (RN-01). No se registraron impedimentos bloqueantes. El detalle diario queda en los comentarios de los elementos de trabajo.
 
@@ -3411,7 +3411,7 @@ La segunda acción tuvo efecto visible: los casos de prueba se gestionaron como 
 
 *Casos de prueba registrados en Azure Boards*
 
-> [Insertar captura: Azure Boards > Boards > Queries (o Work items), lista de elementos de tipo Test Case del proyecto (TC-01 a TC-64, con TC-17 y TC-18 en estado Design y el resto en Closed). Perfil: Product Owner. Acción previa: filtrar Work Item Type = Test Case y abrir uno, por ejemplo TC-38, para mostrar sus pasos y su enlace "Tested By" a la historia. Demuestra: gestión del plan de pruebas mediante elementos de trabajo enlazados. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_workitems]
+> [Insertar captura: Azure Boards > Boards > Queries (o Work items), lista de elementos de tipo Test Case del proyecto (TC-01 a TC-64, con TC-17 y TC-18 en estado Design y el resto en Closed). Perfil: Product Owner. Acción previa: filtrar Work Item Type = Test Case y abrir uno, por ejemplo TC-38, para mostrar sus pasos y su enlace "Tested By" a la historia. Demuestra: gestión del plan de pruebas mediante elementos de trabajo enlazados. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_workitems/edit/310]
 
 ## 6.5 Sprints 2, 3 y 4
 
@@ -3443,13 +3443,13 @@ El 17/10 concentra 22 commits, el máximo del proyecto. El sprint termina el 19/
 
 *Taskboard del Sprint 2*
 
-> [Insertar captura: Azure Boards > Boards > Sprints > Sprint 2 > Taskboard. Perfil: Scrum Master. Acción previa: seleccionar la iteración "Sprint 2". Demuestra: trabajo cerrado en el segundo sprint y asignación por integrante. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_sprints/taskboard]
+> [Insertar captura: Azure Boards > Boards > Sprints > Sprint 2 > Taskboard. Perfil: Scrum Master. Acción previa: seleccionar la iteración "Sprint 2". Demuestra: trabajo cerrado en el segundo sprint y asignación por integrante. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_sprints/taskboard/erp-contable-delta%20Team/erp-contable-delta/Sprint%202]
 
 **Figura 59**
 
 *Taskboard del Sprint 3*
 
-> [Insertar captura: Azure Boards > Boards > Sprints > Sprint 3 > Taskboard, con las historias agrupadas por estado (el proyecto no registra elementos de tipo Task). Perfil: Scrum Master. Acción previa: seleccionar la iteración "Sprint 3" en el selector superior. Demuestra: volumen de trabajo cerrado en el sprint de mayor carga. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_sprints/taskboard]
+> [Insertar captura: Azure Boards > Boards > Sprints > Sprint 3 > Taskboard, con las historias agrupadas por estado (el proyecto no registra elementos de tipo Task). Perfil: Scrum Master. Acción previa: seleccionar la iteración "Sprint 3" en el selector superior. Demuestra: volumen de trabajo cerrado en el sprint de mayor carga. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_sprints/taskboard/erp-contable-delta%20Team/erp-contable-delta/Sprint%203]
 
 ## 6.6 Creación de la base de datos
 
@@ -3488,7 +3488,7 @@ Al 17/10/2026 la rama `development` contiene 37 tablas base en el esquema públi
 
 *Tablas y registro de migraciones de la rama development*
 
-> [Insertar captura: Consola de Neon > rama development > Tables, o SQL Editor con una consulta que cuente tablas y vistas del esquema public y un SELECT sobre schema_migrations. Perfil: propietario. Acción previa: seleccionar la rama development. Demuestra: 37 tablas base (36 de dominio y la de control) y las migraciones registradas. Enlace: https://console.neon.tech/app/projects/lingering-cell-09535323/branches]
+> [Insertar captura: Consola de Neon > rama development > Tables, o SQL Editor con una consulta que cuente tablas y vistas del esquema public y un SELECT sobre schema_migrations. Perfil: propietario. Acción previa: seleccionar la rama development. Demuestra: 37 tablas base (36 de dominio y la de control) y las migraciones registradas. Enlace: https://console.neon.tech/app/projects/lingering-cell-09535323/branches/br-purple-salad-b5bn7dxm/tables]
 
 ## 6.7 Equipo de trabajo
 
@@ -3549,7 +3549,7 @@ El flujo de datos es: navegador, frontend (HTTPS), backend (HTTPS con JSON), bas
 
 *Recursos del grupo de recursos del proyecto en Azure*
 
-> [Insertar captura: Portal de Azure > Resource groups > grupo de recursos del proyecto (rg-delta-erp), pestaña "Overview" con la lista de recursos: entorno de Container Apps (cae-delta-erp) y aplicación de contenedor (ca-delta-erp-backend). Perfil: propietario de la suscripción de Azure. Acción previa: ninguna. Demuestra: infraestructura del backend agrupada en un solo grupo de recursos. Enlace: https://portal.azure.com/#browse/resourcegroups]
+> [Insertar captura: Portal de Azure > Resource groups > grupo de recursos del proyecto (rg-delta-erp), pestaña "Overview" con la lista de recursos: entorno de Container Apps (cae-delta-erp) y aplicación de contenedor (ca-delta-erp-backend). Perfil: propietario de la suscripción de Azure. Acción previa: ninguna. Demuestra: infraestructura del backend agrupada en un solo grupo de recursos. Enlace: https://portal.azure.com/#resource/subscriptions/10d9f7c8-7ba4-4604-b2d5-a1caea9c765b/resourceGroups/rg-delta-erp/overview]
 
 ## 7.2 Control de versiones y protección de ramas
 
@@ -3596,19 +3596,19 @@ La base de datos es PostgreSQL 16 en Neon. La rama `production` es la única que
 
 *Revisiones de la aplicación de contenedor del backend*
 
-> [Insertar captura: Portal de Azure > Container Apps > ca-delta-erp-backend > "Revisions and replicas", con la revisión activa, su estado Healthy y las revisiones anteriores. Perfil: propietario de la suscripción de Azure. Acción previa: abrir también la pestaña "Overview" para ver el dominio público y, si es posible, "Application > Containers" para ver la etiqueta de la imagen. Demuestra: despliegue por revisiones y la imagen etiquetada con el commit. Enlace: https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.App%2FcontainerApps]
+> [Insertar captura: Portal de Azure > Container Apps > ca-delta-erp-backend > "Revisions and replicas", con la revisión activa, su estado Healthy y las revisiones anteriores. Perfil: propietario de la suscripción de Azure. Acción previa: abrir también la pestaña "Overview" para ver el dominio público y, si es posible, "Application > Containers" para ver la etiqueta de la imagen. Demuestra: despliegue por revisiones y la imagen etiquetada con el commit. Enlace: https://portal.azure.com/#resource/subscriptions/10d9f7c8-7ba4-4604-b2d5-a1caea9c765b/resourceGroups/rg-delta-erp/providers/Microsoft.App/containerApps/ca-delta-erp-backend/revisionManagement]
 
 **Figura 65**
 
 *Secretos y variables de entorno de la aplicación de contenedor*
 
-> [Insertar captura: Portal de Azure > ca-delta-erp-backend > "Security" > "Secrets" (y "Environment variables" con referencias a secretos). Perfil: propietario de la suscripción. Acción previa: no revelar ningún valor; capturar únicamente los nombres de los secretos y el tipo de variable "Reference a secret". Demuestra: la cadena de conexión y la clave JWT se guardan como secretos y no como texto plano. Enlace: https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.App%2FcontainerApps]
+> [Insertar captura: Portal de Azure > ca-delta-erp-backend > "Security" > "Secrets" (y "Environment variables" con referencias a secretos). Perfil: propietario de la suscripción. Acción previa: no revelar ningún valor; capturar únicamente los nombres de los secretos y el tipo de variable "Reference a secret". Demuestra: la cadena de conexión y la clave JWT se guardan como secretos y no como texto plano. Enlace: https://portal.azure.com/#resource/subscriptions/10d9f7c8-7ba4-4604-b2d5-a1caea9c765b/resourceGroups/rg-delta-erp/providers/Microsoft.App/containerApps/ca-delta-erp-backend/secrets]
 
 **Figura 66**
 
 *Despliegues y dominio del frontend en Vercel*
 
-> [Insertar captura: Panel de Vercel > proyecto delta-erp-contable > "Deployments", con el despliegue de producción más reciente en estado Ready, y la pestaña "Domains" con el dominio asignado. Perfil: propietario del equipo en Vercel. Acción previa: filtrar por entorno Production. Demuestra: frontend publicado y vinculado a un commit de la rama principal (último despliegue de producción: 18/10/2026, 04:40 UTC, estado Ready, desde la fusión del Pull Request 51). Enlace: https://vercel.com/davidsito-team/delta-erp-contable]
+> [Insertar captura: Panel de Vercel > proyecto delta-erp-contable > "Deployments", con el despliegue de producción más reciente en estado Ready, y la pestaña "Domains" con el dominio asignado. Perfil: propietario del equipo en Vercel. Acción previa: filtrar por entorno Production. Demuestra: frontend publicado y vinculado a un commit de la rama principal (último despliegue de producción: 18/10/2026, 04:40 UTC, estado Ready, desde la fusión del Pull Request 51). Enlace: https://vercel.com/davidsito-team/delta-erp-contable/BZJw8tSeHMqEbQ6KUW8fvZRNCNNJ]
 
 ## 7.4 Dockerfile en dos etapas
 
@@ -3729,13 +3729,13 @@ Los pasos de acciones externas se fijan por hash de commit y no por etiqueta mut
 
 *Ejecución exitosa del flujo de despliegue del backend*
 
-> [Insertar captura: GitHub Actions > flujo "Backend, build y despliegue a Azure Container Apps" > última ejecución exitosa sobre `main`, con los jobs `migrate` y `build-and-deploy` y el resumen (imagen, digest, revisión, commit, health). Perfil: colaborador. Acción previa: abrir la ejecución del 18/10/2026 04:40 UTC y expandir "Summary". Demuestra: migración, construcción, despliegue y verificación de salud encadenados. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions/workflows/backend-deploy.yml]
+> [Insertar captura: GitHub Actions > flujo "Backend, build y despliegue a Azure Container Apps" > última ejecución exitosa sobre `main`, con los jobs `migrate` y `build-and-deploy` y el resumen (imagen, digest, revisión, commit, health). Perfil: colaborador. Acción previa: abrir la ejecución del 18/10/2026 04:40 UTC y expandir "Summary". Demuestra: migración, construcción, despliegue y verificación de salud encadenados. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions/runs/39097887879]
 
 **Figura 69**
 
 *Verificación de migraciones en un Pull Request hacia main*
 
-> [Insertar captura: GitHub > Pull Request hacia `main` (por ejemplo el 51) > pestaña "Checks" con el job `migrar-copia-prod` en verde y su resumen de migraciones, junto a la regla de protección de `main` (Settings > Branches) que lo exige. Perfil: colaborador/administrador. Acción previa: abrir el resumen del run del flujo de migraciones. Demuestra: control de migraciones contra copia de producción como verificación requerida. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions/workflows/migrations-check.yml]
+> [Insertar captura: GitHub > Pull Request hacia `main` (por ejemplo el 51) > pestaña "Checks" con el job `migrar-copia-prod` en verde y su resumen de migraciones, junto a la regla de protección de `main` (Settings > Branches) que lo exige. Perfil: colaborador/administrador. Acción previa: abrir el resumen del run del flujo de migraciones. Demuestra: control de migraciones contra copia de producción como verificación requerida. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/pull/51/checks]
 
 ## 7.7 Ejecución del pipeline y resultados
 
@@ -3765,7 +3765,7 @@ Vercel registra el último despliegue de producción en estado Ready (18/10/2026
 
 *Ejecución del flujo de pruebas de backend y frontend*
 
-> [Insertar captura: GitHub Actions > flujo "Pruebas, backend y frontend (dev)" > ejecución exitosa más reciente, con los jobs de backend, frontend, duplicación y cobertura de líneas cambiadas y el job "Resultado de las pruebas". Perfil: colaborador. Acción previa: abrir la ejecución del 18/10/2026 04:33 UTC. Demuestra: la ejecución completa de las pruebas y de los gates en verde. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions/workflows/backend-build-check.yml]
+> [Insertar captura: GitHub Actions > flujo "Pruebas, backend y frontend (dev)" > ejecución exitosa más reciente, con los jobs de backend, frontend, duplicación y cobertura de líneas cambiadas y el job "Resultado de las pruebas". Perfil: colaborador. Acción previa: abrir la ejecución del 18/10/2026 04:33 UTC. Demuestra: la ejecución completa de las pruebas y de los gates en verde. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions/runs/39097531841]
 
 ## 7.8 Pruebas y plan de pruebas
 
@@ -3829,7 +3829,7 @@ La cobertura de 98,5 % corresponde a la condición de código nuevo del Quality 
 
 *Panel de SonarCloud de la rama main*
 
-> [Insertar captura: SonarCloud > proyecto DavidsitoPay_erp-contable-delta > rama `main` > "Overall Code", con el Quality Gate (Passed), cobertura, duplicación, issues y calificaciones. Perfil: colaborador del proyecto en SonarCloud. Acción previa: seleccionar la rama main. Demuestra: las métricas de la Tabla 61. Enlace: https://sonarcloud.io/project/overview?id=DavidsitoPay_erp-contable-delta]
+> [Insertar captura: SonarCloud > proyecto DavidsitoPay_erp-contable-delta > rama `main` > "Overall Code", con el Quality Gate (Passed), cobertura, duplicación, issues y calificaciones. Perfil: colaborador del proyecto en SonarCloud. Acción previa: seleccionar la rama main. Demuestra: las métricas de la Tabla 61. Enlace: https://sonarcloud.io/project/overview?id=DavidsitoPay_erp-contable-delta&branch=main]
 
 **Figura 72**
 
@@ -3853,7 +3853,7 @@ Un sistema de monitoreo de rendimiento de aplicaciones (APM) con alertas no est�
 
 *Aplicación en producción con el usuario con perfil Contador*
 
-> [Insertar captura: Aplicación desplegada en el dominio de producción del frontend (Vercel), con el usuario de demostración con perfil Contador: pantalla de factura de compra con retención de ISR, o reporte de saldos en moneda extranjera. Perfil: usuario de demostración con perfil Contador. Acción previa: registrar o abrir una factura de proveedor del régimen simplificado y mostrar base, tasa, retención y neto a pagar. Demuestra: el sistema funcionando sobre la infraestructura descrita. Enlace: https://delta-erp-contable.vercel.app]
+> [Insertar captura: Aplicación desplegada en el dominio de producción del frontend (Vercel), con el usuario de demostración con perfil Contador: pantalla de factura de compra con retención de ISR, o reporte de saldos en moneda extranjera. Perfil: usuario de demostración con perfil Contador. Acción previa: registrar o abrir una factura de proveedor del régimen simplificado y mostrar base, tasa, retención y neto a pagar. Demuestra: el sistema funcionando sobre la infraestructura descrita. Enlace: https://delta-erp-contable.vercel.app/cxp]
 
 # Capítulo 8. Cierre del proyecto
 
@@ -5919,38 +5919,38 @@ La tabla siguiente enumera las figuras que corresponden a capturas de pantalla, 
 
 *Evidencias pendientes de captura*
 
-| Figura | Qué tomar | Perfil |
-|---|---|---|
-| Figura 1 | página de inicio del sitio corporativo de Delta, donde se aprecian su identidad y su portafolio de servicios | acceso público, sin autenticación |
-| Figura 3 | tablero de Azure Boards con las diez épicas E1 a E10 y su estado | miembro del equipo con acceso al proyecto de Azure Boards |
-| Figura 7 | pantalla de registro de asiento contable con líneas de débito y crédito balanceadas y el mensaje de confirmación | usuario de demostración con perfil Contador |
-| Figura 8 | pantalla de inicio de sesión de la aplicación desplegada, con el candado de conexión segura visible | sin autenticar |
-| Figura 9 | menú principal completo con el usuario de demostración con perfil Administrador del sistema | usuario de demostración con perfil Administrador del sistema |
-| Figura 10 | menú principal reducido con el usuario de demostración con perfil Vendedor | usuario de demostración con perfil Vendedor |
-| Figura 16 | Work item de un caso de prueba en Azure Boards (por ejemplo, el TC-38, identificador 310) con la pestaña Links abierta, donde se vean los vínculos «Tested By» hacia la historia de usuario E10-F2-H3 | Product Owner en Azure DevOps |
-| Figura 18 | Ejecución del flujo «Migraciones — prueba contra copia de producción» en un Pull Request hacia main, con el job de migración exitoso y el resumen de scripts aplicados | acceso al repositorio en GitHub |
-| Figura 19 | Resumen del job de cobertura de líneas cambiadas (diff-cover) dentro del flujo «Pruebas — backend y frontend (dev)», con el umbral de 80 % y el porcentaje alcanzado | acceso al repositorio en GitHub |
-| Figura 20 | Job de duplicación (jscpd) del mismo flujo, con el resultado sin bloques duplicados de 80 tokens o más | acceso al repositorio en GitHub |
-| Figura 47 | Consola de Neon, rama development o production, listado de tablas del esquema public (tabla Tables o consulta con el listado de tablas), donde se vean las 36 tablas de dominio y schema_migrations | propietario del proyecto Neon |
-| Figura 48 | Consulta de la tabla de control schema_migrations en Neon (SELECT * FROM schema_migrations ORDER BY 1) con los 19 scripts registrados | propietario del proyecto Neon |
-| Figura 49 | Paso «Aplicar migraciones» del flujo de despliegue del backend en GitHub Actions, con el log de run_migrations.sh donde se vea la verificación de schema_migrations y los scripts aplicados u omitidos | acceso al repositorio en GitHub |
-| Figura 51 | Azure Boards > Boards > Backlogs, nivel "Epics", con las diez épicas E1 a E10 y su estado (nueve en Done, E9 en New) | Product Owner (David Recinos) en la organización drecinosg2, proyecto erp-contable-delta |
-| Figura 52 | Azure Boards > Backlogs, nivel "Backlog items", con la jerarquía expandida de la épica E10 hasta sus características E10-F1, E10-F2 y E10-F3 y sus historias, con las columnas Estado, Iteration Path y Effort | Product Owner |
-| Figura 55 | Azure Boards > Project Settings > Project configuration > Iterations, mostrando Sprint 1 a Sprint 4 con sus fechas de inicio y fin | Scrum Master (Alejandro Ochoa) |
-| Figura 56 | Azure Boards > Boards > Sprints > Sprint 1, vista "Analytics"/burndown de la iteración con las horas restantes por día | Scrum Master |
-| Figura 57 | Azure Boards > Boards > Queries (o Work items), lista de elementos de tipo Test Case del proyecto (TC-01 a TC-64, con TC-17 y TC-18 en estado Design y el resto en Closed) | Product Owner |
-| Figura 58 | Azure Boards > Boards > Sprints > Sprint 2 > Taskboard | Scrum Master |
-| Figura 59 | Azure Boards > Boards > Sprints > Sprint 3 > Taskboard, con las historias agrupadas por estado (el proyecto no registra elementos de tipo Task) | Scrum Master |
-| Figura 60 | Consola de Neon > proyecto erp-contable-delta > Branches, con las ramas production y development y su estado | propietario del proyecto Neon |
-| Figura 61 | Consola de Neon > rama development > Tables, o SQL Editor con una consulta que cuente tablas y vistas del esquema public y un SELECT sobre schema_migrations | propietario |
-| Figura 62 | Portal de Azure > Resource groups > grupo de recursos del proyecto (rg-delta-erp), pestaña "Overview" con la lista de recursos: entorno de Container Apps (cae-delta-erp) y aplicación de contenedor (ca-delta-erp-backend) | propietario de la suscripción de Azure |
-| Figura 64 | Portal de Azure > Container Apps > ca-delta-erp-backend > "Revisions and replicas", con la revisión activa, su estado Healthy y las revisiones anteriores | propietario de la suscripción de Azure |
-| Figura 65 | Portal de Azure > ca-delta-erp-backend > "Security" > "Secrets" (y "Environment variables" con referencias a secretos) | propietario de la suscripción |
-| Figura 66 | Panel de Vercel > proyecto delta-erp-contable > "Deployments", con el despliegue de producción más reciente en estado Ready, y la pestaña "Domains" con el dominio asignado | propietario del equipo en Vercel |
-| Figura 67 | GitHub > repositorio > pestaña "Actions", con la lista lateral de los cinco flujos de trabajo (Pruebas backend y frontend, Backend build y despliegue, Frontend alias Vercel, Migraciones prueba contra copia de producción, SonarCloud) | colaborador del repositorio |
-| Figura 68 | GitHub Actions > flujo "Backend, build y despliegue a Azure Container Apps" > última ejecución exitosa sobre `main`, con los jobs `migrate` y `build-and-deploy` y el resumen (imagen, digest, revisión, commit, health) | colaborador |
-| Figura 69 | GitHub > Pull Request hacia `main` (por ejemplo el 51) > pestaña "Checks" con el job `migrar-copia-prod` en verde y su resumen de migraciones, junto a la regla de protección de `main` (Settings > Branches) que lo exige | colaborador/administrador |
-| Figura 70 | GitHub Actions > flujo "Pruebas, backend y frontend (dev)" > ejecución exitosa más reciente, con los jobs de backend, frontend, duplicación y cobertura de líneas cambiadas y el job "Resultado de las pruebas" | colaborador |
-| Figura 71 | SonarCloud > proyecto DavidsitoPay_erp-contable-delta > rama `main` > "Overall Code", con el Quality Gate (Passed), cobertura, duplicación, issues y calificaciones | colaborador del proyecto en SonarCloud |
-| Figura 72 | SonarCloud > "Pull requests" > un Pull Request reciente con el Quality Gate aprobado y la condición de cobertura en código nuevo | colaborador |
-| Figura 73 | Aplicación desplegada en el dominio de producción del frontend (Vercel), con el usuario de demostración con perfil Contador: pantalla de factura de compra con retención de ISR, o reporte de saldos en moneda extranjera | usuario de demostración con perfil Contador |
+| Figura | Qué tomar | Perfil | Enlace |
+|---|---|---|---|
+| Figura 1 | página de inicio del sitio corporativo de Delta, donde se aprecian su identidad y su portafolio de servicios | acceso público, sin autenticación | Sin URL confirmada (captura de archivo local) |
+| Figura 3 | tablero de Azure Boards con las diez épicas E1 a E10 y su estado | miembro del equipo con acceso al proyecto de Azure Boards | https://dev.azure.com/drecinosg2/erp-contable-delta/_backlogs/backlog/erp-contable-delta%20Team/Epics |
+| Figura 7 | pantalla de registro de asiento contable con líneas de débito y crédito balanceadas y el mensaje de confirmación | usuario de demostración con perfil Contador | https://delta-erp-contable.vercel.app/asientos |
+| Figura 8 | pantalla de inicio de sesión de la aplicación desplegada, con el candado de conexión segura visible | sin autenticar | https://delta-erp-contable.vercel.app/ |
+| Figura 9 | menú principal completo con el usuario de demostración con perfil Administrador del sistema | usuario de demostración con perfil Administrador del sistema | https://delta-erp-contable.vercel.app/ |
+| Figura 10 | menú principal reducido con el usuario de demostración con perfil Vendedor | usuario de demostración con perfil Vendedor | https://delta-erp-contable.vercel.app/ |
+| Figura 16 | Work item de un caso de prueba en Azure Boards (por ejemplo, el TC-38, identificador 310) con la pestaña Links abierta, donde se vean los vínculos «Tested By» hacia la historia de usuario E10-F2-H3 | Product Owner en Azure DevOps | https://dev.azure.com/drecinosg2/erp-contable-delta/_workitems/edit/310 |
+| Figura 18 | Ejecución del flujo «Migraciones — prueba contra copia de producción» en un Pull Request hacia main, con el job de migración exitoso y el resumen de scripts aplicados | acceso al repositorio en GitHub | https://github.com/DavidsitoPay/erp-contable-delta/actions/runs/39097672616 |
+| Figura 19 | Resumen del job de cobertura de líneas cambiadas (diff-cover) dentro del flujo «Pruebas — backend y frontend (dev)», con el umbral de 80 % y el porcentaje alcanzado | acceso al repositorio en GitHub | https://github.com/DavidsitoPay/erp-contable-delta/actions/runs/39097531841 |
+| Figura 20 | Job de duplicación (jscpd) del mismo flujo, con el resultado sin bloques duplicados de 80 tokens o más | acceso al repositorio en GitHub | https://github.com/DavidsitoPay/erp-contable-delta/actions/runs/39097531841 |
+| Figura 47 | Consola de Neon, rama development o production, listado de tablas del esquema public (tabla Tables o consulta con el listado de tablas), donde se vean las 36 tablas de dominio y schema_migrations | propietario del proyecto Neon | https://console.neon.tech/app/projects/lingering-cell-09535323/branches/br-purple-salad-b5bn7dxm/tables |
+| Figura 48 | Consulta de la tabla de control schema_migrations en Neon (SELECT * FROM schema_migrations ORDER BY 1) con los 19 scripts registrados | propietario del proyecto Neon | https://console.neon.tech/app/projects/lingering-cell-09535323/branches/br-purple-salad-b5bn7dxm/sql-editor |
+| Figura 49 | Paso «Aplicar migraciones» del flujo de despliegue del backend en GitHub Actions, con el log de run_migrations.sh donde se vea la verificación de schema_migrations y los scripts aplicados u omitidos | acceso al repositorio en GitHub | https://github.com/DavidsitoPay/erp-contable-delta/actions/runs/39097887879 |
+| Figura 51 | Azure Boards > Boards > Backlogs, nivel "Epics", con las diez épicas E1 a E10 y su estado (nueve en Done, E9 en New) | Product Owner (David Recinos) en la organización drecinosg2, proyecto erp-contable-delta | https://dev.azure.com/drecinosg2/erp-contable-delta/_backlogs/backlog/erp-contable-delta%20Team/Epics |
+| Figura 52 | Azure Boards > Backlogs, nivel "Backlog items", con la jerarquía expandida de la épica E10 hasta sus características E10-F1, E10-F2 y E10-F3 y sus historias, con las columnas Estado, Iteration Path y Effort | Product Owner | https://dev.azure.com/drecinosg2/erp-contable-delta/_backlogs/backlog/erp-contable-delta%20Team/Backlog%20items |
+| Figura 55 | Azure Boards > Project Settings > Project configuration > Iterations, mostrando Sprint 1 a Sprint 4 con sus fechas de inicio y fin | Scrum Master (Alejandro Ochoa) | https://dev.azure.com/drecinosg2/erp-contable-delta/_settings/work-team?type=iterations |
+| Figura 56 | Azure Boards > Boards > Sprints > Sprint 1, vista "Analytics"/burndown de la iteración con las horas restantes por día | Scrum Master | https://dev.azure.com/drecinosg2/erp-contable-delta/_sprints/taskboard/erp-contable-delta%20Team/erp-contable-delta/Sprint%201 |
+| Figura 57 | Azure Boards > Boards > Queries (o Work items), lista de elementos de tipo Test Case del proyecto (TC-01 a TC-64, con TC-17 y TC-18 en estado Design y el resto en Closed) | Product Owner | https://dev.azure.com/drecinosg2/erp-contable-delta/_workitems/edit/310 |
+| Figura 58 | Azure Boards > Boards > Sprints > Sprint 2 > Taskboard | Scrum Master | https://dev.azure.com/drecinosg2/erp-contable-delta/_sprints/taskboard/erp-contable-delta%20Team/erp-contable-delta/Sprint%202 |
+| Figura 59 | Azure Boards > Boards > Sprints > Sprint 3 > Taskboard, con las historias agrupadas por estado (el proyecto no registra elementos de tipo Task) | Scrum Master | https://dev.azure.com/drecinosg2/erp-contable-delta/_sprints/taskboard/erp-contable-delta%20Team/erp-contable-delta/Sprint%203 |
+| Figura 60 | Consola de Neon > proyecto erp-contable-delta > Branches, con las ramas production y development y su estado | propietario del proyecto Neon | https://console.neon.tech/app/projects/lingering-cell-09535323/branches |
+| Figura 61 | Consola de Neon > rama development > Tables, o SQL Editor con una consulta que cuente tablas y vistas del esquema public y un SELECT sobre schema_migrations | propietario | https://console.neon.tech/app/projects/lingering-cell-09535323/branches/br-purple-salad-b5bn7dxm/tables |
+| Figura 62 | Portal de Azure > Resource groups > grupo de recursos del proyecto (rg-delta-erp), pestaña "Overview" con la lista de recursos: entorno de Container Apps (cae-delta-erp) y aplicación de contenedor (ca-delta-erp-backend) | propietario de la suscripción de Azure | https://portal.azure.com/#browse/resourcegroups |
+| Figura 64 | Portal de Azure > Container Apps > ca-delta-erp-backend > "Revisions and replicas", con la revisión activa, su estado Healthy y las revisiones anteriores | propietario de la suscripción de Azure | https://portal.azure.com/#browse/Microsoft.App%2FcontainerApps |
+| Figura 65 | Portal de Azure > ca-delta-erp-backend > "Security" > "Secrets" (y "Environment variables" con referencias a secretos) | propietario de la suscripción | https://portal.azure.com/#browse/Microsoft.App%2FcontainerApps |
+| Figura 66 | Panel de Vercel > proyecto delta-erp-contable > "Deployments", con el despliegue de producción más reciente en estado Ready, y la pestaña "Domains" con el dominio asignado | propietario del equipo en Vercel | https://vercel.com/davidsito-team/delta-erp-contable/BZJw8tSeHMqEbQ6KUW8fvZRNCNNJ |
+| Figura 67 | GitHub > repositorio > pestaña "Actions", con la lista lateral de los cinco flujos de trabajo (Pruebas backend y frontend, Backend build y despliegue, Frontend alias Vercel, Migraciones prueba contra copia de producción, SonarCloud) | colaborador del repositorio | https://github.com/DavidsitoPay/erp-contable-delta/actions |
+| Figura 68 | GitHub Actions > flujo "Backend, build y despliegue a Azure Container Apps" > última ejecución exitosa sobre `main`, con los jobs `migrate` y `build-and-deploy` y el resumen (imagen, digest, revisión, commit, health) | colaborador | https://github.com/DavidsitoPay/erp-contable-delta/actions/runs/39097887879 |
+| Figura 69 | GitHub > Pull Request hacia `main` (por ejemplo el 51) > pestaña "Checks" con el job `migrar-copia-prod` en verde y su resumen de migraciones, junto a la regla de protección de `main` (Settings > Branches) que lo exige | colaborador/administrador | https://github.com/DavidsitoPay/erp-contable-delta/pull/51/checks |
+| Figura 70 | GitHub Actions > flujo "Pruebas, backend y frontend (dev)" > ejecución exitosa más reciente, con los jobs de backend, frontend, duplicación y cobertura de líneas cambiadas y el job "Resultado de las pruebas" | colaborador | https://github.com/DavidsitoPay/erp-contable-delta/actions/runs/39097531841 |
+| Figura 71 | SonarCloud > proyecto DavidsitoPay_erp-contable-delta > rama `main` > "Overall Code", con el Quality Gate (Passed), cobertura, duplicación, issues y calificaciones | colaborador del proyecto en SonarCloud | https://sonarcloud.io/project/overview?id=DavidsitoPay_erp-contable-delta&branch=main |
+| Figura 72 | SonarCloud > "Pull requests" > un Pull Request reciente con el Quality Gate aprobado y la condición de cobertura en código nuevo | colaborador | https://sonarcloud.io/project/pull_requests_list?id=DavidsitoPay_erp-contable-delta |
+| Figura 73 | Aplicación desplegada en el dominio de producción del frontend (Vercel), con el usuario de demostración con perfil Contador: pantalla de factura de compra con retención de ISR, o reporte de saldos en moneda extranjera | usuario de demostración con perfil Contador | https://delta-erp-contable.vercel.app/cxp |
