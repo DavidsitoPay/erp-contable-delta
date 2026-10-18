@@ -31,7 +31,6 @@ Guatemala, 18 de octubre de 2026
 
 # Índice
 
-- [Índice de capturas](#índice-de-capturas)
 - [Índice de figuras](#índice-de-figuras)
 - [Índice de tablas](#índice-de-tablas)
 - [Resumen ejecutivo](#resumen-ejecutivo)
@@ -212,167 +211,196 @@ Guatemala, 18 de octubre de 2026
   - [Anexo D. Resumen de pruebas](#anexo-d-resumen-de-pruebas)
   - [Anexo E. Datos de demostración](#anexo-e-datos-de-demostración)
   - [Anexo F. Manual de usuario condensado por perfil](#anexo-f-manual-de-usuario-condensado-por-perfil)
-  - [Anexo G. Índice de evidencias](#anexo-g-índice-de-evidencias)
-
-# Índice de capturas
-
-Las capturas 1 a 33 se listan con su número y una descripción breve en el [Anexo G. Índice de evidencias](#anexo-g-índice-de-evidencias).
+  - [Anexo G. Lista de evidencias pendientes de captura](#anexo-g-lista-de-evidencias-pendientes-de-captura)
 
 # Índice de figuras
 
-Las figuras 1 a 40 se listan con su número y su título.
+Las figuras 1 a 73 se listan con su número y su título; incluyen los diagramas y las capturas de pantalla.
 
-- **Figura 1.** Diagrama de causa y efecto del planteamiento del problema.
-- **Figura 2.** Módulos del sistema agrupados por función.
-- **Figura 3.** Arquitectura y flujo del modelo SaaS propuesto para Delta.
-- **Figura 4.** Flujo del proceso desde el registro de la factura hasta el cierre del periodo.
-- **Figura 5.** Organigrama de Delta.
-- **Figura 6.** Business Model Canvas del ERP SaaS de Delta.
-- **Figura 7.** Distribución de la inversión por rubro (quetzales).
-- **Figura 8.** Cronograma del proyecto: actividades planificadas e hitos ejecutados.
-- **Figura 9.** Diagrama de Gantt del proyecto: ruta crítica planificada y sprints ejecutados en Azure Boards.
-- **Figura 10.** Trazabilidad del módulo M2 (ejemplo para el módulo M2).
-- **Figura 11.** Contexto del sistema y servicios externos.
-- **Figura 12.** Casos de uso del núcleo contable, la seguridad y el control.
-- **Figura 13.** Casos de uso de la operación comercial, la tesorería y las obligaciones fiscales.
-- **Figura 14.** Diagrama de clases del núcleo contable y de seguridad.
-- **Figura 15.** Diagrama de clases de cuentas por cobrar y por pagar.
-- **Figura 16.** Diagrama de clases de tesorería, conciliación bancaria y enteramiento.
-- **Figura 17.** Diagrama de clases fiscal y multimoneda.
-- **Figura 18.** Diagrama de secuencia del registro de un asiento contable.
-- **Figura 19.** Diagrama de secuencia de la reversión de un asiento.
-- **Figura 20.** Secuencia del inicio de sesión con JWT.
-- **Figura 21.** Secuencia de la factura de compra con retención de ISR.
-- **Figura 22.** Secuencia del pago a un proveedor no residente.
-- **Figura 23.** Secuencia del enteramiento de retenciones a la SAT.
-- **Figura 24.** Diagrama de componentes del sistema.
-- **Figura 25.** Diagrama de componentes por módulo funcional.
-- **Figura 26.** Actividades del registro de una factura de compra con IVA y retención.
-- **Figura 27.** Actividades del cierre de periodo contable.
-- **Figura 28.** Estados del periodo contable.
-- **Figura 29.** Estados del asiento contable.
-- **Figura 30.** Estados de la conciliación bancaria.
-- **Figura 31.** Estados de la constancia de retención.
-- **Figura 32.** Estados del enteramiento.
-- **Figura 33.** Estados del ajuste de retención.
-- **Figura 34.** Despliegue y flujo de entrega continua.
-- **Figura 35.** Límites de confianza L1 a L4.
-- **Figura 36.** Modelo entidad-relación de las tablas núcleo.
-- **Figura 37.** Épicas del Product Backlog por estado (17/10/2026).
-- **Figura 38.** Línea de tiempo de los sprints.
-- **Figura 39.** Historias (PBI) cerradas por sprint.
-- **Figura 40.** Flujo esquemático de ramas: dev, Pull Request y main.
+- **Figura 1.** Página de inicio del sitio corporativo de Delta
+- **Figura 2.** Diagrama de causa y efecto del planteamiento del problema
+- **Figura 3.** Tablero de Azure Boards con las épicas E1 a E10
+- **Figura 4.** Módulos del sistema agrupados por función
+- **Figura 5.** Arquitectura y flujo del modelo SaaS propuesto para Delta
+- **Figura 6.** Flujo del proceso desde el registro de la factura hasta el cierre del periodo
+- **Figura 7.** Registro de un asiento contable balanceado
+- **Figura 8.** Pantalla de inicio de sesión de la aplicación desplegada
+- **Figura 9.** Menú principal del perfil Administrador del sistema
+- **Figura 10.** Menú principal del perfil Vendedor
+- **Figura 11.** Organigrama de Delta
+- **Figura 12.** Business Model Canvas del ERP SaaS de Delta
+- **Figura 13.** Distribución de la inversión por rubro (quetzales)
+- **Figura 14.** Cronograma del proyecto: actividades planificadas e hitos ejecutados
+- **Figura 15.** Diagrama de Gantt del proyecto: ruta crítica planificada y sprints ejecutados en Azure Boards
+- **Figura 16.** Vínculos «Tested By» de un caso de prueba en Azure Boards
+- **Figura 17.** Trazabilidad de reglas de negocio y casos de prueba del módulo M2
+- **Figura 18.** Ejecución del flujo de migraciones contra una copia de producción
+- **Figura 19.** Resumen del job de cobertura de líneas cambiadas
+- **Figura 20.** Job de duplicación de código (jscpd)
+- **Figura 21.** Contexto del sistema y servicios externos
+- **Figura 22.** Casos de uso del núcleo contable, la seguridad y el control
+- **Figura 23.** Casos de uso de la operación comercial, la tesorería y las obligaciones fiscales
+- **Figura 24.** Diagrama de clases del núcleo contable y de seguridad
+- **Figura 25.** Diagrama de clases de cuentas por cobrar y por pagar
+- **Figura 26.** Diagrama de clases de tesorería, conciliación bancaria y enteramiento
+- **Figura 27.** Diagrama de clases fiscal y multimoneda
+- **Figura 28.** Diagrama de secuencia del registro de un asiento contable
+- **Figura 29.** Diagrama de secuencia de la reversión de un asiento
+- **Figura 30.** Secuencia del inicio de sesión con JWT
+- **Figura 31.** Secuencia de la factura de compra con retención de ISR
+- **Figura 32.** Secuencia del pago a un proveedor no residente
+- **Figura 33.** Secuencia del enteramiento de retenciones a la SAT
+- **Figura 34.** Diagrama de componentes del sistema
+- **Figura 35.** Diagrama de componentes por módulo funcional
+- **Figura 36.** Actividades del registro de una factura de compra con IVA y retención
+- **Figura 37.** Actividades del cierre de periodo contable
+- **Figura 38.** Estados del periodo contable
+- **Figura 39.** Estados del asiento contable
+- **Figura 40.** Estados de la conciliación bancaria
+- **Figura 41.** Estados de la constancia de retención
+- **Figura 42.** Estados del enteramiento
+- **Figura 43.** Estados del ajuste de retención
+- **Figura 44.** Despliegue y flujo de entrega continua
+- **Figura 45.** Límites de confianza L1 a L4
+- **Figura 46.** Modelo entidad-relación de las tablas núcleo
+- **Figura 47.** Listado de tablas del esquema public en Neon
+- **Figura 48.** Registro de migraciones en la tabla schema_migrations
+- **Figura 49.** Paso de aplicación de migraciones en el despliegue del backend
+- **Figura 50.** Épicas del Product Backlog por estado (17/10/2026)
+- **Figura 51.** Épicas del Product Backlog en Azure Boards
+- **Figura 52.** Jerarquía de la épica E10 en el Backlog de Azure Boards
+- **Figura 53.** Línea de tiempo de los sprints
+- **Figura 54.** Historias (PBI) cerradas por sprint
+- **Figura 55.** Iteraciones Sprint 1 a Sprint 4 en Azure Boards
+- **Figura 56.** Burndown del Sprint 1
+- **Figura 57.** Casos de prueba registrados en Azure Boards
+- **Figura 58.** Taskboard del Sprint 2
+- **Figura 59.** Taskboard del Sprint 3
+- **Figura 60.** Ramas production y development en Neon
+- **Figura 61.** Tablas y registro de migraciones de la rama development
+- **Figura 62.** Recursos del grupo de recursos del proyecto en Azure
+- **Figura 63.** Flujo esquemático de ramas: dev, Pull Request y main
+- **Figura 64.** Revisiones de la aplicación de contenedor del backend
+- **Figura 65.** Secretos y variables de entorno de la aplicación de contenedor
+- **Figura 66.** Despliegues y dominio del frontend en Vercel
+- **Figura 67.** Flujos de trabajo de GitHub Actions
+- **Figura 68.** Ejecución exitosa del flujo de despliegue del backend
+- **Figura 69.** Verificación de migraciones en un Pull Request hacia main
+- **Figura 70.** Ejecución del flujo de pruebas de backend y frontend
+- **Figura 71.** Panel de SonarCloud de la rama main
+- **Figura 72.** Quality Gate de un Pull Request en SonarCloud
+- **Figura 73.** Aplicación en producción con el usuario con perfil Contador
 
-Los diagramas se elaboraron con Mermaid 12.2.0; los tipos marcados como beta requieren esa versión o posterior para su visualización.
+Los diagramas se elaboraron con Mermaid 12.2.0; los tipos marcados como beta requieren esa versión o posterior para su visualización. Las figuras que corresponden a capturas de pantalla se identifican con el marcador «Insertar captura» y se resumen en el Anexo G.
 
 # Índice de tablas
 
 Las tablas 1 a 104 se listan con su número y su título.
 
-- **Tabla 1.** Relación entre los componentes del proyecto y los capítulos del documento.
-- **Tabla 2.** Objetivos específicos y módulos que los materializan.
-- **Tabla 3.** Problemas identificados y respuesta implementada.
-- **Tabla 4.** Módulos en alcance.
-- **Tabla 5.** Elementos fuera de alcance o pendientes.
-- **Tabla 6.** Tecnologías por capa del sistema.
-- **Tabla 7.** Dimensiones del contexto de la empresa.
-- **Tabla 8.** Componentes del modelo de negocio: módulos funcionales.
-- **Tabla 9.** Herramientas recomendadas por proceso.
-- **Tabla 10.** Perfiles de usuario y restricciones relevantes.
-- **Tabla 11.** Valores de Delta.
-- **Tabla 12.** Objetivos estratégicos y módulos que los materializan.
-- **Tabla 13.** Requerimientos funcionales del módulo M1 (E1).
-- **Tabla 14.** Requerimientos funcionales del módulo M2 (E2).
-- **Tabla 15.** Requerimientos funcionales del módulo M3 (E3).
-- **Tabla 16.** Requerimientos funcionales del módulo M4 (E4).
-- **Tabla 17.** Requerimientos funcionales del módulo M5 (E5).
-- **Tabla 18.** Requerimientos funcionales del módulo M6 (E6).
-- **Tabla 19.** Requerimientos funcionales del módulo M7 (E7).
-- **Tabla 20.** Requerimientos funcionales del módulo M8 (E8).
-- **Tabla 21.** Requerimientos funcionales del módulo M9 (E9).
-- **Tabla 22.** Capacidades del módulo M10.
-- **Tabla 23.** Requerimientos no funcionales por categoría.
-- **Tabla 24.** Objetivos SMART.
-- **Tabla 25.** Factibilidad técnica: capacidades y brechas.
-- **Tabla 26.** Factibilidad económica: indicadores y dictamen.
-- **Tabla 27.** Obligaciones legales y fiscales y su tratamiento en el sistema.
-- **Tabla 28.** Presupuesto de talento humano.
-- **Tabla 29.** Presupuesto de infraestructura y software en la planificación.
-- **Tabla 30.** Servicios utilizados en la ejecución.
-- **Tabla 31.** Presupuesto de capacitación, gestión del cambio y otros costos directos.
-- **Tabla 32.** Resumen de la inversión.
-- **Tabla 33.** Flujo neto y valor presente a cinco años.
-- **Tabla 34.** Actividades del proyecto y entregables asociados.
-- **Tabla 35.** Duraciones estimadas de las actividades.
-- **Tabla 36.** Cronograma planificado de las actividades.
-- **Tabla 37.** Comparación entre lo planificado y lo ejecutado.
-- **Tabla 38.** Matriz de trazabilidad por módulo.
-- **Tabla 39.** Matriz de riesgos.
-- **Tabla 40.** Capas de la arquitectura.
-- **Tabla 41.** Clases representativas por capa.
-- **Tabla 42.** Interfaces y dependencias de los componentes por módulo.
-- **Tabla 43.** Recursos de la API y rutas de la aplicación por área.
-- **Tabla 44.** Límites de confianza y controles.
-- **Tabla 45.** Grupos de tablas del esquema relacional.
-- **Tabla 46.** Capacidades de PostgreSQL utilizadas en el sistema.
-- **Tabla 47.** Migraciones de base de datos.
-- **Tabla 48.** Estado del backlog en Azure Boards (17/10/2026).
-- **Tabla 49.** Épicas, características e historias.
-- **Tabla 50.** Roles y responsabilidades.
-- **Tabla 51.** Iteraciones en Azure Boards y resultados.
-- **Tabla 52.** Tareas del Sprint Backlog y estado al 19/09/2026 (día 8 de 10).
-- **Tabla 53.** Burndown del Sprint 1 (horas restantes).
-- **Tabla 54.** Retrospectiva del Sprint 1.
-- **Tabla 55.** Evolución del esquema por migración.
-- **Tabla 56.** Indicadores de seguimiento al 18/10/2026.
-- **Tabla 57.** Herramientas por capa.
-- **Tabla 58.** Flujos de trabajo de GitHub Actions.
-- **Tabla 59.** Última ejecución por flujo.
-- **Tabla 60.** Cobertura del plan de pruebas.
-- **Tabla 61.** Conteo de pruebas automatizadas.
-- **Tabla 62.** Métricas de SonarCloud en la rama `main` (consulta del 17/10/2026).
-- **Tabla 63.** Estado de los módulos al 18/10/2026.
-- **Tabla 64.** Reglas de negocio RN-01 a RN-36.
-- **Tabla 65.** Diccionario de datos de la tabla perfil.
-- **Tabla 66.** Diccionario de datos de la tabla usuario.
-- **Tabla 67.** Diccionario de datos de la tabla bitacoraauditoria.
-- **Tabla 68.** Diccionario de datos de la tabla moneda.
-- **Tabla 69.** Diccionario de datos de la tabla historialtipocambio.
-- **Tabla 70.** Diccionario de datos de la tabla periodocontable.
-- **Tabla 71.** Diccionario de datos de la tabla contraparte.
-- **Tabla 72.** Diccionario de datos de la tabla cuentacontable.
-- **Tabla 73.** Diccionario de datos de la tabla centrocosto.
-- **Tabla 74.** Diccionario de datos de la tabla asientocontable.
-- **Tabla 75.** Diccionario de datos de la tabla lineaasiento.
-- **Tabla 76.** Diccionario de datos de la tabla plantillaasiento.
-- **Tabla 77.** Diccionario de datos de la tabla lineaplantillaasiento.
-- **Tabla 78.** Diccionario de datos de la tabla documentocxc.
-- **Tabla 79.** Diccionario de datos de la tabla lineadocumentocxc.
-- **Tabla 80.** Diccionario de datos de la tabla recibopagocliente.
-- **Tabla 81.** Diccionario de datos de la tabla aplicacionpagocliente.
-- **Tabla 82.** Diccionario de datos de la tabla documentocxp.
-- **Tabla 83.** Diccionario de datos de la tabla lineadocumentocxp.
-- **Tabla 84.** Diccionario de datos de la tabla pagoproveedorcabecera.
-- **Tabla 85.** Diccionario de datos de la tabla aplicacionpagoproveedor.
-- **Tabla 86.** Diccionario de datos de la tabla cuentabancaria.
-- **Tabla 87.** Diccionario de datos de la tabla movimientotesoreria.
-- **Tabla 88.** Diccionario de datos de la tabla conciliacionbancaria.
-- **Tabla 89.** Diccionario de datos de la tabla detalleconciliacion.
-- **Tabla 90.** Diccionario de datos de la tabla saldocuentaperiodo.
-- **Tabla 91.** Diccionario de datos de la tabla impuesto.
-- **Tabla 92.** Diccionario de datos de la tabla configuracionfiscal.
-- **Tabla 93.** Diccionario de datos de la tabla parametroretencion.
-- **Tabla 94.** Diccionario de datos de la tabla retencion.
-- **Tabla 95.** Diccionario de datos de la tabla constanciaretencion.
-- **Tabla 96.** Diccionario de datos de la tabla revaluacion.
-- **Tabla 97.** Diccionario de datos de la tabla revaluacionpartida.
-- **Tabla 98.** Diccionario de datos de la tabla enteramiento.
-- **Tabla 99.** Diccionario de datos de la tabla ajuste_retencion.
-- **Tabla 100.** Diccionario de datos de la tabla feriado.
-- **Tabla 101.** Resumen de los casos de prueba.
-- **Tabla 102.** Usuarios de demostración.
-- **Tabla 103.** Lotes de datos de demostración.
-- **Tabla 104.** Capacidades por perfil.
+- **Tabla 1.** Objetivos específicos y módulos que los materializan.
+- **Tabla 2.** Problemas identificados y respuesta implementada.
+- **Tabla 3.** Módulos en alcance.
+- **Tabla 4.** Elementos fuera de alcance o pendientes.
+- **Tabla 5.** Tecnologías por capa del sistema.
+- **Tabla 6.** Dimensiones del contexto de la empresa.
+- **Tabla 7.** Componentes del modelo de negocio: módulos funcionales.
+- **Tabla 8.** Herramientas recomendadas por proceso.
+- **Tabla 9.** Perfiles de usuario y restricciones relevantes.
+- **Tabla 10.** Valores de Delta.
+- **Tabla 11.** Objetivos estratégicos y módulos que los materializan.
+- **Tabla 12.** Requerimientos funcionales del módulo M1 (E1).
+- **Tabla 13.** Requerimientos funcionales del módulo M2 (E2).
+- **Tabla 14.** Requerimientos funcionales del módulo M3 (E3).
+- **Tabla 15.** Requerimientos funcionales del módulo M4 (E4).
+- **Tabla 16.** Requerimientos funcionales del módulo M5 (E5).
+- **Tabla 17.** Requerimientos funcionales del módulo M6 (E6).
+- **Tabla 18.** Requerimientos funcionales del módulo M7 (E7).
+- **Tabla 19.** Requerimientos funcionales del módulo M8 (E8).
+- **Tabla 20.** Requerimientos funcionales del módulo M9 (E9).
+- **Tabla 21.** Capacidades del módulo M10.
+- **Tabla 22.** Requerimientos no funcionales por categoría.
+- **Tabla 23.** Objetivos SMART.
+- **Tabla 24.** Factibilidad técnica: capacidades y brechas.
+- **Tabla 25.** Factibilidad económica: indicadores y dictamen.
+- **Tabla 26.** Obligaciones legales y fiscales y su tratamiento en el sistema.
+- **Tabla 27.** Presupuesto de talento humano.
+- **Tabla 28.** Presupuesto de infraestructura y software en la planificación.
+- **Tabla 29.** Servicios utilizados en la ejecución.
+- **Tabla 30.** Presupuesto de capacitación, gestión del cambio y otros costos directos.
+- **Tabla 31.** Resumen de la inversión.
+- **Tabla 32.** Flujo neto y valor presente a cinco años.
+- **Tabla 33.** Actividades del proyecto y entregables asociados.
+- **Tabla 34.** Duraciones estimadas de las actividades.
+- **Tabla 35.** Cronograma planificado de las actividades.
+- **Tabla 36.** Comparación entre lo planificado y lo ejecutado.
+- **Tabla 37.** Matriz de trazabilidad por módulo.
+- **Tabla 38.** Matriz de riesgos.
+- **Tabla 39.** Capas de la arquitectura.
+- **Tabla 40.** Clases representativas por capa.
+- **Tabla 41.** Interfaces y dependencias de los componentes por módulo.
+- **Tabla 42.** Recursos de la API y rutas de la aplicación por área.
+- **Tabla 43.** Límites de confianza y controles.
+- **Tabla 44.** Grupos de tablas del esquema relacional.
+- **Tabla 45.** Capacidades de PostgreSQL utilizadas en el sistema.
+- **Tabla 46.** Migraciones de base de datos.
+- **Tabla 47.** Estado del backlog en Azure Boards (17/10/2026).
+- **Tabla 48.** Épicas, características e historias.
+- **Tabla 49.** Roles y responsabilidades.
+- **Tabla 50.** Iteraciones en Azure Boards y resultados.
+- **Tabla 51.** Tareas del Sprint Backlog y estado al 19/09/2026 (día 8 de 10).
+- **Tabla 52.** Burndown del Sprint 1 (horas restantes).
+- **Tabla 53.** Retrospectiva del Sprint 1.
+- **Tabla 54.** Evolución del esquema por migración.
+- **Tabla 55.** Indicadores de seguimiento al 18/10/2026.
+- **Tabla 56.** Herramientas por capa.
+- **Tabla 57.** Flujos de trabajo de GitHub Actions.
+- **Tabla 58.** Última ejecución por flujo.
+- **Tabla 59.** Cobertura del plan de pruebas.
+- **Tabla 60.** Conteo de pruebas automatizadas.
+- **Tabla 61.** Métricas de SonarCloud en la rama `main` (consulta del 17/10/2026).
+- **Tabla 62.** Estado de los módulos al 18/10/2026.
+- **Tabla 63.** Reglas de negocio RN-01 a RN-36.
+- **Tabla 64.** Diccionario de datos de la tabla perfil.
+- **Tabla 65.** Diccionario de datos de la tabla usuario.
+- **Tabla 66.** Diccionario de datos de la tabla bitacoraauditoria.
+- **Tabla 67.** Diccionario de datos de la tabla moneda.
+- **Tabla 68.** Diccionario de datos de la tabla historialtipocambio.
+- **Tabla 69.** Diccionario de datos de la tabla periodocontable.
+- **Tabla 70.** Diccionario de datos de la tabla contraparte.
+- **Tabla 71.** Diccionario de datos de la tabla cuentacontable.
+- **Tabla 72.** Diccionario de datos de la tabla centrocosto.
+- **Tabla 73.** Diccionario de datos de la tabla asientocontable.
+- **Tabla 74.** Diccionario de datos de la tabla lineaasiento.
+- **Tabla 75.** Diccionario de datos de la tabla plantillaasiento.
+- **Tabla 76.** Diccionario de datos de la tabla lineaplantillaasiento.
+- **Tabla 77.** Diccionario de datos de la tabla documentocxc.
+- **Tabla 78.** Diccionario de datos de la tabla lineadocumentocxc.
+- **Tabla 79.** Diccionario de datos de la tabla recibopagocliente.
+- **Tabla 80.** Diccionario de datos de la tabla aplicacionpagocliente.
+- **Tabla 81.** Diccionario de datos de la tabla documentocxp.
+- **Tabla 82.** Diccionario de datos de la tabla lineadocumentocxp.
+- **Tabla 83.** Diccionario de datos de la tabla pagoproveedorcabecera.
+- **Tabla 84.** Diccionario de datos de la tabla aplicacionpagoproveedor.
+- **Tabla 85.** Diccionario de datos de la tabla cuentabancaria.
+- **Tabla 86.** Diccionario de datos de la tabla movimientotesoreria.
+- **Tabla 87.** Diccionario de datos de la tabla conciliacionbancaria.
+- **Tabla 88.** Diccionario de datos de la tabla detalleconciliacion.
+- **Tabla 89.** Diccionario de datos de la tabla saldocuentaperiodo.
+- **Tabla 90.** Diccionario de datos de la tabla impuesto.
+- **Tabla 91.** Diccionario de datos de la tabla configuracionfiscal.
+- **Tabla 92.** Diccionario de datos de la tabla parametroretencion.
+- **Tabla 93.** Diccionario de datos de la tabla retencion.
+- **Tabla 94.** Diccionario de datos de la tabla constanciaretencion.
+- **Tabla 95.** Diccionario de datos de la tabla revaluacion.
+- **Tabla 96.** Diccionario de datos de la tabla revaluacionpartida.
+- **Tabla 97.** Diccionario de datos de la tabla enteramiento.
+- **Tabla 98.** Diccionario de datos de la tabla ajuste_retencion.
+- **Tabla 99.** Diccionario de datos de la tabla feriado.
+- **Tabla 100.** Resumen de los casos de prueba.
+- **Tabla 101.** Usuarios de demostración.
+- **Tabla 102.** Lotes de datos de demostración.
+- **Tabla 103.** Capacidades por perfil.
+- **Tabla 104.** Evidencias pendientes de captura.
 
 ---
 
@@ -391,8 +419,6 @@ El trabajo se desarrolló con la metodología Scrum en iteraciones de dos semana
 ## Guía de lectura
 
 La tabla siguiente relaciona cada componente del proyecto con el capítulo donde se desarrolla.
-
-**Tabla 1. Relación entre los componentes del proyecto y los capítulos del documento.**
 
 | Componente del proyecto | Capítulo |
 |---|---|
@@ -426,7 +452,11 @@ Delta cuenta con más de 45 colaboradores y ha atendido a más de 200 clientes, 
 
 La empresa desarrolló y comercializa un módulo de administración contable para terceros. Esa experiencia aporta la lógica funcional de referencia para el sistema interno. No obstante, los requerimientos del control contable propio de Delta no estaban documentados: residían en la práctica diaria del personal administrativo y en sus hojas de cálculo.
 
-[Captura 1: página de inicio del sitio corporativo de Delta, donde se aprecian su identidad y su portafolio de servicios. Perfil: acceso público, sin autenticación. Acción previa: abrir el sitio corporativo en un navegador y capturar la página completa. Demuestra: la identidad, la trayectoria y el giro de negocio de la empresa. Enlace: sitio corporativo de Delta; archivo de referencia en docs/entregables/Captura de pantalla 2026-09-17 231443.png]
+**Figura 1**
+
+*Página de inicio del sitio corporativo de Delta*
+
+> [Insertar captura: página de inicio del sitio corporativo de Delta, donde se aprecian su identidad y su portafolio de servicios. Perfil: acceso público, sin autenticación. Acción previa: abrir el sitio corporativo en un navegador y capturar la página completa. Demuestra: la identidad, la trayectoria y el giro de negocio de la empresa. Enlace: sitio corporativo de Delta; archivo de referencia en docs/entregables/Captura de pantalla 2026-09-17 231443.png]
 
 ## 1.3 Objetivos
 
@@ -438,7 +468,9 @@ Diseñar, construir y poner en operación un sistema ERP orientado al control co
 
 Cada objetivo específico se vincula con los módulos que lo materializan.
 
-**Tabla 2. Objetivos específicos y módulos que los materializan.**
+**Tabla 1**
+
+*Objetivos específicos y módulos que los materializan*
 
 | N.º | Objetivo específico | Módulos y épicas |
 |---|---|---|
@@ -467,7 +499,9 @@ La solución utiliza tecnologías que el equipo y la empresa dominan en gran med
 
 Delta opera su control contable interno sin una fuente única de información. La tabla siguiente resume los seis problemas identificados y la respuesta que el sistema incorpora.
 
-**Tabla 3. Problemas identificados y respuesta implementada.**
+**Tabla 2**
+
+*Problemas identificados y respuesta implementada*
 
 | N.º | Problema | Efecto | Respuesta implementada |
 |---|---|---|---|
@@ -478,7 +512,11 @@ Delta opera su control contable interno sin una fuente única de información. L
 | 5 | Insostenibilidad ante el crecimiento de clientes y transacciones | Esfuerzo creciente con confiabilidad decreciente | Procesamiento automatizado de facturas, pagos y asientos (M4, M5, M6) |
 | 6 | Contradicción operativa: Delta digitaliza a terceros pero no a sí misma | Pérdida de coherencia comercial | Sistema propio en producción como caso de referencia |
 
-La Figura 1 organiza los seis problemas como causas del efecto central: un control contable sin fuente única de información.
+La Figura 2 organiza los seis problemas como causas del efecto central: un control contable sin fuente única de información.
+
+**Figura 2**
+
+*Diagrama de causa y efecto del planteamiento del problema*
 
 ```mermaid
 ishikawa-beta
@@ -501,7 +539,7 @@ ishikawa-beta
             Pérdida de coherencia comercial
 ```
 
-**Figura 1. Diagrama de causa y efecto del planteamiento del problema.**
+*Nota.* Elaboración propia.
 
 ## 1.6 Alcance
 
@@ -509,7 +547,9 @@ La Fase 1 abarca el control contable interno de una sola empresa. La tabla sigui
 
 ### 1.6.1 Módulos en alcance
 
-**Tabla 4. Módulos en alcance.**
+**Tabla 3**
+
+*Módulos en alcance*
 
 | Módulo | Épica | Descripción | Estado |
 |---|---|---|---|
@@ -525,7 +565,9 @@ La Fase 1 abarca el control contable interno de una sola empresa. La tabla sigui
 
 ### 1.6.2 Fuera de alcance o pendiente
 
-**Tabla 5. Elementos fuera de alcance o pendientes.**
+**Tabla 4**
+
+*Elementos fuera de alcance o pendientes*
 
 | Elemento | Situación | Observación |
 |---|---|---|
@@ -539,13 +581,19 @@ La Fase 1 abarca el control contable interno de una sola empresa. La tabla sigui
 | Migración definitiva de datos históricos de hojas de cálculo | Pendiente | Depende del módulo M9 |
 | Requerimientos funcionales y no funcionales marcados «Parcial» o «No incorporado» en la sección 4.1 | Pendiente | Entre ellos: flujo de efectivo, cheques, programación de pagos, reportes comparativos, administración de usuarios y bitácora desde la aplicación, política de contraseñas y bloqueo por intentos fallidos |
 
-[Captura 2: tablero de Azure Boards con las diez épicas E1 a E10 y su estado. Perfil: miembro del equipo con acceso al proyecto de Azure Boards. Acción previa: abrir Boards > Backlogs, seleccionar el nivel Epics y expandir todas las épicas. Demuestra: la correspondencia entre los módulos M1 a M10 y las épicas E1 a E10, y el estado de cada una. Enlace: URL del proyecto en Azure DevOps]
+**Figura 3**
+
+*Tablero de Azure Boards con las épicas E1 a E10*
+
+> [Insertar captura: tablero de Azure Boards con las diez épicas E1 a E10 y su estado. Perfil: miembro del equipo con acceso al proyecto de Azure Boards. Acción previa: abrir Boards > Backlogs, seleccionar el nivel Epics y expandir todas las épicas. Demuestra: la correspondencia entre los módulos M1 a M10 y las épicas E1 a E10, y el estado de cada una. Enlace: URL del proyecto en Azure DevOps]
 
 ## 1.7 Herramientas tecnológicas
 
 ### 1.7.1 Herramientas por capa
 
-**Tabla 6. Tecnologías por capa del sistema.**
+**Tabla 5**
+
+*Tecnologías por capa del sistema*
 
 | Capa | Tecnología | Función |
 |---|---|---|
@@ -575,7 +623,9 @@ El proyecto se planificó y se inició sobre .NET 8. El 17 de octubre de 2026 el
 
 Delta es una organización de más de tres décadas de trayectoria con capacidad técnica reconocida. El análisis FODA del modelo digital propuesto identificó los elementos siguientes.
 
-**Tabla 7. Dimensiones del contexto de la empresa.**
+**Tabla 6**
+
+*Dimensiones del contexto de la empresa*
 
 | Dimensión | Elementos identificados |
 |---|---|
@@ -609,7 +659,9 @@ La infraestructura planificada inicialmente contemplaba servidores propios con u
 
 Los componentes del modelo son los diez módulos funcionales del sistema, agrupados por función.
 
-**Tabla 8. Componentes del modelo de negocio: módulos funcionales.**
+**Tabla 7**
+
+*Componentes del modelo de negocio: módulos funcionales*
 
 | Grupo | Módulo | Épica | Función principal |
 |---|---|---|---|
@@ -624,7 +676,11 @@ Los componentes del modelo son los diez módulos funcionales del sistema, agrupa
 | Carga de datos | M9 Carga inicial e importación | E9 | Importación asistida (pendiente) |
 | Cumplimiento | M10 Cumplimiento fiscal y multimoneda | E10 | IVA, retenciones, enteramiento y multimoneda |
 
-La Figura 2 resume los diez módulos agrupados por función.
+La Figura 4 resume los diez módulos agrupados por función.
+
+**Figura 4**
+
+*Módulos del sistema agrupados por función*
 
 ```mermaid
 mindmap
@@ -647,9 +703,13 @@ mindmap
             M10 Cumplimiento fiscal y multimoneda
 ```
 
-**Figura 2. Módulos del sistema agrupados por función.**
+*Nota.* Elaboración propia.
 
-La Figura 3 reproduce la arquitectura y el flujo del modelo de servicio propuesto inicialmente. Esa propuesta contemplaba React o Angular, una base de datos SQL Server o PostgreSQL y un despliegue en servidores propios o en Azure. La implementación usó React sin Angular, PostgreSQL en Neon y despliegue en Azure Container Apps y Vercel.
+La Figura 5 reproduce la arquitectura y el flujo del modelo de servicio propuesto inicialmente. Esa propuesta contemplaba React o Angular, una base de datos SQL Server o PostgreSQL y un despliegue en servidores propios o en Azure. La implementación usó React sin Angular, PostgreSQL en Neon y despliegue en Azure Container Apps y Vercel.
+
+**Figura 5**
+
+*Arquitectura y flujo del modelo SaaS propuesto para Delta*
 
 ```mermaid
 flowchart LR
@@ -667,13 +727,17 @@ flowchart LR
     FE ~~~ BN
 ```
 
-**Figura 3. Arquitectura y flujo del modelo SaaS propuesto para Delta.**
+*Nota.* Elaboración propia.
 
 El modelo de negocio completo se resume en el lienzo del apartado 4.3.
 
 ## 2.6 Procesos clave
 
 El sistema soporta siete procesos clave: registro de asientos, facturación de cuentas por cobrar y por pagar con IVA y retención, cobros y pagos, conciliación bancaria, revaluación de fin de mes, enteramiento de retenciones y cierre de periodo. El diagrama siguiente resume el flujo desde la factura hasta el cierre.
+
+**Figura 6**
+
+*Flujo del proceso desde el registro de la factura hasta el cierre del periodo*
 
 ```mermaid
 flowchart TD
@@ -698,15 +762,21 @@ flowchart TD
     N --> O[Cierre de periodo:<br/>saldos consolidados inmutables]
 ```
 
-**Figura 4. Flujo del proceso desde el registro de la factura hasta el cierre del periodo.**
+*Nota.* Elaboración propia.
 
 Los saldos de documentos, cuentas contables y cuentas bancarias no se almacenan en columnas editables: se calculan en vistas. La única excepción es la fotografía de saldos por periodo, escrita una sola vez al cerrar el periodo y protegida contra modificaciones posteriores.
 
-[Captura 3: pantalla de registro de asiento contable con líneas de débito y crédito balanceadas y el mensaje de confirmación. Perfil: usuario de demostración con perfil Contador. Acción previa: abrir la pestaña Registrar asiento, completar el periodo abierto y dos líneas con importes iguales, y confirmar. Demuestra: el registro de un asiento con partida doble verificada. Enlace: https://delta-erp-contable.vercel.app]
+**Figura 7**
+
+*Registro de un asiento contable balanceado*
+
+> [Insertar captura: pantalla de registro de asiento contable con líneas de débito y crédito balanceadas y el mensaje de confirmación. Perfil: usuario de demostración con perfil Contador. Acción previa: abrir la pestaña Registrar asiento, completar el periodo abierto y dos líneas con importes iguales, y confirmar. Demuestra: el registro de un asiento con partida doble verificada. Enlace: https://delta-erp-contable.vercel.app]
 
 ## 2.7 Herramientas recomendadas por proceso
 
-**Tabla 9. Herramientas recomendadas por proceso.**
+**Tabla 8**
+
+*Herramientas recomendadas por proceso*
 
 | Proceso | Herramienta o mecanismo | Descripción |
 |---|---|---|
@@ -723,7 +793,9 @@ Los saldos de documentos, cuentas contables y cuentas bancarias no se almacenan 
 
 El sistema define cuatro perfiles de usuario. El menú de la aplicación se adapta al perfil y el servidor valida el permiso en cada operación.
 
-**Tabla 10. Perfiles de usuario y restricciones relevantes.**
+**Tabla 9**
+
+*Perfiles de usuario y restricciones relevantes*
 
 | Perfil | Responsabilidades principales | Restricciones relevantes |
 |---|---|---|
@@ -734,11 +806,23 @@ El sistema define cuatro perfiles de usuario. El menú de la aplicación se adap
 
 La gestión del cambio considera que el personal construyó sus propios controles en hojas de cálculo y puede percibir el sistema como una carga adicional. Las medidas aplicadas son la participación del personal en las revisiones de sprint y la disponibilidad de un manual de usuario por perfil. La capacitación presencial y el periodo de operación en paralelo previstos en el plan original no cuentan con evidencia de ejecución a la fecha de este documento y se consideran pendientes.
 
-[Captura 4: pantalla de inicio de sesión de la aplicación desplegada, con el candado de conexión segura visible. Perfil: sin autenticar. Acción previa: abrir la dirección pública en una ventana nueva. Demuestra: el acceso público por HTTPS. Enlace: https://delta-erp-contable.vercel.app]
+**Figura 8**
 
-[Captura 5: menú principal completo con el usuario de demostración con perfil Administrador del sistema. Perfil: usuario de demostración con perfil Administrador del sistema. Acción previa: iniciar sesión y desplegar cada grupo del menú. Demuestra: las opciones disponibles para el perfil de mayor privilegio. Enlace: https://delta-erp-contable.vercel.app]
+*Pantalla de inicio de sesión de la aplicación desplegada*
 
-[Captura 6: menú principal reducido con el usuario de demostración con perfil Vendedor. Perfil: usuario de demostración con perfil Vendedor. Acción previa: cerrar sesión e iniciar con el usuario Vendedor. Demuestra: que el menú se adapta al perfil y omite Registrar asiento, Tesorería y reportes. Enlace: https://delta-erp-contable.vercel.app]
+> [Insertar captura: pantalla de inicio de sesión de la aplicación desplegada, con el candado de conexión segura visible. Perfil: sin autenticar. Acción previa: abrir la dirección pública en una ventana nueva. Demuestra: el acceso público por HTTPS. Enlace: https://delta-erp-contable.vercel.app]
+
+**Figura 9**
+
+*Menú principal del perfil Administrador del sistema*
+
+> [Insertar captura: menú principal completo con el usuario de demostración con perfil Administrador del sistema. Perfil: usuario de demostración con perfil Administrador del sistema. Acción previa: iniciar sesión y desplegar cada grupo del menú. Demuestra: las opciones disponibles para el perfil de mayor privilegio. Enlace: https://delta-erp-contable.vercel.app]
+
+**Figura 10**
+
+*Menú principal del perfil Vendedor*
+
+> [Insertar captura: menú principal reducido con el usuario de demostración con perfil Vendedor. Perfil: usuario de demostración con perfil Vendedor. Acción previa: cerrar sesión e iniciar con el usuario Vendedor. Demuestra: que el menú se adapta al perfil y omite Registrar asiento, Tesorería y reportes. Enlace: https://delta-erp-contable.vercel.app]
 
 ---
 
@@ -760,7 +844,9 @@ Ser la empresa guatemalteca de referencia en transformación digital y desarroll
 
 ## 3.4 Valores
 
-**Tabla 11. Valores de Delta.**
+**Tabla 10**
+
+*Valores de Delta*
 
 | Valor | Descripción |
 |---|---|
@@ -775,7 +861,9 @@ Ser la empresa guatemalteca de referencia en transformación digital y desarroll
 
 La tabla relaciona cada objetivo estratégico con el módulo que lo materializa.
 
-**Tabla 12. Objetivos estratégicos y módulos que los materializan.**
+**Tabla 11**
+
+*Objetivos estratégicos y módulos que los materializan*
 
 | N.º | Objetivo estratégico | Módulos que lo materializan |
 |---|---|---|
@@ -788,7 +876,11 @@ La tabla relaciona cada objetivo estratégico con el módulo que lo materializa.
 
 ## 3.6 Organigrama
 
-El organigrama de Delta ubica un equipo de ERP interno adscrito al área administrativa, que actúa como contraparte formal del proyecto. La Figura 5 lo representa.
+El organigrama de Delta ubica un equipo de ERP interno adscrito al área administrativa, que actúa como contraparte formal del proyecto. La Figura 11 lo representa.
+
+**Figura 11**
+
+*Organigrama de Delta*
 
 ```mermaid
 flowchart TD
@@ -805,7 +897,7 @@ flowchart TD
     AD --> EE
 ```
 
-**Figura 5. Organigrama de Delta.**
+*Nota.* Elaboración propia.
 
 ## 3.7 Modelo de negocio digital propuesto
 
@@ -826,7 +918,9 @@ Los requerimientos de Delta ERP Contable (DEC) se identifican con los códigos R
 
 **M1. Catálogo y parametrización contable (E1)**
 
-**Tabla 13. Requerimientos funcionales del módulo M1 (E1).**
+**Tabla 12**
+
+*Requerimientos funcionales del módulo M1 (E1)*
 
 | ID | Requerimiento | Estado |
 |---|---|---|
@@ -840,7 +934,9 @@ Los requerimientos de Delta ERP Contable (DEC) se identifican con los códigos R
 
 **M2. Registro de transacciones (E2)**
 
-**Tabla 14. Requerimientos funcionales del módulo M2 (E2).**
+**Tabla 13**
+
+*Requerimientos funcionales del módulo M2 (E2)*
 
 | ID | Requerimiento | Estado |
 |---|---|---|
@@ -851,7 +947,9 @@ Los requerimientos de Delta ERP Contable (DEC) se identifican con los códigos R
 
 **M3. Libros y auxiliares (E3)**
 
-**Tabla 15. Requerimientos funcionales del módulo M3 (E3).**
+**Tabla 14**
+
+*Requerimientos funcionales del módulo M3 (E3)*
 
 | ID | Requerimiento | Estado |
 |---|---|---|
@@ -863,7 +961,9 @@ Los requerimientos de Delta ERP Contable (DEC) se identifican con los códigos R
 
 **M4. Cuentas por cobrar (E4)**
 
-**Tabla 16. Requerimientos funcionales del módulo M4 (E4).**
+**Tabla 15**
+
+*Requerimientos funcionales del módulo M4 (E4)*
 
 | ID | Requerimiento | Estado |
 |---|---|---|
@@ -878,7 +978,9 @@ Los requerimientos de Delta ERP Contable (DEC) se identifican con los códigos R
 
 **M5. Cuentas por pagar (E5)**
 
-**Tabla 17. Requerimientos funcionales del módulo M5 (E5).**
+**Tabla 16**
+
+*Requerimientos funcionales del módulo M5 (E5)*
 
 | ID | Requerimiento | Estado |
 |---|---|---|
@@ -890,7 +992,9 @@ Los requerimientos de Delta ERP Contable (DEC) se identifican con los códigos R
 
 **M6. Tesorería y bancos (E6)**
 
-**Tabla 18. Requerimientos funcionales del módulo M6 (E6).**
+**Tabla 17**
+
+*Requerimientos funcionales del módulo M6 (E6)*
 
 | ID | Requerimiento | Estado |
 |---|---|---|
@@ -903,7 +1007,9 @@ Los requerimientos de Delta ERP Contable (DEC) se identifican con los códigos R
 
 **M7. Reportes y estados financieros (E7)**
 
-**Tabla 19. Requerimientos funcionales del módulo M7 (E7).**
+**Tabla 18**
+
+*Requerimientos funcionales del módulo M7 (E7)*
 
 | ID | Requerimiento | Estado |
 |---|---|---|
@@ -916,7 +1022,9 @@ Los requerimientos de Delta ERP Contable (DEC) se identifican con los códigos R
 
 **M8. Seguridad y auditoría (E8)**
 
-**Tabla 20. Requerimientos funcionales del módulo M8 (E8).**
+**Tabla 19**
+
+*Requerimientos funcionales del módulo M8 (E8)*
 
 | ID | Requerimiento | Estado |
 |---|---|---|
@@ -931,7 +1039,9 @@ Los requerimientos de Delta ERP Contable (DEC) se identifican con los códigos R
 
 **M9. Carga inicial e importación (E9)**
 
-**Tabla 21. Requerimientos funcionales del módulo M9 (E9).**
+**Tabla 20**
+
+*Requerimientos funcionales del módulo M9 (E9)*
 
 | ID | Requerimiento | Estado |
 |---|---|---|
@@ -941,7 +1051,9 @@ Los requerimientos de Delta ERP Contable (DEC) se identifican con los códigos R
 
 El módulo M10 recoge las capacidades tributarias y cambiarias que el negocio exigió durante la ejecución. Se organiza en tres funcionalidades.
 
-**Tabla 22. Capacidades del módulo M10.**
+**Tabla 21**
+
+*Capacidades del módulo M10*
 
 | Funcionalidad | Capacidad | Estado |
 |---|---|---|
@@ -953,7 +1065,9 @@ El módulo M10 recoge las capacidades tributarias y cambiarias que el negocio ex
 
 Los 46 requerimientos no funcionales se agrupan en diez categorías. La columna Estado distingue lo cumplido con evidencia de lo pendiente de medición formal.
 
-**Tabla 23. Requerimientos no funcionales por categoría.**
+**Tabla 22**
+
+*Requerimientos no funcionales por categoría*
 
 | ID | Categoría | Requerimiento | Estado |
 |---|---|---|---|
@@ -1008,7 +1122,9 @@ Los 46 requerimientos no funcionales se agrupan en diez categorías. La columna 
 
 Los objetivos del proyecto se formulan con los criterios específico (E), medible (M), alcanzable (A), relevante (R) y temporal (T). El plazo común es el 19 de octubre de 2026, fecha de cierre del sprint 3.
 
-**Tabla 24. Objetivos SMART.**
+**Tabla 23**
+
+*Objetivos SMART*
 
 | N.º | Objetivo | E | M | A | R | T | Evidencia |
 |---|---|---|---|---|---|---|---|
@@ -1021,9 +1137,13 @@ Los objetivos del proyecto se formulan con los criterios específico (E), medibl
 
 ## 4.3 Canvas de modelo de negocio
 
-El Canvas de DEC sintetiza el modelo de negocio en sus nueve bloques: segmentos de clientes, propuesta de valor, canales, relación con los clientes, fuentes de ingresos, recursos clave, actividades clave, socios clave y estructura de costos. La Figura 6 reproduce el lienzo elaborado en la etapa de planificación. Esa propuesta inicial menciona C# con React o Angular y proveedores de nube AWS o Azure. La implementación usó C# con ASP.NET Core sobre .NET 10, React 18 sin Angular, y Azure Container Apps, Vercel y Neon.
+El Canvas de DEC sintetiza el modelo de negocio en sus nueve bloques: segmentos de clientes, propuesta de valor, canales, relación con los clientes, fuentes de ingresos, recursos clave, actividades clave, socios clave y estructura de costos. La Figura 12 reproduce el lienzo elaborado en la etapa de planificación. Esa propuesta inicial menciona C# con React o Angular y proveedores de nube AWS o Azure. La implementación usó C# con ASP.NET Core sobre .NET 10, React 18 sin Angular, y Azure Container Apps, Vercel y Neon.
 
 El contenido textual del modelo establece dos fases. En la Fase 1, el sistema es una instancia de uso interno para una sola empresa, que sustituye prácticas manuales soportadas en hojas de cálculo, correo electrónico y documentación en papel. En la Fase 2, futura y no implementada, el sistema evolucionaría hacia una plataforma multiempresa comercializable bajo el modelo SaaS. Los recursos tecnológicos efectivos del sistema son .NET 10 LTS, React 18, PostgreSQL 16 en Neon, Azure Container Apps, Vercel, GitHub Actions y SonarCloud (apartado 1.7).
+
+**Figura 12**
+
+*Business Model Canvas del ERP SaaS de Delta*
 
 ```mermaid
 block-beta
@@ -1046,7 +1166,7 @@ block-beta
   RI["<b>Fuentes de Ingresos</b><br/>• Ahorro de costos: Reducción de horas administrativas y prevención de errores financieros (Corto plazo).<br/>• Suscripciones B2B: Modelo SaaS recurrente (Mensual/Anual) en la Fase 2.<br/>• Servicios profesionales: Cobro por implementación, personalización y capacitación de usuarios."]:5
 ```
 
-**Figura 6. Business Model Canvas del ERP SaaS de Delta.**
+*Nota.* Elaboración propia.
 
 ## 4.4 Factibilidad integral
 
@@ -1056,7 +1176,9 @@ La factibilidad se evaluó en cuatro dimensiones. Las tres primeras se calificar
 
 La dimensión técnica es la más favorable porque Delta desarrolla software sobre la plataforma elegida. La tabla contrasta cada capacidad requerida con la situación de la organización y el resultado de la ejecución.
 
-**Tabla 25. Factibilidad técnica: capacidades y brechas.**
+**Tabla 24**
+
+*Factibilidad técnica: capacidades y brechas*
 
 | Capacidad requerida | Situación en la organización | Brecha | Resultado de la ejecución |
 |---|---|---|---|
@@ -1073,7 +1195,9 @@ El dimensionamiento de planificación supuso un volumen inferior a tres mil asie
 
 La inversión total estimada en la planificación asciende a Q129,591.00. El 81.3 % corresponde a talento humano interno y el componente de licencias de software es nulo por el uso de tecnologías de código abierto y planes gratuitos.
 
-**Tabla 26. Factibilidad económica: indicadores y dictamen.**
+**Tabla 25**
+
+*Factibilidad económica: indicadores y dictamen*
 
 | Indicador | Resultado | Criterio de aceptación | Dictamen |
 |---|---|---|---|
@@ -1098,7 +1222,9 @@ La calificación global de las tres dimensiones es 4.50 sobre 5.00, equivalente 
 
 El sistema opera sobre la normativa tributaria guatemalteca aplicable a Delta. La tabla relaciona cada obligación con el tratamiento implementado.
 
-**Tabla 27. Obligaciones legales y fiscales y su tratamiento en el sistema.**
+**Tabla 26**
+
+*Obligaciones legales y fiscales y su tratamiento en el sistema*
 
 | Obligación | Tratamiento en el sistema | Regla |
 |---|---|---|
@@ -1129,7 +1255,9 @@ El presupuesto es un estimado de planificación. Cuantifica los recursos necesar
 
 ### 4.5.2 Talento humano
 
-**Tabla 28. Presupuesto de talento humano.**
+**Tabla 27**
+
+*Presupuesto de talento humano*
 
 | Rol | Horas | Costo por hora | Subtotal |
 |---|---|---|---|
@@ -1144,7 +1272,9 @@ El presupuesto es un estimado de planificación. Cuantifica los recursos necesar
 
 La tabla siguiente presenta el presupuesto de planificación. La ejecución sustituyó los servidores propios por servicios de nube; la tabla posterior relaciona cada rubro con el servicio efectivamente utilizado.
 
-**Tabla 29. Presupuesto de infraestructura y software en la planificación.**
+**Tabla 28**
+
+*Presupuesto de infraestructura y software en la planificación*
 
 | Concepto | Detalle de planificación | Subtotal |
 |---|---|---|
@@ -1156,7 +1286,9 @@ La tabla siguiente presenta el presupuesto de planificación. La ejecución sust
 | Docker, Azure DevOps y GitHub | Edición comunitaria y planes gratuitos | Q0.00 |
 | **Total de infraestructura y software** | | **Q6,750.00** |
 
-**Tabla 30. Servicios utilizados en la ejecución.**
+**Tabla 29**
+
+*Servicios utilizados en la ejecución*
 
 | Servicio utilizado en la ejecución | Función | Modalidad |
 |---|---|---|
@@ -1171,7 +1303,9 @@ El costo de Azure no se pudo expresar en cifra: la suscripción es del tipo Azur
 
 ### 4.5.4 Capacitación, gestión del cambio y otros costos directos
 
-**Tabla 31. Presupuesto de capacitación, gestión del cambio y otros costos directos.**
+**Tabla 30**
+
+*Presupuesto de capacitación, gestión del cambio y otros costos directos*
 
 | Concepto | Detalle | Subtotal |
 |---|---|---|
@@ -1185,7 +1319,9 @@ El costo de Azure no se pudo expresar en cifra: la suscripción es del tipo Azur
 
 ### 4.5.5 Resumen de la inversión
 
-**Tabla 32. Resumen de la inversión.**
+**Tabla 31**
+
+*Resumen de la inversión*
 
 | Rubro | Monto | Participación |
 |---|---|---|
@@ -1199,7 +1335,11 @@ El costo de Azure no se pudo expresar en cifra: la suscripción es del tipo Azur
 
 El proyecto es intensivo en conocimiento y no en capital: más de ocho de cada diez quetzales corresponden a horas de trabajo especializado.
 
-La Figura 7 representa la proporción de cada rubro dentro de la inversión total, en quetzales.
+La Figura 13 representa la proporción de cada rubro dentro de la inversión total, en quetzales.
+
+**Figura 13**
+
+*Distribución de la inversión por rubro (quetzales)*
 
 ```mermaid
 treemap-beta
@@ -1211,11 +1351,13 @@ treemap-beta
     "Reserva de contingencia (10 %)": 11781
 ```
 
-**Figura 7. Distribución de la inversión por rubro (quetzales).**
+*Nota.* Elaboración propia.
 
 ### 4.5.6 Análisis costo-beneficio
 
-**Tabla 33. Flujo neto y valor presente a cinco años.**
+**Tabla 32**
+
+*Flujo neto y valor presente a cinco años*
 
 | Año | Flujo neto | Factor de descuento (12 %) | Valor presente | Valor presente acumulado |
 |---|---|---|---|---|
@@ -1241,7 +1383,9 @@ La fecha base del cronograma es el lunes 20 de julio de 2026, con semana laboral
 
 ### 4.6.1 Actividades del proyecto
 
-**Tabla 34. Actividades del proyecto y entregables asociados.**
+**Tabla 33**
+
+*Actividades del proyecto y entregables asociados*
 
 | ID | Actividad | Entregable asociado |
 |---|---|---|
@@ -1266,7 +1410,9 @@ La fecha base del cronograma es el lunes 20 de julio de 2026, con semana laboral
 
 ### 4.6.2 Duraciones estimadas
 
-**Tabla 35. Duraciones estimadas de las actividades.**
+**Tabla 34**
+
+*Duraciones estimadas de las actividades*
 
 | ID | Optimista (a) | Más probable (m) | Pesimista (b) | Esperada (te) | Varianza (σ²) |
 |---|---|---|---|---|---|
@@ -1296,7 +1442,9 @@ La ruta crítica está formada por las actividades A, C, D, F, G, I, J, M, N, O,
 
 ### 4.6.4 Cronograma planificado
 
-**Tabla 36. Cronograma planificado de las actividades.**
+**Tabla 35**
+
+*Cronograma planificado de las actividades*
 
 | ID | Inicio | Fin | Duración (días) | Holgura (días) |
 |---|---|---|---|---|
@@ -1324,6 +1472,10 @@ La construcción se planificó en tres sprints de dos semanas: del 8 al 21 de se
 ## 4.7 Cronograma: diagrama de Gantt
 
 El cronograma se presenta en dos bloques. El bloque planificado traslada a calendario la estimación PERT de las dieciocho actividades del proyecto, con inicio el lunes 20 de julio de 2026. El bloque real registra los hitos ejecutados, con las fechas de los commits del repositorio de código y de la creación de cada script de migración.
+
+**Figura 14**
+
+*Cronograma del proyecto: actividades planificadas e hitos ejecutados*
 
 ```mermaid
 gantt
@@ -1367,7 +1519,11 @@ gantt
     Gate de migraciones y .NET 10            :2026-10-17, 1d
 ```
 
-**Figura 8. Cronograma del proyecto: actividades planificadas e hitos ejecutados.**
+*Nota.* Elaboración propia.
+
+**Figura 15**
+
+*Diagrama de Gantt del proyecto: ruta crítica planificada y sprints ejecutados en Azure Boards*
 
 ```mermaid
 gantt
@@ -1402,13 +1558,15 @@ gantt
     Sprint 4 (20/10 al 02/11)           :s4, 2026-10-20, 2026-11-03
 ```
 
-**Figura 9. Diagrama de Gantt del proyecto: ruta crítica planificada y sprints ejecutados en Azure Boards.**
+*Nota.* Elaboración propia.
 
-La Figura 9 muestra la ruta crítica planificada (actividades A, C, D, F, G, I, J, M, N, O, Q y R, con fin esperado el 22/10/2026) y las iteraciones registradas en Azure Boards. Las actividades con holgura (B, E, H, K, L y P) se dibujan sin marca de ruta crítica. El diagrama no representa la holgura disponible, que se resume en el apartado 4.6.3. La planificación original preveía tres sprints; Azure Boards registra un cuarto, del 20/10/2026 al 02/11/2026, que no había iniciado.
+La Figura 15 muestra la ruta crítica planificada (actividades A, C, D, F, G, I, J, M, N, O, Q y R, con fin esperado el 22/10/2026) y las iteraciones registradas en Azure Boards. Las actividades con holgura (B, E, H, K, L y P) se dibujan sin marca de ruta crítica. El diagrama no representa la holgura disponible, que se resume en el apartado 4.6.3. La planificación original preveía tres sprints; Azure Boards registra un cuarto, del 20/10/2026 al 02/11/2026, que no había iniciado.
 
 La comparación entre lo planificado y lo ejecutado se resume así.
 
-**Tabla 37. Comparación entre lo planificado y lo ejecutado.**
+**Tabla 36**
+
+*Comparación entre lo planificado y lo ejecutado*
 
 | Frente | Planificado | Real | Observación |
 |---|---|---|---|
@@ -1424,7 +1582,9 @@ El 17 de octubre de 2026 concentró veintidós de los 106 commits del repositori
 
 La matriz enlaza cada módulo con sus requerimientos funcionales, las reglas de negocio que lo gobiernan, las migraciones y tablas que lo sostienen, los puntos de acceso de la API, las pantallas del frontend y los casos de prueba que lo verifican. Permite recorrer el camino objetivo, épica, requerimiento, regla, diseño, tabla, historia y caso de prueba sin pérdida de continuidad.
 
-**Tabla 38. Matriz de trazabilidad por módulo.**
+**Tabla 37**
+
+*Matriz de trazabilidad por módulo*
 
 | Módulo / épica | RF | RN | Migración y tablas | API | Pantalla | Casos de prueba |
 |---|---|---|---|---|---|---|
@@ -1443,9 +1603,17 @@ La matriz enlaza cada módulo con sus requerimientos funcionales, las reglas de 
 
 Los casos TC-01 a TC-18 se vinculan como hijos de la historia de usuario que verifican. Desde TC-19, el vínculo es del tipo «Tested By». Las épicas E1 a E8 y E10 figuran en estado Done en Azure Boards, y la épica E9 permanece en New. Los casos se gestionan como work items de tipo Test Case enlazados a sus historias. Azure Test Plans contiene además un plan de pruebas con diez suites, en el que 18 casos están asignados a las suites de módulo, dos por cada módulo de M1 a M9.
 
-[Captura 7: Work item de un caso de prueba en Azure Boards (por ejemplo, el TC-38, identificador 310) con la pestaña Links abierta, donde se vean los vínculos «Tested By» hacia la historia de usuario E10-F2-H3. Perfil: Product Owner en Azure DevOps. Acción previa: abrir el work item y seleccionar Links; expandir el vínculo para mostrar el título de la historia. Demuestra: la trazabilidad entre un requerimiento tributario, su historia y su caso de prueba. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_workitems/edit/310]
+**Figura 16**
 
-La Figura 10 muestra, a modo de ejemplo, la trazabilidad del módulo M2: el módulo satisface sus reglas de negocio y los casos de prueba lo verifican.
+*Vínculos «Tested By» de un caso de prueba en Azure Boards*
+
+> [Insertar captura: Work item de un caso de prueba en Azure Boards (por ejemplo, el TC-38, identificador 310) con la pestaña Links abierta, donde se vean los vínculos «Tested By» hacia la historia de usuario E10-F2-H3. Perfil: Product Owner en Azure DevOps. Acción previa: abrir el work item y seleccionar Links; expandir el vínculo para mostrar el título de la historia. Demuestra: la trazabilidad entre un requerimiento tributario, su historia y su caso de prueba. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_workitems/edit/310]
+
+La Figura 17 muestra, a modo de ejemplo, la trazabilidad del módulo M2: el módulo satisface sus reglas de negocio y los casos de prueba lo verifican.
+
+**Figura 17**
+
+*Trazabilidad de reglas de negocio y casos de prueba del módulo M2*
 
 ```mermaid
 requirementDiagram
@@ -1501,19 +1669,21 @@ requirementDiagram
     TC20 - verifies -> M2
 ```
 
-**Figura 10. Trazabilidad del módulo M2 (ejemplo para el módulo M2).**
+*Nota.* Elaboración propia.
 
 ## 4.9 Matriz de riesgos
 
 La matriz usa una escala cualitativa de tres niveles (Baja, Media y Alta) para la probabilidad y el impacto. La escala es un criterio del equipo y no representa probabilidades numéricas.
 
-**Tabla 39. Matriz de riesgos.**
+**Tabla 38**
+
+*Matriz de riesgos*
 
 | ID | Riesgo | Probabilidad / Impacto | Respuesta | Estado | Evidencia |
 |---|---|---|---|---|---|
-| R1 | Una migración incorrecta afecta los datos de producción | Media / Alta | Los scripts son inmutables: una corrección se publica como un script nuevo. Cada Pull Request a main ejecuta las migraciones sobre una rama de Neon creada como copia de producción, que se elimina al terminar. Ese trabajo es una comprobación requerida para integrar | Materializado y mitigado: un script de migración falló al aplicarse en producción, se corrigió con un script nuevo y se creó el control sobre una copia de producción | Flujo de migraciones en Pull Request (Captura 8) |
+| R1 | Una migración incorrecta afecta los datos de producción | Media / Alta | Los scripts son inmutables: una corrección se publica como un script nuevo. Cada Pull Request a main ejecuta las migraciones sobre una rama de Neon creada como copia de producción, que se elimina al terminar. Ese trabajo es una comprobación requerida para integrar | Materializado y mitigado: un script de migración falló al aplicarse en producción, se corrigió con un script nuevo y se creó el control sobre una copia de producción | Flujo de migraciones en Pull Request (Figura 18) |
 | R2 | El cambio de plataforma de .NET 8 a .NET 10 interrumpe la compilación o las pruebas | Media / Media | Migración en un único cambio de versión, paquetes actualizados y pruebas adaptadas | Materializado y resuelto el 17/10/2026 | Compilación y suite de pruebas en estado exitoso tras la migración |
-| R3 | Duplicación de código entre cuentas por cobrar y por pagar | Alta / Media | Extracción de reglas comunes a un solo lugar y puerta de duplicación en integración continua | Materializado y resuelto (refactorizaciones del 03/10 y del 09/10) | Resultado de la puerta de duplicación (Captura 10) |
+| R3 | Duplicación de código entre cuentas por cobrar y por pagar | Alta / Media | Extracción de reglas comunes a un solo lugar y puerta de duplicación en integración continua | Materializado y resuelto (refactorizaciones del 03/10 y del 09/10) | Resultado de la puerta de duplicación (Figura 20) |
 | R4 | Saldos manipulables o descuadre contable | Media / Alta | Los saldos se derivan de vistas y no se almacenan como columnas editables; un disparador exige partida doble; el cierre de periodo consolida saldos de forma inmutable | Mitigado | Reglas RN-01, RN-02 y RN-03; casos TC-04 y TC-20 |
 | R5 | Dependencia del servicio de tipos de cambio de Banguat | Media / Media | Consulta con caché en el historial, reintento ante errores transitorios y captura manual con motivo y perfil autorizado cuando el servicio no responde | Mitigado | Casos TC-50 y TC-51 |
 | R6 | Exposición de secretos | Baja / Alta | Secretos en el almacén de secretos del repositorio y de Azure Container Apps referenciados como secreto; la API usa un rol de base de datos de mínimo privilegio sin pertenecer al superusuario | Mitigado | Migración del rol de aplicación y pruebas de permisos |
@@ -1523,11 +1693,23 @@ La matriz usa una escala cualitativa de tres niveles (Baja, Media y Alta) para l
 
 Tres controles de la matriz se respaldan con evidencia visual de los flujos automatizados.
 
-[Captura 8: Ejecución del flujo «Migraciones — prueba contra copia de producción» en un Pull Request hacia main, con el job de migración exitoso y el resumen de scripts aplicados. Perfil: acceso al repositorio en GitHub. Acción previa: abrir GitHub > Actions > Migraciones — prueba contra copia de producción y seleccionar una ejecución en estado exitoso (archivo .github/workflows/migrations-check.yml). Demuestra: el control de R1, es decir, que las migraciones se prueban sobre una copia de producción antes de integrarse. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions]
+**Figura 18**
 
-[Captura 9: Resumen del job de cobertura de líneas cambiadas (diff-cover) dentro del flujo «Pruebas — backend y frontend (dev)», con el umbral de 80 % y el porcentaje alcanzado. Perfil: acceso al repositorio en GitHub. Acción previa: abrir una ejecución reciente del flujo en la rama dev y abrir el resumen del run (archivo .github/workflows/backend-build-check.yml). Demuestra: la puerta de calidad del objetivo 4 sobre las líneas modificadas. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions]
+*Ejecución del flujo de migraciones contra una copia de producción*
 
-[Captura 10: Job de duplicación (jscpd) del mismo flujo, con el resultado sin bloques duplicados de 80 tokens o más. Perfil: acceso al repositorio en GitHub. Acción previa: en la misma ejecución, abrir el job jscpd y su resumen. Demuestra: el control de R3 y el cumplimiento del objetivo 4 en duplicación. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions]
+> [Insertar captura: Ejecución del flujo «Migraciones — prueba contra copia de producción» en un Pull Request hacia main, con el job de migración exitoso y el resumen de scripts aplicados. Perfil: acceso al repositorio en GitHub. Acción previa: abrir GitHub > Actions > Migraciones — prueba contra copia de producción y seleccionar una ejecución en estado exitoso (archivo .github/workflows/migrations-check.yml). Demuestra: el control de R1, es decir, que las migraciones se prueban sobre una copia de producción antes de integrarse. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions]
+
+**Figura 19**
+
+*Resumen del job de cobertura de líneas cambiadas*
+
+> [Insertar captura: Resumen del job de cobertura de líneas cambiadas (diff-cover) dentro del flujo «Pruebas — backend y frontend (dev)», con el umbral de 80 % y el porcentaje alcanzado. Perfil: acceso al repositorio en GitHub. Acción previa: abrir una ejecución reciente del flujo en la rama dev y abrir el resumen del run (archivo .github/workflows/backend-build-check.yml). Demuestra: la puerta de calidad del objetivo 4 sobre las líneas modificadas. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions]
+
+**Figura 20**
+
+*Job de duplicación de código (jscpd)*
+
+> [Insertar captura: Job de duplicación (jscpd) del mismo flujo, con el resultado sin bloques duplicados de 80 tokens o más. Perfil: acceso al repositorio en GitHub. Acción previa: en la misma ejecución, abrir el job jscpd y su resumen. Demuestra: el control de R3 y el cumplimiento del objetivo 4 en duplicación. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions]
 
 # Capítulo 5. Diseño del sistema
 
@@ -1537,7 +1719,9 @@ El diseño de DEC describe tres capas desacopladas, un modelo de datos relaciona
 
 DEC se estructura en tres capas.
 
-**Tabla 40. Capas de la arquitectura.**
+**Tabla 39**
+
+*Capas de la arquitectura*
 
 | Capa | Tecnología | Responsabilidad |
 |---|---|---|
@@ -1546,6 +1730,10 @@ DEC se estructura en tres capas.
 | Datos | PostgreSQL 16 en Neon | Integridad referencial, restricciones de dominio, disparadores, procedimientos y vistas que hacen cumplir las reglas que la aplicación no puede garantizar por sí sola |
 
 Los sistemas externos son el servicio SOAP del Banco de Guatemala (Banguat), que provee el tipo de cambio de referencia, y un servidor de correo SMTP para notificaciones, que está diseñado y no se implementó. La comunicación sigue la cadena navegador, frontend (HTTPS), API (HTTPS y JSON) y base de datos (SQL mediante Npgsql y Entity Framework Core). Ningún módulo del frontend accede directamente a la base de datos.
+
+**Figura 21**
+
+*Contexto del sistema y servicios externos*
 
 ```mermaid
 C4Context
@@ -1559,13 +1747,17 @@ C4Context
     Rel(dec, smtp, "Notifica (no implementado)", "SMTP")
 ```
 
-**Figura 11. Contexto del sistema y servicios externos.**
+*Nota.* Elaboración propia.
 
 ## 5.2 Casos de uso
 
 Los actores corresponden a los cuatro perfiles que reconoce la API: Administrador del sistema, Contador, Vendedor y Técnico. El perfil Técnico existe en el modelo de datos y no tiene permisos sobre los módulos de negocio: toda solicitud de negocio con ese perfil recibe un rechazo 403. Los casos de uso se limitan a los implementados.
 
 **Núcleo contable, seguridad y control**
+
+**Figura 22**
+
+*Casos de uso del núcleo contable, la seguridad y el control*
 
 ```mermaid
 usecase-beta
@@ -1599,9 +1791,13 @@ usecase-beta
     ADM --> CU09
 ```
 
-**Figura 12. Casos de uso del núcleo contable, la seguridad y el control.**
+*Nota.* Elaboración propia.
 
 **Operación comercial, tesorería y obligaciones fiscales**
+
+**Figura 23**
+
+*Casos de uso de la operación comercial, la tesorería y las obligaciones fiscales*
 
 ```mermaid
 usecase-beta
@@ -1640,7 +1836,7 @@ usecase-beta
     ADM --> CU18
 ```
 
-**Figura 13. Casos de uso de la operación comercial, la tesorería y las obligaciones fiscales.**
+*Nota.* Elaboración propia.
 
 Las restricciones por perfil que sustentan los diagramas son las siguientes. La reversa de asientos, la edición de la configuración fiscal, la escritura de parámetros de retención y la escritura del calendario de feriados son exclusivas del Administrador del sistema. El Vendedor factura a clientes y consulta impuestos y monedas, pero recibe 403 al registrar cobros, consultar retenciones o acceder a tesorería y reportes. El Contador comparte el resto de las operaciones con el Administrador.
 
@@ -1648,7 +1844,11 @@ Las restricciones por perfil que sustentan los diagramas son las siguientes. La 
 
 El modelo de clases del backend se organiza en capas. Las entidades del dominio representan las tablas del esquema; las reglas puras encapsulan los cálculos y validaciones sin acceso a datos; los servicios coordinan reglas, persistencia y auditoría; los controladores exponen la API.
 
-La Figura 14 presenta el núcleo contable y de seguridad. Cada usuario pertenece a un perfil y un perfil agrupa a varios usuarios (relación N:1). Los permisos se derivan de roles fijos y no de una lista de permisos por usuario. La bitácora de auditoría es una tabla sin entidad en la capa de dominio: se escribe mediante un procedimiento almacenado.
+La Figura 24 presenta el núcleo contable y de seguridad. Cada usuario pertenece a un perfil y un perfil agrupa a varios usuarios (relación N:1). Los permisos se derivan de roles fijos y no de una lista de permisos por usuario. La bitácora de auditoría es una tabla sin entidad en la capa de dominio: se escribe mediante un procedimiento almacenado.
+
+**Figura 24**
+
+*Diagrama de clases del núcleo contable y de seguridad*
 
 ```mermaid
 classDiagram
@@ -1733,9 +1933,13 @@ classDiagram
     ReversaAsiento ..> AsientoContable : evalúa bloqueos
 ```
 
-**Figura 14. Diagrama de clases del núcleo contable y de seguridad.**
+*Nota.* Elaboración propia.
 
-La Figura 15 presenta las cuentas por cobrar y por pagar. Cliente y proveedor son una misma entidad, la contraparte, distinguida por su tipo. Los documentos de ambos módulos heredan de una base común. La nota de crédito es un documento con tipo propio que referencia al documento de origen. Los cobros y pagos se registran en cada módulo y generan el movimiento de tesorería que muestra la Figura 16, junto con la conciliación bancaria y el enteramiento. La Figura 17 agrupa las clases fiscales y de multimoneda. No existe una entidad de importación de datos: la carga inicial se realiza mediante scripts SQL.
+La Figura 25 presenta las cuentas por cobrar y por pagar. Cliente y proveedor son una misma entidad, la contraparte, distinguida por su tipo. Los documentos de ambos módulos heredan de una base común. La nota de crédito es un documento con tipo propio que referencia al documento de origen. Los cobros y pagos se registran en cada módulo y generan el movimiento de tesorería que muestra la Figura 26, junto con la conciliación bancaria y el enteramiento. La Figura 27 agrupa las clases fiscales y de multimoneda. No existe una entidad de importación de datos: la carga inicial se realiza mediante scripts SQL.
+
+**Figura 25**
+
+*Diagrama de clases de cuentas por cobrar y por pagar*
 
 ```mermaid
 classDiagram
@@ -1849,7 +2053,11 @@ classDiagram
     AplicacionPagoProveedor "0..*" --> "1" DocumentoCxP : liquida
 ```
 
-**Figura 15. Diagrama de clases de cuentas por cobrar y por pagar.**
+*Nota.* Elaboración propia.
+
+**Figura 26**
+
+*Diagrama de clases de tesorería, conciliación bancaria y enteramiento*
 
 ```mermaid
 classDiagram
@@ -1920,7 +2128,11 @@ classDiagram
     AsientoContable "1" --> "0..1" Enteramiento : respalda
 ```
 
-**Figura 16. Diagrama de clases de tesorería, conciliación bancaria y enteramiento.**
+*Nota.* Elaboración propia.
+
+**Figura 27**
+
+*Diagrama de clases fiscal y multimoneda*
 
 ```mermaid
 classDiagram
@@ -2021,9 +2233,11 @@ classDiagram
     Retencion "1" --> "0..*" AjusteRetencion : se ajusta por
 ```
 
-**Figura 17. Diagrama de clases fiscal y multimoneda.**
+*Nota.* Elaboración propia.
 
-**Tabla 41. Clases representativas por capa.**
+**Tabla 40**
+
+*Clases representativas por capa*
 
 | Capa | Clases representativas | Responsabilidad |
 |---|---|---|
@@ -2037,6 +2251,10 @@ Los documentos de cuentas por cobrar y por pagar comparten la abstracción IDocu
 ## 5.4 Diagramas de secuencia
 
 Se presentan seis secuencias: el registro de un asiento, la reversión de un asiento, el inicio de sesión, la factura de compra con retención de ISR, el pago a un proveedor no residente y el enteramiento de retenciones.
+
+**Figura 28**
+
+*Diagrama de secuencia del registro de un asiento contable*
 
 ```mermaid
 sequenceDiagram
@@ -2063,7 +2281,11 @@ sequenceDiagram
     F-->>U: Muestra el resultado
 ```
 
-**Figura 18. Diagrama de secuencia del registro de un asiento contable.**
+*Nota.* Elaboración propia.
+
+**Figura 29**
+
+*Diagrama de secuencia de la reversión de un asiento*
 
 ```mermaid
 sequenceDiagram
@@ -2091,9 +2313,13 @@ sequenceDiagram
     L-->>U: Muestra el resultado
 ```
 
-**Figura 19. Diagrama de secuencia de la reversión de un asiento.**
+*Nota.* Elaboración propia.
 
 **Inicio de sesión con JWT**
+
+**Figura 30**
+
+*Secuencia del inicio de sesión con JWT*
 
 ```mermaid
 sequenceDiagram
@@ -2116,9 +2342,13 @@ sequenceDiagram
     end
 ```
 
-**Figura 20. Secuencia del inicio de sesión con JWT.**
+*Nota.* Elaboración propia.
 
 **Factura de compra con retención de ISR**
+
+**Figura 31**
+
+*Secuencia de la factura de compra con retención de ISR*
 
 ```mermaid
 sequenceDiagram
@@ -2146,9 +2376,13 @@ sequenceDiagram
     X-->>F: 201 con el detalle de la factura
 ```
 
-**Figura 21. Secuencia de la factura de compra con retención de ISR.**
+*Nota.* Elaboración propia.
 
 **Pago a un proveedor no residente**
+
+**Figura 32**
+
+*Secuencia del pago a un proveedor no residente*
 
 ```mermaid
 sequenceDiagram
@@ -2173,9 +2407,13 @@ sequenceDiagram
     X-->>C: 201 con las retenciones
 ```
 
-**Figura 22. Secuencia del pago a un proveedor no residente.**
+*Nota.* Elaboración propia.
 
 **Enteramiento de retenciones a la SAT**
+
+**Figura 33**
+
+*Secuencia del enteramiento de retenciones a la SAT*
 
 ```mermaid
 sequenceDiagram
@@ -2203,13 +2441,17 @@ sequenceDiagram
     end
 ```
 
-**Figura 23. Secuencia del enteramiento de retenciones a la SAT.**
+*Nota.* Elaboración propia.
 
 ## 5.5 Diagrama de componentes
 
 Los componentes del frontend se agrupan por área funcional y se comunican con la API a través de un servicio central de acceso HTTP, que expone un objeto por recurso. En el backend, cada controlador depende de servicios y reglas de dominio, y estos del contexto de datos. La base de datos aporta los componentes que hacen cumplir la integridad: disparadores, procedimientos almacenados y vistas.
 
-La Figura 24 detalla los componentes de cada capa y sus interfaces. La Figura 25 los agrupa por módulo funcional (M1 a M10, con la numeración del apartado 2.5). El servidor SMTP se dibuja punteado porque está diseñado y no se implementó. La integración externa implementada es el servicio SOAP de Banguat. Los cobros y pagos se registran en cuentas por cobrar y por pagar y generan el movimiento de tesorería. El módulo M9 no ofrece API: la carga inicial se realiza con scripts SQL.
+La Figura 34 detalla los componentes de cada capa y sus interfaces. La Figura 35 los agrupa por módulo funcional (M1 a M10, con la numeración del apartado 2.5). El servidor SMTP se dibuja punteado porque está diseñado y no se implementó. La integración externa implementada es el servicio SOAP de Banguat. Los cobros y pagos se registran en cuentas por cobrar y por pagar y generan el movimiento de tesorería. El módulo M9 no ofrece API: la carga inicial se realiza con scripts SQL.
+
+**Figura 34**
+
+*Diagrama de componentes del sistema*
 
 ```mermaid
 flowchart TB
@@ -2254,7 +2496,11 @@ flowchart TB
     BGC -->|"SOAP"| EXT
 ```
 
-**Figura 24. Diagrama de componentes del sistema.**
+*Nota.* Elaboración propia.
+
+**Figura 35**
+
+*Diagrama de componentes por módulo funcional*
 
 ```mermaid
 flowchart TB
@@ -2307,9 +2553,11 @@ flowchart TB
     API -.->|"SMTP"| SMTP
 ```
 
-**Figura 25. Diagrama de componentes por módulo funcional.**
+*Nota.* Elaboración propia.
 
-**Tabla 42. Interfaces y dependencias de los componentes por módulo.**
+**Tabla 41**
+
+*Interfaces y dependencias de los componentes por módulo*
 
 | Componente | Interfaz que ofrece | Depende de |
 |---|---|---|
@@ -2323,6 +2571,10 @@ flowchart TB
 ## 5.6 Diagramas de actividades
 
 **Registro de una factura de compra con IVA y retención**
+
+**Figura 36**
+
+*Actividades del registro de una factura de compra con IVA y retención*
 
 ```mermaid
 flowchart TD
@@ -2347,9 +2599,13 @@ flowchart TD
     N -->|Sí| O([Factura registrada])
 ```
 
-**Figura 26. Actividades del registro de una factura de compra con IVA y retención.**
+*Nota.* Elaboración propia.
 
 **Cierre de periodo contable**
+
+**Figura 37**
+
+*Actividades del cierre de periodo contable*
 
 ```mermaid
 flowchart TD
@@ -2367,11 +2623,15 @@ flowchart TD
     I --> J([Periodo cerrado])
 ```
 
-**Figura 27. Actividades del cierre de periodo contable.**
+*Nota.* Elaboración propia.
 
 ## 5.7 Diagramas de estados
 
 Los estados corresponden a las restricciones de la base de datos que los validan.
+
+**Figura 38**
+
+*Estados del periodo contable*
 
 ```mermaid
 stateDiagram-v2
@@ -2381,7 +2641,11 @@ stateDiagram-v2
     Cerrado --> Abierto: sp_reabrir_periodo
 ```
 
-**Figura 28. Estados del periodo contable.**
+*Nota.* Elaboración propia.
+
+**Figura 39**
+
+*Estados del asiento contable*
 
 ```mermaid
 stateDiagram-v2
@@ -2391,7 +2655,11 @@ stateDiagram-v2
     Confirmado --> Anulado: reversa formal con motivo
 ```
 
-**Figura 29. Estados del asiento contable.**
+*Nota.* Elaboración propia.
+
+**Figura 40**
+
+*Estados de la conciliación bancaria*
 
 ```mermaid
 stateDiagram-v2
@@ -2403,7 +2671,11 @@ stateDiagram-v2
     Cancelada --> [*]
 ```
 
-**Figura 30. Estados de la conciliación bancaria.**
+*Nota.* Elaboración propia.
+
+**Figura 41**
+
+*Estados de la constancia de retención*
 
 ```mermaid
 stateDiagram-v2
@@ -2413,7 +2685,11 @@ stateDiagram-v2
     ANULADA --> [*]
 ```
 
-**Figura 31. Estados de la constancia de retención.**
+*Nota.* Elaboración propia.
+
+**Figura 42**
+
+*Estados del enteramiento*
 
 ```mermaid
 stateDiagram-v2
@@ -2423,7 +2699,11 @@ stateDiagram-v2
     ANULADO --> [*]
 ```
 
-**Figura 32. Estados del enteramiento.**
+*Nota.* Elaboración propia.
+
+**Figura 43**
+
+*Estados del ajuste de retención*
 
 ```mermaid
 stateDiagram-v2
@@ -2433,7 +2713,7 @@ stateDiagram-v2
     RESUELTO --> [*]
 ```
 
-**Figura 33. Estados del ajuste de retención.**
+*Nota.* Elaboración propia.
 
 La constancia de retención se deriva además en la API como pendiente o vencida, según el plazo del mes siguiente. La revaluación de fin de mes pasa de Vigente a Anulada cuando se anula, con sus contra-asientos.
 
@@ -2441,7 +2721,9 @@ La constancia de retención se deriva además en la API como pendiente o vencida
 
 La API expone recursos en JSON bajo el prefijo `api/`. La autorización se declara por operación con los perfiles descritos en la sección 5.2. La navegación del frontend se organiza en un menú fijo con cinco desplegables, filtrado según el perfil.
 
-**Tabla 43. Recursos de la API y rutas de la aplicación por área.**
+**Tabla 42**
+
+*Recursos de la API y rutas de la aplicación por área*
 
 | Área | Recursos principales de la API | Rutas de la aplicación |
 |---|---|---|
@@ -2460,6 +2742,10 @@ Los códigos de respuesta siguen una convención uniforme. El código 400 indica
 ## 5.9 Diagrama de despliegue
 
 Cada capa se despliega en un servicio administrado independiente. El backend se empaqueta en una imagen de contenedor de dos etapas (compilación y ejecución) basada en las imágenes oficiales de .NET 10, se publica en GitHub Container Registry y corre en Azure Container Apps. El frontend, al ser una aplicación de una sola página sin estado de servidor, se publica directamente en Vercel desde el código fuente. La base de datos PostgreSQL 16 corre en Neon con dos ramas: `production`, la única que usa el backend desplegado, y `development`, de uso local.
+
+**Figura 44**
+
+*Despliegue y flujo de entrega continua*
 
 ```mermaid
 architecture-beta
@@ -2485,7 +2771,7 @@ architecture-beta
     ci:R --> L:spa
 ```
 
-**Figura 34. Despliegue y flujo de entrega continua.**
+*Nota.* Elaboración propia.
 
 Cinco flujos de GitHub Actions automatizan la entrega. El flujo de pruebas se ejecuta en cada push a la rama dev con cuatro trabajos en paralelo (backend, frontend, duplicación y cobertura de líneas cambiadas) y un trabajo final que falla si alguno no resulta exitoso. El flujo de análisis de SonarCloud se ejecuta en cada Pull Request y en cada push a main. El gate de migraciones se ejecuta en cada Pull Request a main. El flujo de despliegue del backend se ejecuta en cada push a main: aplica las migraciones pendientes sobre la rama de producción, construye y publica la imagen, actualiza Azure Container Apps y verifica el punto de salud con hasta doce intentos. El flujo del alias de Vercel reapunta el dominio corto al último despliegue de producción.
 
@@ -2493,7 +2779,9 @@ Cinco flujos de GitHub Actions automatizan la entrega. El flujo de pruebas se ej
 
 La seguridad es una responsabilidad compartida entre la capa de lógica y la capa de datos. Cuatro límites de confianza delimitan los controles.
 
-**Tabla 44. Límites de confianza y controles.**
+**Tabla 43**
+
+*Límites de confianza y controles*
 
 | Límite | Entre | Controles |
 |---|---|---|
@@ -2501,6 +2789,10 @@ La seguridad es una responsabilidad compartida entre la capa de lógica y la cap
 | L2 | Frontend y API | HTTPS, lista de orígenes permitidos (CORS) y validación del token (emisor, audiencia, vigencia y firma) |
 | L3 | API y base de datos | Cadena de conexión como secreto, rol de aplicación de mínimo privilegio, reglas de integridad en la base y verificación de perfil dentro de los procedimientos sensibles |
 | L4 | Repositorio y producción | Pull Request obligatorio, pruebas y análisis en integración continua, autenticación federada (OIDC) hacia Azure |
+
+**Figura 45**
+
+*Límites de confianza L1 a L4*
 
 ```mermaid
 flowchart LR
@@ -2511,7 +2803,7 @@ flowchart LR
     CI ==>|"L4: migraciones con rol propietario"| PROD
 ```
 
-**Figura 35. Límites de confianza L1 a L4.**
+*Nota.* Elaboración propia.
 
 La base de datos opera con dos roles. El propietario aplica las migraciones mediante un secreto del flujo de despliegue. La API usa el rol `delta_api`, cuya cadena de conexión es un secreto de la aplicación referenciado como secreto de Azure Container Apps. Los permisos de `delta_api` son de mínimo privilegio: operaciones de datos solo en 34 de las 36 tablas (las dos tablas de plantillas de asiento carecen de permisos); sin UPDATE en las tablas inmutables (bitácora, saldos consolidados, movimientos de tesorería, líneas de asiento, retenciones, partidas de revaluación, pagos, aplicaciones y detalles); DELETE únicamente en el detalle de conciliación; EXECUTE solo en nueve rutinas; y revocación a PUBLIC del permiso de ejecución y de creación en el esquema. Ninguna rutina usa SECURITY DEFINER, por lo que triggers y procedimientos se ejecutan con los permisos del llamador.
 
@@ -2520,6 +2812,10 @@ Los controles de la capa de datos garantizan lo que la aplicación no puede aseg
 ## 5.11 Modelo entidad-relación
 
 El diagrama siguiente muestra las catorce tablas núcleo del modelo, con sus claves y relaciones. Se derivó de los scripts de creación vigentes. Las tablas de documentos de cobro, recibos de pago, conciliación bancaria y detalle de conciliación se representan como clases en las Figuras 15 y 16 y se describen en el Anexo A.
+
+**Figura 46**
+
+*Modelo entidad-relación de las tablas núcleo*
 
 ```mermaid
 erDiagram
@@ -2661,13 +2957,15 @@ erDiagram
     }
 ```
 
-**Figura 36. Modelo entidad-relación de las tablas núcleo.**
+*Nota.* Elaboración propia.
 
 ## 5.12 Modelo relacional y diccionario de datos
 
 El esquema contiene 36 tablas de dominio, organizadas en nueve grupos, más una tabla de control de migraciones. Ninguna tabla almacena un saldo editable: los saldos de cuentas, documentos y cuentas bancarias se derivan de vistas. La única tabla de saldos, el consolidado por periodo, es inmutable y se escribe una sola vez desde el procedimiento de cierre. El diccionario completo con tipo, restricción y descripción de cada columna se presenta en el Anexo C.
 
-**Tabla 45. Grupos de tablas del esquema relacional.**
+**Tabla 44**
+
+*Grupos de tablas del esquema relacional*
 
 | Grupo | Tabla | Propósito | Columnas clave |
 |---|---|---|---|
@@ -2708,13 +3006,19 @@ El esquema contiene 36 tablas de dominio, organizadas en nueve grupos, más una 
 | Multimoneda | revaluacion | Revaluación de fin de mes | estado Vigente o Anulada, asientos de cierre y reversa |
 | | revaluacionpartida | Partidas de la revaluación | revaluacion_id, saldo original y valor en GTQ |
 
-[Captura 11: Consola de Neon, rama development o production, listado de tablas del esquema public (tabla Tables o consulta con el listado de tablas), donde se vean las 36 tablas de dominio y schema_migrations. Perfil: propietario del proyecto Neon. Acción previa: abrir Neon > proyecto erp-contable-delta > Tables y elegir la rama; alternativamente ejecutar en el SQL Editor la consulta de tablas de information_schema.tables. Demuestra: que el esquema desplegado contiene las tablas descritas. Enlace: https://console.neon.tech]
+**Figura 47**
+
+*Listado de tablas del esquema public en Neon*
+
+> [Insertar captura: Consola de Neon, rama development o production, listado de tablas del esquema public (tabla Tables o consulta con el listado de tablas), donde se vean las 36 tablas de dominio y schema_migrations. Perfil: propietario del proyecto Neon. Acción previa: abrir Neon > proyecto erp-contable-delta > Tables y elegir la rama; alternativamente ejecutar en el SQL Editor la consulta de tablas de information_schema.tables. Demuestra: que el esquema desplegado contiene las tablas descritas. Enlace: https://console.neon.tech]
 
 ## 5.13 Motor de base de datos: PostgreSQL 16
 
 El proyecto usa PostgreSQL 16 sobre Neon, por la combinación de lógica procedimental, transacciones con DDL y ramas de copia sobre escritura. La tabla relaciona cada capacidad con el mecanismo que la usa.
 
-**Tabla 46. Capacidades de PostgreSQL utilizadas en el sistema.**
+**Tabla 45**
+
+*Capacidades de PostgreSQL utilizadas en el sistema*
 
 | Capacidad | Uso en DEC |
 |---|---|
@@ -2839,7 +3143,9 @@ El rol se crea sin inicio de sesión ni contraseña en el script; el inicio de s
 
 **Las 19 migraciones**
 
-**Tabla 47. Migraciones de base de datos.**
+**Tabla 46**
+
+*Migraciones de base de datos*
 
 | N.º | Contenido | Tablas nuevas |
 |---|---|---|
@@ -2865,9 +3171,17 @@ El rol se crea sin inicio de sesión ni contraseña en el script; el inicio de s
 
 Las tablas nuevas suman 36. Además de las migraciones, existen cuatro scripts de datos de demostración que no forman parte de la secuencia: se cargan manualmente y cuentan con una guardia que impide ejecutarlos dos veces.
 
-[Captura 12: Consulta de la tabla de control schema_migrations en Neon (SELECT * FROM schema_migrations ORDER BY 1) con los 19 scripts registrados. Perfil: propietario del proyecto Neon. Acción previa: abrir Neon > SQL Editor, elegir la rama production o development y ejecutar la consulta. Demuestra: que las 19 migraciones están aplicadas y registradas. Enlace: https://console.neon.tech]
+**Figura 48**
 
-[Captura 13: Paso «Aplicar migraciones» del flujo de despliegue del backend en GitHub Actions, con el log de run_migrations.sh donde se vea la verificación de schema_migrations y los scripts aplicados u omitidos. Perfil: acceso al repositorio en GitHub. Acción previa: abrir Actions > Backend — build y despliegue a Azure Container Apps > una ejecución exitosa en main (archivo .github/workflows/backend-deploy.yml) y expandir el paso de migraciones. Demuestra: la aplicación automatizada y transaccional de las migraciones en producción. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions]
+*Registro de migraciones en la tabla schema_migrations*
+
+> [Insertar captura: Consulta de la tabla de control schema_migrations en Neon (SELECT * FROM schema_migrations ORDER BY 1) con los 19 scripts registrados. Perfil: propietario del proyecto Neon. Acción previa: abrir Neon > SQL Editor, elegir la rama production o development y ejecutar la consulta. Demuestra: que las 19 migraciones están aplicadas y registradas. Enlace: https://console.neon.tech]
+
+**Figura 49**
+
+*Paso de aplicación de migraciones en el despliegue del backend*
+
+> [Insertar captura: Paso «Aplicar migraciones» del flujo de despliegue del backend en GitHub Actions, con el log de run_migrations.sh donde se vea la verificación de schema_migrations y los scripts aplicados u omitidos. Perfil: acceso al repositorio en GitHub. Acción previa: abrir Actions > Backend — build y despliegue a Azure Container Apps > una ejecución exitosa en main (archivo .github/workflows/backend-deploy.yml) y expandir el paso de migraciones. Demuestra: la aplicación automatizada y transaccional de las migraciones en producción. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions]
 
 # Capítulo 6. Gestión ágil del proyecto con Scrum
 
@@ -2877,7 +3191,9 @@ El proyecto Delta ERP Contable se gestionó con Scrum sobre Azure Boards. El tra
 
 El backlog tiene tres niveles: épica, característica (Feature) e historia de usuario (Product Backlog Item, PBI). Cada épica agrupa un módulo funcional. Cada característica reúne las historias que la implementan. Cada historia lleva criterios de aceptación, prioridad (1 es la más alta), esfuerzo estimado en horas y valor de negocio.
 
-**Tabla 48. Estado del backlog en Azure Boards (17/10/2026).**
+**Tabla 47**
+
+*Estado del backlog en Azure Boards (17/10/2026)*
 
 | Tipo de elemento | Hecho (Done) | Nuevo (New) | Total |
 |---|---|---|---|
@@ -2889,7 +3205,9 @@ El backlog tiene tres niveles: épica, característica (Feature) e historia de u
 
 La única épica abierta es E9 (importación de catálogo y saldos): su característica y sus dos historias están en estado Nuevo. El resto del backlog está cerrado. El equipo gestionó el trabajo a nivel de historia (PBI) y no lo descompuso en elementos de tipo Task: el proyecto registra 0 Tasks, por lo que el avance por sprint se mide en historias cerradas (apartado 6.3).
 
-**Tabla 49. Épicas, características e historias.**
+**Tabla 48**
+
+*Épicas, características e historias*
 
 | Épica | Módulo | Característica | Historias | Prioridad | Esfuerzo (h) | Estado |
 |---|---|---|---|---|---|---|
@@ -2910,7 +3228,11 @@ La épica E10 amplió el alcance inicial de nueve módulos. Cubre las obligacion
 
 Las historias de E9 permanecen en estado Nuevo: la validación de archivos CSV (RN-11) y la inserción transaccional de la importación. La regla RN-11 es la única de las 36 reglas de negocio sin implementar.
 
-La Figura 37 distribuye las épicas según su estado en Azure Boards.
+La Figura 50 distribuye las épicas según su estado en Azure Boards.
+
+**Figura 50**
+
+*Épicas del Product Backlog por estado (17/10/2026)*
 
 ```mermaid
 kanban
@@ -2928,15 +3250,25 @@ kanban
         e10[E10 Parámetros fiscales, retenciones y multimoneda]
 ```
 
-**Figura 37. Épicas del Product Backlog por estado (17/10/2026).**
+*Nota.* Elaboración propia.
 
-[Captura 14: Azure Boards > Boards > Backlogs, nivel "Epics", con las diez épicas E1 a E10 y su estado (nueve en Done, E9 en New). Perfil: Product Owner (David Recinos) en la organización drecinosg2, proyecto erp-contable-delta. Acción previa: ninguna. Demuestra: estructura del backlog y estado real por épica. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_backlogs]
+**Figura 51**
 
-[Captura 15: Azure Boards > Backlogs, nivel "Backlog items", con la jerarquía expandida de la épica E10 hasta sus características E10-F1, E10-F2 y E10-F3 y sus historias, con las columnas Estado, Iteration Path y Effort. Perfil: Product Owner. Acción previa: mostrar las columnas indicadas y expandir los niveles. Demuestra: trazabilidad épica, característica e historia con estimación. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_backlogs]
+*Épicas del Product Backlog en Azure Boards*
+
+> [Insertar captura: Azure Boards > Boards > Backlogs, nivel "Epics", con las diez épicas E1 a E10 y su estado (nueve en Done, E9 en New). Perfil: Product Owner (David Recinos) en la organización drecinosg2, proyecto erp-contable-delta. Acción previa: ninguna. Demuestra: estructura del backlog y estado real por épica. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_backlogs]
+
+**Figura 52**
+
+*Jerarquía de la épica E10 en el Backlog de Azure Boards*
+
+> [Insertar captura: Azure Boards > Backlogs, nivel "Backlog items", con la jerarquía expandida de la épica E10 hasta sus características E10-F1, E10-F2 y E10-F3 y sus historias, con las columnas Estado, Iteration Path y Effort. Perfil: Product Owner. Acción previa: mostrar las columnas indicadas y expandir los niveles. Demuestra: trazabilidad épica, característica e historia con estimación. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_backlogs]
 
 ## 6.2 Roles Scrum
 
-**Tabla 50. Roles y responsabilidades.**
+**Tabla 49**
+
+*Roles y responsabilidades*
 
 | Rol | Integrante | Responsabilidades en el proyecto |
 |---|---|---|
@@ -2949,7 +3281,9 @@ kanban
 
 Se creó una iteración por sprint en Azure Boards, con fechas fijas de dos semanas. Los sprints 1 a 3 se definieron en la planificación inicial del proyecto. La cuarta iteración, del 20/10/2026 al 02/11/2026, se creó a continuación de la tercera y no forma parte de los tres sprints planificados.
 
-**Tabla 51. Iteraciones en Azure Boards y resultados.**
+**Tabla 50**
+
+*Iteraciones en Azure Boards y resultados*
 
 | Sprint | Inicio | Fin | Estado al 18/10/2026 | Historias (PBI) cerradas |
 |---|---|---|---|---|
@@ -2960,7 +3294,11 @@ Se creó una iteración por sprint en Azure Boards, con fechas fijas de dos sema
 
 El conteo por sprint usa la iteración actual de cada historia y no la fecha de cierre. Las 45 historias en estado Hecho se reparten así en 6, 6 y 33. Una historia que pasó de un sprint a otro cuenta en el sprint donde quedó asignada. Las 2 historias restantes son las de E9 y no están cerradas.
 
-La Figura 38 presenta las cuatro iteraciones y la Figura 39 las historias cerradas en cada una.
+La Figura 53 presenta las cuatro iteraciones y la Figura 54 las historias cerradas en cada una.
+
+**Figura 53**
+
+*Línea de tiempo de los sprints*
 
 ```mermaid
 timeline
@@ -2971,7 +3309,11 @@ timeline
     Sprint 4 : 20/10/2026 a 02/11/2026 : Sin iniciar
 ```
 
-**Figura 38. Línea de tiempo de los sprints.**
+*Nota.* Elaboración propia.
+
+**Figura 54**
+
+*Historias (PBI) cerradas por sprint*
 
 ```mermaid
 xychart-beta
@@ -2981,9 +3323,13 @@ xychart-beta
     bar [6, 6, 33, 0]
 ```
 
-**Figura 39. Historias (PBI) cerradas por sprint.**
+*Nota.* Elaboración propia.
 
-[Captura 16: Azure Boards > Project Settings > Project configuration > Iterations, mostrando Sprint 1 a Sprint 4 con sus fechas de inicio y fin. Perfil: Scrum Master (Alejandro Ochoa). Acción previa: ninguna. Demuestra: existencia de cuatro iteraciones con las fechas de la Tabla 51. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_settings/work-team?type=iterations]
+**Figura 55**
+
+*Iteraciones Sprint 1 a Sprint 4 en Azure Boards*
+
+> [Insertar captura: Azure Boards > Project Settings > Project configuration > Iterations, mostrando Sprint 1 a Sprint 4 con sus fechas de inicio y fin. Perfil: Scrum Master (Alejandro Ochoa). Acción previa: ninguna. Demuestra: existencia de cuatro iteraciones con las fechas de la Tabla 50. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_settings/work-team?type=iterations]
 
 ## 6.4 Sprint 1 (08/09/2026 al 21/09/2026)
 
@@ -2991,7 +3337,9 @@ xychart-beta
 
 **Sprint Backlog.** El sprint se estimó en 108 horas. Al registrar el alcance real ya construido, el backlog del sprint creció a 152 horas en 17 tareas, ninguna mayor de 16 horas. Este desglose corresponde al plan del sprint: en Azure Boards el trabajo se gestionó a nivel de historia y el proyecto no registra elementos de tipo Task.
 
-**Tabla 52. Tareas del Sprint Backlog y estado al 19/09/2026 (día 8 de 10).**
+**Tabla 51**
+
+*Tareas del Sprint Backlog y estado al 19/09/2026 (día 8 de 10)*
 
 | # | Tarea | Módulo | Responsable | Estimación | Estado |
 |---|---|---|---|---|---|
@@ -3015,9 +3363,11 @@ xychart-beta
 
 La decisión de la tarea 12 se mantuvo hasta el final del proyecto: el backend es una sola aplicación ASP.NET Core modular. El dominio contable exige transacciones atómicas entre asientos, cuentas por cobrar, cuentas por pagar y tesorería.
 
-**Burndown.** El sprint se siguió con horas restantes por día. La Tabla 53 recoge los datos hasta el día 8.
+**Burndown.** El sprint se siguió con horas restantes por día. La Tabla 52 recoge los datos hasta el día 8.
 
-**Tabla 53. Burndown del Sprint 1 (horas restantes).**
+**Tabla 52**
+
+*Burndown del Sprint 1 (horas restantes)*
 
 | Día | Fecha | Ideal | Real |
 |---|---|---|---|
@@ -3034,7 +3384,11 @@ La decisión de la tarea 12 se mantuvo hasta el final del proyecto: el backend e
 
 El equipo se mantuvo por encima de la línea ideal durante el sprint. La causa registrada fue el trabajo no planificado de corrección del modelo de datos tras una observación de auditoría. Los datos de los días 9 y 10 (20 y 21 de septiembre) no figuran en el registro disponible. El cierre del sprint se sustenta en el estado final de las historias en Azure Boards: 6 cerradas.
 
-[Captura 17: Azure Boards > Boards > Sprints > Sprint 1, vista "Analytics"/burndown de la iteración con las horas restantes por día. Perfil: Scrum Master. Acción previa: abrir la iteración Sprint 1. Si la vista de Analytics no está disponible en la organización gratuita, capturar el Taskboard del Sprint 1 con las tareas en Done y marcar el burndown como no disponible. Demuestra: avance del sprint frente a la línea ideal. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_sprints/taskboard]
+**Figura 56**
+
+*Burndown del Sprint 1*
+
+> [Insertar captura: Azure Boards > Boards > Sprints > Sprint 1, vista "Analytics"/burndown de la iteración con las horas restantes por día. Perfil: Scrum Master. Acción previa: abrir la iteración Sprint 1. Si la vista de Analytics no está disponible en la organización gratuita, capturar el Taskboard del Sprint 1 con las tareas en Done y marcar el burndown como no disponible. Demuestra: avance del sprint frente a la línea ideal. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_sprints/taskboard]
 
 **Daily Scrum.** En cada reunión diaria se respondieron tres preguntas: qué se hizo, qué se hará y qué impedimentos existen. En la primera semana (08 al 12/09) el Product Owner priorizó el backlog y coordinó la corrección del modelo de datos, el Scrum Master configuró el repositorio y las ramas, José Rodolfo López preparó los contenedores y Luis David Reyes escribió el script completo de la base de datos. En la segunda semana (15 al 19/09) se configuró Azure Boards con las épicas, se construyó el pipeline de compilación y se inició el backend contable (RN-01). No se registraron impedimentos bloqueantes. El detalle diario queda en los comentarios de los elementos de trabajo.
 
@@ -3042,7 +3396,9 @@ El equipo se mantuvo por encima de la línea ideal durante el sprint. La causa r
 
 **Retrospectiva.**
 
-**Tabla 54. Retrospectiva del Sprint 1.**
+**Tabla 53**
+
+*Retrospectiva del Sprint 1*
 
 | Qué funcionó | Qué no funcionó | Acción de mejora |
 |---|---|---|
@@ -3051,7 +3407,11 @@ El equipo se mantuvo por encima de la línea ideal durante el sprint. La causa r
 
 La segunda acción tuvo efecto visible: los casos de prueba se gestionaron como elementos de trabajo de tipo Test Case enlazados a las historias (véase 7.8).
 
-[Captura 18: Azure Boards > Boards > Queries (o Work items), lista de elementos de tipo Test Case del proyecto (TC-01 a TC-64, con TC-17 y TC-18 en estado Design y el resto en Closed). Perfil: Product Owner. Acción previa: filtrar Work Item Type = Test Case y abrir uno, por ejemplo TC-38, para mostrar sus pasos y su enlace "Tested By" a la historia. Demuestra: gestión del plan de pruebas mediante elementos de trabajo enlazados. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_workitems]
+**Figura 57**
+
+*Casos de prueba registrados en Azure Boards*
+
+> [Insertar captura: Azure Boards > Boards > Queries (o Work items), lista de elementos de tipo Test Case del proyecto (TC-01 a TC-64, con TC-17 y TC-18 en estado Design y el resto en Closed). Perfil: Product Owner. Acción previa: filtrar Work Item Type = Test Case y abrir uno, por ejemplo TC-38, para mostrar sus pasos y su enlace "Tested By" a la historia. Demuestra: gestión del plan de pruebas mediante elementos de trabajo enlazados. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_workitems]
 
 ## 6.5 Sprints 2, 3 y 4
 
@@ -3079,9 +3439,17 @@ El 17/10 concentra 22 commits, el máximo del proyecto. El sprint termina el 19/
 
 **Sprint 4 (20/10/2026 al 02/11/2026), sin iniciar.** La iteración existe en Azure Boards, no ha iniciado y no tiene historias cerradas. Su alcance se define en la planificación del sprint. Los candidatos son la documentación final y las historias de E9.
 
-[Captura 19: Azure Boards > Boards > Sprints > Sprint 2 > Taskboard. Perfil: Scrum Master. Acción previa: seleccionar la iteración "Sprint 2". Demuestra: trabajo cerrado en el segundo sprint y asignación por integrante. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_sprints/taskboard]
+**Figura 58**
 
-[Captura 20: Azure Boards > Boards > Sprints > Sprint 3 > Taskboard, con las historias agrupadas por estado (el proyecto no registra elementos de tipo Task). Perfil: Scrum Master. Acción previa: seleccionar la iteración "Sprint 3" en el selector superior. Demuestra: volumen de trabajo cerrado en el sprint de mayor carga. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_sprints/taskboard]
+*Taskboard del Sprint 2*
+
+> [Insertar captura: Azure Boards > Boards > Sprints > Sprint 2 > Taskboard. Perfil: Scrum Master. Acción previa: seleccionar la iteración "Sprint 2". Demuestra: trabajo cerrado en el segundo sprint y asignación por integrante. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_sprints/taskboard]
+
+**Figura 59**
+
+*Taskboard del Sprint 3*
+
+> [Insertar captura: Azure Boards > Boards > Sprints > Sprint 3 > Taskboard, con las historias agrupadas por estado (el proyecto no registra elementos de tipo Task). Perfil: Scrum Master. Acción previa: seleccionar la iteración "Sprint 3" en el selector superior. Demuestra: volumen de trabajo cerrado en el sprint de mayor carga. Enlace: https://dev.azure.com/drecinosg2/erp-contable-delta/_sprints/taskboard]
 
 ## 6.6 Creación de la base de datos
 
@@ -3094,7 +3462,9 @@ La base opera con dos roles. El propietario solo aplica migraciones. El rol de l
 
 El esquema se construye con 19 scripts de migración numerados. El procedimiento de migración aplica solo los que no figuran en la tabla de control de migraciones (`schema_migrations`), en orden y cada uno dentro de una sola transacción. Si un script falla, la transacción se revierte y el script no se registra como aplicado. Una migración ya aplicada no se edita: la corrección se hace con un script nuevo.
 
-**Tabla 55. Evolución del esquema por migración.**
+**Tabla 54**
+
+*Evolución del esquema por migración*
 
 | Migraciones | Contenido | Fecha de creación |
 |---|---|---|
@@ -3108,13 +3478,21 @@ El esquema se construye con 19 scripts de migración numerados. El procedimiento
 
 Al 17/10/2026 la rama `development` contiene 37 tablas base en el esquema público: las 36 tablas de dominio y la tabla de control de migraciones. Contiene además 8 vistas. Los datos de demostración se cargan con scripts separados que el flujo automático no aplica y que incluyen una guarda contra la doble ejecución. La demostración usa ocho usuarios (dos por perfil), cuentas bancarias, movimientos, conciliaciones y un lote de documentos fiscales y multimoneda. No se documentan credenciales.
 
-[Captura 21: Consola de Neon > proyecto erp-contable-delta > Branches, con las ramas production y development y su estado. Perfil: propietario del proyecto Neon. Acción previa: ninguna. Demuestra: separación entre el ambiente de producción y el de desarrollo. Enlace: https://console.neon.tech/app/projects/lingering-cell-09535323/branches]
+**Figura 60**
 
-[Captura 22: Consola de Neon > rama development > Tables, o SQL Editor con una consulta que cuente tablas y vistas del esquema public y un SELECT sobre schema_migrations. Perfil: propietario. Acción previa: seleccionar la rama development. Demuestra: 37 tablas base (36 de dominio y la de control) y las migraciones registradas. Enlace: https://console.neon.tech/app/projects/lingering-cell-09535323/branches]
+*Ramas production y development en Neon*
+
+> [Insertar captura: Consola de Neon > proyecto erp-contable-delta > Branches, con las ramas production y development y su estado. Perfil: propietario del proyecto Neon. Acción previa: ninguna. Demuestra: separación entre el ambiente de producción y el de desarrollo. Enlace: https://console.neon.tech/app/projects/lingering-cell-09535323/branches]
+
+**Figura 61**
+
+*Tablas y registro de migraciones de la rama development*
+
+> [Insertar captura: Consola de Neon > rama development > Tables, o SQL Editor con una consulta que cuente tablas y vistas del esquema public y un SELECT sobre schema_migrations. Perfil: propietario. Acción previa: seleccionar la rama development. Demuestra: 37 tablas base (36 de dominio y la de control) y las migraciones registradas. Enlace: https://console.neon.tech/app/projects/lingering-cell-09535323/branches]
 
 ## 6.7 Equipo de trabajo
 
-El equipo lo forman cuatro estudiantes de Ingeniería en Sistemas de la Universidad Mariano Gálvez de Guatemala, en el curso Seminario de Tecnologías de Información, bajo la cátedra de Erick Aguilar. La distribución de módulos se resume en la Tabla 50 y en la columna de asignación del backlog. La actividad del repositorio ofrece una medida de la carga: 106 commits entre el 16/09 y el 17/10/2026 y 34 Pull Request fusionados, todos hacia la rama principal. El primero se fusionó el 24/09 y el último el 18/10 (hora UTC).
+El equipo lo forman cuatro estudiantes de Ingeniería en Sistemas de la Universidad Mariano Gálvez de Guatemala, en el curso Seminario de Tecnologías de Información, bajo la cátedra de Erick Aguilar. La distribución de módulos se resume en la Tabla 49 y en la columna de asignación del backlog. La actividad del repositorio ofrece una medida de la carga: 106 commits entre el 16/09 y el 17/10/2026 y 34 Pull Request fusionados, todos hacia la rama principal. El primero se fusionó el 24/09 y el último el 18/10 (hora UTC).
 
 ## 6.8 Comunicación del equipo
 
@@ -3129,7 +3507,9 @@ El seguimiento combina cuatro fuentes:
 3. **GitHub Actions:** resultado de cada ejecución de pruebas, controles de calidad y despliegue (capítulo 7).
 4. **SonarCloud:** Quality Gate, cobertura, duplicación e incidencias sobre `main` (apartado 7.9).
 
-**Tabla 56. Indicadores de seguimiento al 18/10/2026.**
+**Tabla 55**
+
+*Indicadores de seguimiento al 18/10/2026*
 
 | Indicador | Valor | Fuente |
 |---|---|---|
@@ -3147,7 +3527,9 @@ El sistema se despliega en servicios administrados independientes, uno por capa,
 
 ## 7.1 Herramientas y arquitectura de despliegue
 
-**Tabla 57. Herramientas por capa.**
+**Tabla 56**
+
+*Herramientas por capa*
 
 | Capa | Tecnología | Servicio |
 |---|---|---|
@@ -3163,13 +3545,21 @@ El flujo de datos es: navegador, frontend (HTTPS), backend (HTTPS con JSON), bas
 
 **Evolución tecnológica.** El backend se inició sobre .NET 8. El 17/10/2026 se migró a .NET 10 LTS, con actualización de los paquetes a su última versión y adaptación de las pruebas. Los flujos de integración continua se actualizaron en la misma fecha: ejecutan las pruebas con el SDK 10 y usan Node 24 para el frontend, con jobs en paralelo. El cambio se realizó en un commit de migración y dos de corrección de pruebas, y la compilación quedó en verde.
 
-[Captura 23: Portal de Azure > Resource groups > grupo de recursos del proyecto (rg-delta-erp), pestaña "Overview" con la lista de recursos: entorno de Container Apps (cae-delta-erp) y aplicación de contenedor (ca-delta-erp-backend). Perfil: propietario de la suscripción de Azure. Acción previa: ninguna. Demuestra: infraestructura del backend agrupada en un solo grupo de recursos. Enlace: https://portal.azure.com/#browse/resourcegroups]
+**Figura 62**
+
+*Recursos del grupo de recursos del proyecto en Azure*
+
+> [Insertar captura: Portal de Azure > Resource groups > grupo de recursos del proyecto (rg-delta-erp), pestaña "Overview" con la lista de recursos: entorno de Container Apps (cae-delta-erp) y aplicación de contenedor (ca-delta-erp-backend). Perfil: propietario de la suscripción de Azure. Acción previa: ninguna. Demuestra: infraestructura del backend agrupada en un solo grupo de recursos. Enlace: https://portal.azure.com/#browse/resourcegroups]
 
 ## 7.2 Control de versiones y protección de ramas
 
 El código se aloja en un único repositorio de GitHub. La rama `main` representa lo desplegado en producción. La rama `dev` es la de integración del equipo. Todo cambio llega a `main` mediante Pull Request. La regla de protección de `main` exige el Pull Request, incluye a los administradores y prohíbe el force-push y el borrado de la rama. El control de migraciones contra la copia de producción es una verificación requerida para fusionar. No se exige un número mínimo de aprobaciones, porque el equipo es de cuatro personas.
 
-La Figura 40 ilustra de forma esquemática el flujo de integración: los cambios se acumulan en `dev` y llegan a `main` mediante Pull Request. Las etiquetas indican el tipo de cambio y no corresponden a commits reales.
+La Figura 63 ilustra de forma esquemática el flujo de integración: los cambios se acumulan en `dev` y llegan a `main` mediante Pull Request. Las etiquetas indican el tipo de cambio y no corresponden a commits reales.
+
+**Figura 63**
+
+*Flujo esquemático de ramas: dev, Pull Request y main*
 
 ```mermaid
 gitGraph
@@ -3182,7 +3572,7 @@ gitGraph
     merge dev id: "Pull Request" tag: "despliegue"
 ```
 
-**Figura 40. Flujo esquemático de ramas: dev, Pull Request y main.**
+*Nota.* Elaboración propia.
 
 Los valores sensibles (cadena de conexión de la rama de producción de Neon, clave de la API de Neon, identidad federada de Azure y token de Vercel) se guardan como secretos cifrados del repositorio. Ningún flujo los expone en sus registros. La autenticación hacia Azure usa OpenID Connect y no almacena una credencial de larga duración.
 
@@ -3202,11 +3592,23 @@ El frontend se despliega en Vercel con integración nativa a GitHub. Cada push a
 
 La base de datos es PostgreSQL 16 en Neon. La rama `production` es la única que usa el backend desplegado. El proveedor es sin servidor y ofrece ramas copy-on-write, que el control de migraciones aprovecha (véase 7.6).
 
-[Captura 24: Portal de Azure > Container Apps > ca-delta-erp-backend > "Revisions and replicas", con la revisión activa, su estado Healthy y las revisiones anteriores. Perfil: propietario de la suscripción de Azure. Acción previa: abrir también la pestaña "Overview" para ver el dominio público y, si es posible, "Application > Containers" para ver la etiqueta de la imagen. Demuestra: despliegue por revisiones y la imagen etiquetada con el commit. Enlace: https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.App%2FcontainerApps]
+**Figura 64**
 
-[Captura 25: Portal de Azure > ca-delta-erp-backend > "Security" > "Secrets" (y "Environment variables" con referencias a secretos). Perfil: propietario de la suscripción. Acción previa: no revelar ningún valor; capturar únicamente los nombres de los secretos y el tipo de variable "Reference a secret". Demuestra: la cadena de conexión y la clave JWT se guardan como secretos y no como texto plano. Enlace: https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.App%2FcontainerApps]
+*Revisiones de la aplicación de contenedor del backend*
 
-[Captura 26: Panel de Vercel > proyecto delta-erp-contable > "Deployments", con el despliegue de producción más reciente en estado Ready, y la pestaña "Domains" con el dominio asignado. Perfil: propietario del equipo en Vercel. Acción previa: filtrar por entorno Production. Demuestra: frontend publicado y vinculado a un commit de la rama principal (último despliegue de producción: 18/10/2026, 04:40 UTC, estado Ready, desde la fusión del Pull Request 51). Enlace: https://vercel.com/davidsito-team/delta-erp-contable]
+> [Insertar captura: Portal de Azure > Container Apps > ca-delta-erp-backend > "Revisions and replicas", con la revisión activa, su estado Healthy y las revisiones anteriores. Perfil: propietario de la suscripción de Azure. Acción previa: abrir también la pestaña "Overview" para ver el dominio público y, si es posible, "Application > Containers" para ver la etiqueta de la imagen. Demuestra: despliegue por revisiones y la imagen etiquetada con el commit. Enlace: https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.App%2FcontainerApps]
+
+**Figura 65**
+
+*Secretos y variables de entorno de la aplicación de contenedor*
+
+> [Insertar captura: Portal de Azure > ca-delta-erp-backend > "Security" > "Secrets" (y "Environment variables" con referencias a secretos). Perfil: propietario de la suscripción. Acción previa: no revelar ningún valor; capturar únicamente los nombres de los secretos y el tipo de variable "Reference a secret". Demuestra: la cadena de conexión y la clave JWT se guardan como secretos y no como texto plano. Enlace: https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.App%2FcontainerApps]
+
+**Figura 66**
+
+*Despliegues y dominio del frontend en Vercel*
+
+> [Insertar captura: Panel de Vercel > proyecto delta-erp-contable > "Deployments", con el despliegue de producción más reciente en estado Ready, y la pestaña "Domains" con el dominio asignado. Perfil: propietario del equipo en Vercel. Acción previa: filtrar por entorno Production. Demuestra: frontend publicado y vinculado a un commit de la rama principal (último despliegue de producción: 18/10/2026, 04:40 UTC, estado Ready, desde la fusión del Pull Request 51). Enlace: https://vercel.com/davidsito-team/delta-erp-contable]
 
 ## 7.4 Dockerfile en dos etapas
 
@@ -3239,7 +3641,9 @@ El pipeline toma el código de GitHub directamente. No hay una copia sincronizad
 
 Se definieron cinco flujos de trabajo en GitHub Actions. GitHub Actions no requiere un servidor propio, vive junto al repositorio y permite autenticación federada con Azure.
 
-**Tabla 58. Flujos de trabajo de GitHub Actions.**
+**Tabla 57**
+
+*Flujos de trabajo de GitHub Actions*
 
 | Flujo | Disparador | Jobs | Control que aplica |
 |---|---|---|---|
@@ -3315,17 +3719,31 @@ jobs:
 
 Los pasos de acciones externas se fijan por hash de commit y no por etiqueta mutable. Los Pull Request originados en bifurcaciones no reciben secretos, y en ellos el job se omite. El script de migración corre con la opción de fallo de tuberías, de modo que un error del script no queda enmascarado por el registro del log.
 
-[Captura 27: GitHub > repositorio > pestaña "Actions", con la lista lateral de los cinco flujos de trabajo (Pruebas backend y frontend, Backend build y despliegue, Frontend alias Vercel, Migraciones prueba contra copia de producción, SonarCloud). Perfil: colaborador del repositorio. Acción previa: ninguna. Demuestra: existencia de los cinco flujos. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions]
+**Figura 67**
 
-[Captura 28: GitHub Actions > flujo "Backend, build y despliegue a Azure Container Apps" > última ejecución exitosa sobre `main`, con los jobs `migrate` y `build-and-deploy` y el resumen (imagen, digest, revisión, commit, health). Perfil: colaborador. Acción previa: abrir la ejecución del 18/10/2026 04:40 UTC y expandir "Summary". Demuestra: migración, construcción, despliegue y verificación de salud encadenados. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions/workflows/backend-deploy.yml]
+*Flujos de trabajo de GitHub Actions*
 
-[Captura 29: GitHub > Pull Request hacia `main` (por ejemplo el 51) > pestaña "Checks" con el job `migrar-copia-prod` en verde y su resumen de migraciones, junto a la regla de protección de `main` (Settings > Branches) que lo exige. Perfil: colaborador/administrador. Acción previa: abrir el resumen del run del flujo de migraciones. Demuestra: control de migraciones contra copia de producción como verificación requerida. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions/workflows/migrations-check.yml]
+> [Insertar captura: GitHub > repositorio > pestaña "Actions", con la lista lateral de los cinco flujos de trabajo (Pruebas backend y frontend, Backend build y despliegue, Frontend alias Vercel, Migraciones prueba contra copia de producción, SonarCloud). Perfil: colaborador del repositorio. Acción previa: ninguna. Demuestra: existencia de los cinco flujos. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions]
+
+**Figura 68**
+
+*Ejecución exitosa del flujo de despliegue del backend*
+
+> [Insertar captura: GitHub Actions > flujo "Backend, build y despliegue a Azure Container Apps" > última ejecución exitosa sobre `main`, con los jobs `migrate` y `build-and-deploy` y el resumen (imagen, digest, revisión, commit, health). Perfil: colaborador. Acción previa: abrir la ejecución del 18/10/2026 04:40 UTC y expandir "Summary". Demuestra: migración, construcción, despliegue y verificación de salud encadenados. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions/workflows/backend-deploy.yml]
+
+**Figura 69**
+
+*Verificación de migraciones en un Pull Request hacia main*
+
+> [Insertar captura: GitHub > Pull Request hacia `main` (por ejemplo el 51) > pestaña "Checks" con el job `migrar-copia-prod` en verde y su resumen de migraciones, junto a la regla de protección de `main` (Settings > Branches) que lo exige. Perfil: colaborador/administrador. Acción previa: abrir el resumen del run del flujo de migraciones. Demuestra: control de migraciones contra copia de producción como verificación requerida. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions/workflows/migrations-check.yml]
 
 ## 7.7 Ejecución del pipeline y resultados
 
-La Tabla 59 resume la última ejecución observada de cada flujo, tomada de GitHub Actions el 18/10/2026 (hora UTC).
+La Tabla 58 resume la última ejecución observada de cada flujo, tomada de GitHub Actions el 18/10/2026 (hora UTC).
 
-**Tabla 59. Última ejecución por flujo.**
+**Tabla 58**
+
+*Última ejecución por flujo*
 
 | Flujo | Rama `main` | Rama `dev` |
 |---|---|---|
@@ -3343,13 +3761,19 @@ En el periodo se fusionaron 34 Pull Request, todos con base `main`. El primero f
 
 Vercel registra el último despliegue de producción en estado Ready (18/10/2026 04:40 UTC, commit de la fusión del Pull Request 51). Los dos despliegues de producción anteriores (Pull Request 50 y 49) también terminaron en estado Ready.
 
-[Captura 30: GitHub Actions > flujo "Pruebas, backend y frontend (dev)" > ejecución exitosa más reciente, con los jobs de backend, frontend, duplicación y cobertura de líneas cambiadas y el job "Resultado de las pruebas". Perfil: colaborador. Acción previa: abrir la ejecución del 18/10/2026 04:33 UTC. Demuestra: la ejecución completa de las pruebas y de los gates en verde. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions/workflows/backend-build-check.yml]
+**Figura 70**
+
+*Ejecución del flujo de pruebas de backend y frontend*
+
+> [Insertar captura: GitHub Actions > flujo "Pruebas, backend y frontend (dev)" > ejecución exitosa más reciente, con los jobs de backend, frontend, duplicación y cobertura de líneas cambiadas y el job "Resultado de las pruebas". Perfil: colaborador. Acción previa: abrir la ejecución del 18/10/2026 04:33 UTC. Demuestra: la ejecución completa de las pruebas y de los gates en verde. Enlace: https://github.com/DavidsitoPay/erp-contable-delta/actions/workflows/backend-build-check.yml]
 
 ## 7.8 Pruebas y plan de pruebas
 
 **Plan de pruebas.** Los casos de prueba son elementos de trabajo de tipo Test Case en Azure Boards, con pasos (acción y resultado esperado) y prioridad de 1 a 4. Cada caso se vincula a la historia que verifica, mediante la relación de hijo (TC-01 a TC-18) o la relación "Tested By" (desde TC-19). Azure Test Plans contiene además un plan de pruebas ("Plan de pruebas - Delta ERP Contable", activo) con 10 suites estáticas: una raíz sin casos y nueve de módulos (M1 a M9). El plan tiene 18 casos asignados, dos por cada suite de módulo; los 46 casos restantes de los 64 definidos permanecen como elementos Test Case enlazados a sus historias, fuera de las suites. La trazabilidad entre casos, historias y estado se gestiona mediante los elementos Test Case enlazados.
 
-**Tabla 60. Cobertura del plan de pruebas.**
+**Tabla 59**
+
+*Cobertura del plan de pruebas*
 
 | Grupo | Casos | Alcance | Estado | Automatización |
 |---|---|---|---|---|
@@ -3366,7 +3790,9 @@ La consulta a Azure Boards devolvió 62 elementos Test Case en estado Closed. Su
 
 **Pruebas automatizadas.** El análisis del código de pruebas arroja los siguientes conteos:
 
-**Tabla 61. Conteo de pruebas automatizadas.**
+**Tabla 60**
+
+*Conteo de pruebas automatizadas*
 
 | Suite | Conteo | Criterio de conteo |
 |---|---|---|
@@ -3374,13 +3800,15 @@ La consulta a Azure Boards devolvió 62 elementos Test Case en estado Closed. Su
 | Frontend (Vitest) | 778 invocaciones de `it(` o `test(` | Conteo por líneas; puede incluir alguna llamada que no sea una prueba |
 | Casos de prueba definidos | 64 identificadores únicos (TC-01 a TC-64), de los cuales 18 están asignados a suites del plan | Conteo de identificadores distintos de tipo Test Case |
 
-El presente documento no afirma un número de ejecuciones acumuladas. El resultado de cada ejecución está en los registros de GitHub Actions (captura 30). Las pruebas de integración usan una base PostgreSQL real como servicio del job y sustituyen el cliente de Banguat por un doble de prueba, de modo que el flujo no depende de un servicio externo.
+El presente documento no afirma un número de ejecuciones acumuladas. El resultado de cada ejecución está en los registros de GitHub Actions (Figura 70). Las pruebas de integración usan una base PostgreSQL real como servicio del job y sustituyen el cliente de Banguat por un doble de prueba, de modo que el flujo no depende de un servicio externo.
 
 ## 7.9 Calidad con SonarCloud
 
 SonarCloud analiza el backend en C#, el frontend y el código SQL del repositorio en cada Pull Request y en cada push a `main`. La carpeta de scripts SQL se excluye del análisis de SonarCloud, porque su analizador SQL es para Oracle PL/SQL. Los scripts tampoco se miden por duplicación, ya que las correcciones redefinen objetos y repiten por diseño cuerpos de scripts anteriores.
 
-**Tabla 62. Métricas de SonarCloud en la rama `main` (consulta del 17/10/2026).**
+**Tabla 61**
+
+*Métricas de SonarCloud en la rama `main` (consulta del 17/10/2026)*
 
 | Métrica | Valor |
 |---|---|
@@ -3397,9 +3825,17 @@ SonarCloud analiza el backend en C#, el frontend y el código SQL del repositori
 
 La cobertura de 98,5 % corresponde a la condición de código nuevo del Quality Gate, y la métrica global de la rama también es 98,5 %. Las incidencias que SonarCloud detectó en los Pull Request (por ejemplo, las de los Pull Request 18, 25, 30, 33, 38, 40 y 42) se corrigieron antes de fusionar, según el historial de commits.
 
-[Captura 31: SonarCloud > proyecto DavidsitoPay_erp-contable-delta > rama `main` > "Overall Code", con el Quality Gate (Passed), cobertura, duplicación, issues y calificaciones. Perfil: colaborador del proyecto en SonarCloud. Acción previa: seleccionar la rama main. Demuestra: las métricas de la Tabla 62. Enlace: https://sonarcloud.io/project/overview?id=DavidsitoPay_erp-contable-delta]
+**Figura 71**
 
-[Captura 32: SonarCloud > "Pull requests" > un Pull Request reciente con el Quality Gate aprobado y la condición de cobertura en código nuevo. Perfil: colaborador. Acción previa: seleccionar el Pull Request más reciente. Demuestra: el análisis por Pull Request antes de fusionar. Enlace: https://sonarcloud.io/project/pull_requests_list?id=DavidsitoPay_erp-contable-delta]
+*Panel de SonarCloud de la rama main*
+
+> [Insertar captura: SonarCloud > proyecto DavidsitoPay_erp-contable-delta > rama `main` > "Overall Code", con el Quality Gate (Passed), cobertura, duplicación, issues y calificaciones. Perfil: colaborador del proyecto en SonarCloud. Acción previa: seleccionar la rama main. Demuestra: las métricas de la Tabla 61. Enlace: https://sonarcloud.io/project/overview?id=DavidsitoPay_erp-contable-delta]
+
+**Figura 72**
+
+*Quality Gate de un Pull Request en SonarCloud*
+
+> [Insertar captura: SonarCloud > "Pull requests" > un Pull Request reciente con el Quality Gate aprobado y la condición de cobertura en código nuevo. Perfil: colaborador. Acción previa: seleccionar el Pull Request más reciente. Demuestra: el análisis por Pull Request antes de fusionar. Enlace: https://sonarcloud.io/project/pull_requests_list?id=DavidsitoPay_erp-contable-delta]
 
 ## 7.10 Monitoreo
 
@@ -3413,7 +3849,11 @@ El monitoreo se apoya en los mecanismos de cada servicio:
 
 Un sistema de monitoreo de rendimiento de aplicaciones (APM) con alertas no está implementado; queda como trabajo futuro (8.3).
 
-[Captura 33: Aplicación desplegada en el dominio de producción del frontend (Vercel), con el usuario de demostración con perfil Contador: pantalla de factura de compra con retención de ISR, o reporte de saldos en moneda extranjera. Perfil: usuario de demostración con perfil Contador. Acción previa: registrar o abrir una factura de proveedor del régimen simplificado y mostrar base, tasa, retención y neto a pagar. Demuestra: el sistema funcionando sobre la infraestructura descrita. Enlace: https://delta-erp-contable.vercel.app]
+**Figura 73**
+
+*Aplicación en producción con el usuario con perfil Contador*
+
+> [Insertar captura: Aplicación desplegada en el dominio de producción del frontend (Vercel), con el usuario de demostración con perfil Contador: pantalla de factura de compra con retención de ISR, o reporte de saldos en moneda extranjera. Perfil: usuario de demostración con perfil Contador. Acción previa: registrar o abrir una factura de proveedor del régimen simplificado y mostrar base, tasa, retención y neto a pagar. Demuestra: el sistema funcionando sobre la infraestructura descrita. Enlace: https://delta-erp-contable.vercel.app]
 
 # Capítulo 8. Cierre del proyecto
 
@@ -3439,9 +3879,11 @@ La reflexión se limita a hechos observables del proyecto.
 
 ## 8.2 Conclusión por módulo
 
-La Tabla 63 relaciona cada módulo con su estado y con la evidencia que lo respalda.
+La Tabla 62 relaciona cada módulo con su estado y con la evidencia que lo respalda.
 
-**Tabla 63. Estado de los módulos al 18/10/2026.**
+**Tabla 62**
+
+*Estado de los módulos al 18/10/2026*
 
 | Módulo | Épica | Estado | Evidencia |
 |---|---|---|---|
@@ -4566,7 +5008,9 @@ CREATE TABLE IF NOT EXISTS feriado (
 
 La tabla presenta cada regla con el módulo que la materializa, el mecanismo donde se aplica (base de datos, API o interfaz de usuario) y su estado. Las reglas aplicadas en la base de datos se hacen cumplir con disparadores, restricciones, vistas o procedimientos almacenados; las aplicadas en la API se validan en el dominio o en los servicios.
 
-**Tabla 64. Reglas de negocio RN-01 a RN-36.**
+**Tabla 63**
+
+*Reglas de negocio RN-01 a RN-36*
 
 | Regla | Enunciado resumido | Módulo | Mecanismo | Estado |
 |---|---|---|---|---|
@@ -4618,7 +5062,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.1 perfil
 
-**Tabla 65. Diccionario de datos de la tabla perfil.**
+**Tabla 64**
+
+*Diccionario de datos de la tabla perfil*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4627,7 +5073,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.2 usuario
 
-**Tabla 66. Diccionario de datos de la tabla usuario.**
+**Tabla 65**
+
+*Diccionario de datos de la tabla usuario*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4640,7 +5088,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.3 bitacoraauditoria
 
-**Tabla 67. Diccionario de datos de la tabla bitacoraauditoria.**
+**Tabla 66**
+
+*Diccionario de datos de la tabla bitacoraauditoria*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4653,7 +5103,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.4 moneda
 
-**Tabla 68. Diccionario de datos de la tabla moneda.**
+**Tabla 67**
+
+*Diccionario de datos de la tabla moneda*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4666,7 +5118,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.5 historialtipocambio
 
-**Tabla 69. Diccionario de datos de la tabla historialtipocambio.**
+**Tabla 68**
+
+*Diccionario de datos de la tabla historialtipocambio*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4687,7 +5141,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.6 periodocontable
 
-**Tabla 70. Diccionario de datos de la tabla periodocontable.**
+**Tabla 69**
+
+*Diccionario de datos de la tabla periodocontable*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4700,7 +5156,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.7 contraparte
 
-**Tabla 71. Diccionario de datos de la tabla contraparte.**
+**Tabla 70**
+
+*Diccionario de datos de la tabla contraparte*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4720,7 +5178,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.8 cuentacontable
 
-**Tabla 72. Diccionario de datos de la tabla cuentacontable.**
+**Tabla 71**
+
+*Diccionario de datos de la tabla cuentacontable*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4734,7 +5194,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.9 centrocosto
 
-**Tabla 73. Diccionario de datos de la tabla centrocosto.**
+**Tabla 72**
+
+*Diccionario de datos de la tabla centrocosto*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4745,7 +5207,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.10 asientocontable
 
-**Tabla 74. Diccionario de datos de la tabla asientocontable.**
+**Tabla 73**
+
+*Diccionario de datos de la tabla asientocontable*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4761,7 +5225,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.11 lineaasiento
 
-**Tabla 75. Diccionario de datos de la tabla lineaasiento.**
+**Tabla 74**
+
+*Diccionario de datos de la tabla lineaasiento*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4774,7 +5240,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.12 plantillaasiento
 
-**Tabla 76. Diccionario de datos de la tabla plantillaasiento.**
+**Tabla 75**
+
+*Diccionario de datos de la tabla plantillaasiento*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4784,7 +5252,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.13 lineaplantillaasiento
 
-**Tabla 77. Diccionario de datos de la tabla lineaplantillaasiento.**
+**Tabla 76**
+
+*Diccionario de datos de la tabla lineaplantillaasiento*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4796,7 +5266,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.14 documentocxc
 
-**Tabla 78. Diccionario de datos de la tabla documentocxc.**
+**Tabla 77**
+
+*Diccionario de datos de la tabla documentocxc*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4826,7 +5298,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.15 lineadocumentocxc
 
-**Tabla 79. Diccionario de datos de la tabla lineadocumentocxc.**
+**Tabla 78**
+
+*Diccionario de datos de la tabla lineadocumentocxc*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4847,7 +5321,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.16 recibopagocliente
 
-**Tabla 80. Diccionario de datos de la tabla recibopagocliente.**
+**Tabla 79**
+
+*Diccionario de datos de la tabla recibopagocliente*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4863,7 +5339,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.17 aplicacionpagocliente
 
-**Tabla 81. Diccionario de datos de la tabla aplicacionpagocliente.**
+**Tabla 80**
+
+*Diccionario de datos de la tabla aplicacionpagocliente*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4878,7 +5356,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.18 documentocxp
 
-**Tabla 82. Diccionario de datos de la tabla documentocxp.**
+**Tabla 81**
+
+*Diccionario de datos de la tabla documentocxp*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4910,7 +5390,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.19 lineadocumentocxp
 
-**Tabla 83. Diccionario de datos de la tabla lineadocumentocxp.**
+**Tabla 82**
+
+*Diccionario de datos de la tabla lineadocumentocxp*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4931,7 +5413,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.20 pagoproveedorcabecera
 
-**Tabla 84. Diccionario de datos de la tabla pagoproveedorcabecera.**
+**Tabla 83**
+
+*Diccionario de datos de la tabla pagoproveedorcabecera*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4947,7 +5431,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.21 aplicacionpagoproveedor
 
-**Tabla 85. Diccionario de datos de la tabla aplicacionpagoproveedor.**
+**Tabla 84**
+
+*Diccionario de datos de la tabla aplicacionpagoproveedor*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4962,7 +5448,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.22 cuentabancaria
 
-**Tabla 86. Diccionario de datos de la tabla cuentabancaria.**
+**Tabla 85**
+
+*Diccionario de datos de la tabla cuentabancaria*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -4978,7 +5466,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.23 movimientotesoreria
 
-**Tabla 87. Diccionario de datos de la tabla movimientotesoreria.**
+**Tabla 86**
+
+*Diccionario de datos de la tabla movimientotesoreria*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -5000,7 +5490,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.24 conciliacionbancaria
 
-**Tabla 88. Diccionario de datos de la tabla conciliacionbancaria.**
+**Tabla 87**
+
+*Diccionario de datos de la tabla conciliacionbancaria*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -5013,7 +5505,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.25 detalleconciliacion
 
-**Tabla 89. Diccionario de datos de la tabla detalleconciliacion.**
+**Tabla 88**
+
+*Diccionario de datos de la tabla detalleconciliacion*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -5023,7 +5517,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.26 saldocuentaperiodo
 
-**Tabla 90. Diccionario de datos de la tabla saldocuentaperiodo.**
+**Tabla 89**
+
+*Diccionario de datos de la tabla saldocuentaperiodo*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -5037,7 +5533,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.27 impuesto
 
-**Tabla 91. Diccionario de datos de la tabla impuesto.**
+**Tabla 90**
+
+*Diccionario de datos de la tabla impuesto*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -5056,7 +5554,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.28 configuracionfiscal
 
-**Tabla 92. Diccionario de datos de la tabla configuracionfiscal.**
+**Tabla 91**
+
+*Diccionario de datos de la tabla configuracionfiscal*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -5081,7 +5581,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.29 parametroretencion
 
-**Tabla 93. Diccionario de datos de la tabla parametroretencion.**
+**Tabla 92**
+
+*Diccionario de datos de la tabla parametroretencion*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -5103,7 +5605,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.30 retencion
 
-**Tabla 94. Diccionario de datos de la tabla retencion.**
+**Tabla 93**
+
+*Diccionario de datos de la tabla retencion*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -5135,7 +5639,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.31 constanciaretencion
 
-**Tabla 95. Diccionario de datos de la tabla constanciaretencion.**
+**Tabla 94**
+
+*Diccionario de datos de la tabla constanciaretencion*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -5157,7 +5663,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.32 revaluacion
 
-**Tabla 96. Diccionario de datos de la tabla revaluacion.**
+**Tabla 95**
+
+*Diccionario de datos de la tabla revaluacion*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -5183,7 +5691,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.33 revaluacionpartida
 
-**Tabla 97. Diccionario de datos de la tabla revaluacionpartida.**
+**Tabla 96**
+
+*Diccionario de datos de la tabla revaluacionpartida*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -5201,7 +5711,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.34 enteramiento
 
-**Tabla 98. Diccionario de datos de la tabla enteramiento.**
+**Tabla 97**
+
+*Diccionario de datos de la tabla enteramiento*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -5226,7 +5738,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.35 ajuste_retencion
 
-**Tabla 99. Diccionario de datos de la tabla ajuste_retencion.**
+**Tabla 98**
+
+*Diccionario de datos de la tabla ajuste_retencion*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -5244,7 +5758,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 ### C.36 feriado
 
-**Tabla 100. Diccionario de datos de la tabla feriado.**
+**Tabla 99**
+
+*Diccionario de datos de la tabla feriado*
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -5258,7 +5774,9 @@ Cada tabla se presenta con sus columnas, tipo de dato, restricciones declaradas 
 
 Los casos TC-01 a TC-64 están descritos con sus pasos en Azure Boards. La tabla resume cada caso, la historia que verifica y su estado. Los casos con estado Cerrado están automatizados y se ejecutan en integración continua (xUnit para el backend y Vitest para el frontend).
 
-**Tabla 101. Resumen de los casos de prueba.**
+**Tabla 100**
+
+*Resumen de los casos de prueba*
 
 | Caso | Título | Historia verificada | Estado |
 |---|---|---|---|
@@ -5333,7 +5851,9 @@ Resumen: 62 casos cerrados y automatizados (18 + 28 + 14 + 2) y 2 en estado Desi
 
 El ambiente de producción contiene datos de demostración cargados manualmente con scripts específicos. Los scripts no forman parte del flujo automático de migraciones y cada uno incluye una guarda que impide ejecutarlo dos veces. Las contraseñas no se documentan; el equipo las entrega por un canal privado.
 
-**Tabla 102. Usuarios de demostración.**
+**Tabla 101**
+
+*Usuarios de demostración*
 
 | Perfil | Usuarios | Contraseña |
 |---|---|---|
@@ -5344,7 +5864,9 @@ El ambiente de producción contiene datos de demostración cargados manualmente 
 
 Cada usuario de demostración usa la misma contraseña que el usuario inicial de su perfil. En total son 8 usuarios, dos por perfil.
 
-**Tabla 103. Lotes de datos de demostración.**
+**Tabla 102**
+
+*Lotes de datos de demostración*
 
 | Lote | Contenido |
 |---|---|
@@ -5357,7 +5879,9 @@ Cada usuario de demostración usa la misma contraseña que el usuario inicial de
 
 La aplicación se utiliza desde un navegador actualizado, en la dirección https://delta-erp-contable.vercel.app, sin instalación. El inicio de sesión requiere correo y contraseña. La sesión vence a los 60 minutos. La barra superior muestra el nombre del usuario, su perfil y el estado de conexión con la API. El menú se adapta al perfil y el servidor valida el permiso en cada operación; una operación no autorizada responde con el código 403.
 
-**Tabla 104. Capacidades por perfil.**
+**Tabla 103**
+
+*Capacidades por perfil*
 
 | Función | Administrador del sistema | Contador | Vendedor | Técnico |
 |---|---|---|---|---|
@@ -5387,38 +5911,46 @@ La aplicación se utiliza desde un navegador actualizado, en la dirección https
 
 **Mensajes frecuentes.** Las credenciales inválidas muestran el mensaje "Credenciales inválidas.". Un perfil sin permiso recibe el mensaje de acceso no autorizado. Un asiento descuadrado se rechaza por la regla de partida doble (RN-01). Un pago mayor al saldo pendiente se rechaza por RN-05. Un periodo cerrado no admite nuevas transacciones (RN-02). Si el backend no responde, la aplicación puede estar escalando desde cero réplicas y conviene esperar unos segundos y recargar.
 
-## Anexo G. Índice de evidencias
+## Anexo G. Lista de evidencias pendientes de captura
 
-- **Captura 1:** página de inicio del sitio corporativo de Delta, donde se aprecian su identidad y su portafolio de servicios.
-- **Captura 2:** tablero de Azure Boards con las diez épicas E1 a E10 y su estado.
-- **Captura 3:** pantalla de registro de asiento contable con líneas de débito y crédito balanceadas y el mensaje de confirmación.
-- **Captura 4:** pantalla de inicio de sesión de la aplicación desplegada, con el candado de conexión segura visible.
-- **Captura 5:** menú principal completo con el usuario de demostración con perfil Administrador del sistema.
-- **Captura 6:** menú principal reducido con el usuario de demostración con perfil Vendedor.
-- **Captura 7:** Work item de un caso de prueba en Azure Boards (por ejemplo, el TC-38, identificador 310) con la pestaña Links abierta, donde se vean los vínculos «Tested By» hacia la historia de usuario E10-F2-H3.
-- **Captura 8:** Ejecución del flujo «Migraciones — prueba contra copia de producción» en un Pull Request hacia main, con el job de migración exitoso y el resumen de scripts aplicados.
-- **Captura 9:** Resumen del job de cobertura de líneas cambiadas (diff-cover) dentro del flujo «Pruebas — backend y frontend (dev)», con el umbral de 80 % y el porcentaje alcanzado.
-- **Captura 10:** Job de duplicación (jscpd) del mismo flujo, con el resultado sin bloques duplicados de 80 tokens o más.
-- **Captura 11:** Consola de Neon, rama development o production, listado de tablas del esquema public (tabla Tables o consulta con el listado de tablas), donde se vean las 36 tablas de dominio y schema_migrations.
-- **Captura 12:** Consulta de la tabla de control schema_migrations en Neon (SELECT * FROM schema_migrations ORDER BY 1) con los 19 scripts registrados.
-- **Captura 13:** Paso «Aplicar migraciones» del flujo de despliegue del backend en GitHub Actions, con el log de run_migrations.sh donde se vea la verificación de schema_migrations y los scripts aplicados u omitidos.
-- **Captura 14:** Azure Boards > Boards > Backlogs, nivel "Epics", con las diez épicas E1 a E10 y su estado (nueve en Done, E9 en New).
-- **Captura 15:** Azure Boards > Backlogs, nivel "Backlog items", con la jerarquía expandida de la épica E10 hasta sus características E10-F1, E10-F2 y E10-F3 y sus historias, con las columnas Estado, Iteration Path y Effort.
-- **Captura 16:** Azure Boards > Project Settings > Project configuration > Iterations, mostrando Sprint 1 a Sprint 4 con sus fechas de inicio y fin.
-- **Captura 17:** Azure Boards > Boards > Sprints > Sprint 1, vista "Analytics"/burndown de la iteración con las horas restantes por día.
-- **Captura 18:** Azure Boards > Boards > Queries (o Work items), lista de elementos de tipo Test Case del proyecto (TC-01 a TC-64, con TC-17 y TC-18 en estado Design y el resto en Closed).
-- **Captura 19:** Azure Boards > Boards > Sprints > Sprint 2 > Taskboard.
-- **Captura 20:** Azure Boards > Boards > Sprints > Sprint 3 > Taskboard, con las historias agrupadas por estado (el proyecto no registra elementos de tipo Task).
-- **Captura 21:** Consola de Neon > proyecto erp-contable-delta > Branches, con las ramas production y development y su estado.
-- **Captura 22:** Consola de Neon > rama development > Tables, o SQL Editor con una consulta que cuente tablas y vistas del esquema public y un SELECT sobre schema_migrations.
-- **Captura 23:** Portal de Azure > Resource groups > grupo de recursos del proyecto (rg-delta-erp), pestaña "Overview" con la lista de recursos: entorno de Container Apps (cae-delta-erp) y aplicación de contenedor (ca-delta-erp-backend).
-- **Captura 24:** Portal de Azure > Container Apps > ca-delta-erp-backend > "Revisions and replicas", con la revisión activa, su estado Healthy y las revisiones anteriores.
-- **Captura 25:** Portal de Azure > ca-delta-erp-backend > "Security" > "Secrets" (y "Environment variables" con referencias a secretos).
-- **Captura 26:** Panel de Vercel > proyecto delta-erp-contable > "Deployments", con el despliegue de producción más reciente en estado Ready, y la pestaña "Domains" con el dominio asignado.
-- **Captura 27:** GitHub > repositorio > pestaña "Actions", con la lista lateral de los cinco flujos de trabajo (Pruebas backend y frontend, Backend build y despliegue, Frontend alias Vercel, Migraciones prueba contra copia de producción, SonarCloud).
-- **Captura 28:** GitHub Actions > flujo "Backend, build y despliegue a Azure Container Apps" > última ejecución exitosa sobre `main`, con los jobs `migrate` y `build-and-deploy` y el resumen (imagen, digest, revisión, commit, health).
-- **Captura 29:** GitHub > Pull Request hacia `main` (por ejemplo el 51) > pestaña "Checks" con el job `migrar-copia-prod` en verde y su resumen de migraciones, junto a la regla de protección de `main` (Settings > Branches) que lo exige.
-- **Captura 30:** GitHub Actions > flujo "Pruebas, backend y frontend (dev)" > ejecución exitosa más reciente, con los jobs de backend, frontend, duplicación y cobertura de líneas cambiadas y el job "Resultado de las pruebas".
-- **Captura 31:** SonarCloud > proyecto DavidsitoPay_erp-contable-delta > rama `main` > "Overall Code", con el Quality Gate (Passed), cobertura, duplicación, issues y calificaciones.
-- **Captura 32:** SonarCloud > "Pull requests" > un Pull Request reciente con el Quality Gate aprobado y la condición de cobertura en código nuevo.
-- **Captura 33:** Aplicación desplegada en el dominio de producción del frontend (Vercel), con el usuario de demostración con perfil Contador: pantalla de factura de compra con retención de ISR, o reporte de saldos en moneda extranjera.
+La tabla siguiente enumera las figuras que corresponden a capturas de pantalla, con la evidencia que debe tomarse y el perfil con el que se obtiene. Cada marcador «Insertar captura» del cuerpo del documento amplía la acción previa, lo que demuestra y el enlace.
+
+**Tabla 104**
+
+*Evidencias pendientes de captura*
+
+| Figura | Qué tomar | Perfil |
+|---|---|---|
+| Figura 1 | página de inicio del sitio corporativo de Delta, donde se aprecian su identidad y su portafolio de servicios | acceso público, sin autenticación |
+| Figura 3 | tablero de Azure Boards con las diez épicas E1 a E10 y su estado | miembro del equipo con acceso al proyecto de Azure Boards |
+| Figura 7 | pantalla de registro de asiento contable con líneas de débito y crédito balanceadas y el mensaje de confirmación | usuario de demostración con perfil Contador |
+| Figura 8 | pantalla de inicio de sesión de la aplicación desplegada, con el candado de conexión segura visible | sin autenticar |
+| Figura 9 | menú principal completo con el usuario de demostración con perfil Administrador del sistema | usuario de demostración con perfil Administrador del sistema |
+| Figura 10 | menú principal reducido con el usuario de demostración con perfil Vendedor | usuario de demostración con perfil Vendedor |
+| Figura 16 | Work item de un caso de prueba en Azure Boards (por ejemplo, el TC-38, identificador 310) con la pestaña Links abierta, donde se vean los vínculos «Tested By» hacia la historia de usuario E10-F2-H3 | Product Owner en Azure DevOps |
+| Figura 18 | Ejecución del flujo «Migraciones — prueba contra copia de producción» en un Pull Request hacia main, con el job de migración exitoso y el resumen de scripts aplicados | acceso al repositorio en GitHub |
+| Figura 19 | Resumen del job de cobertura de líneas cambiadas (diff-cover) dentro del flujo «Pruebas — backend y frontend (dev)», con el umbral de 80 % y el porcentaje alcanzado | acceso al repositorio en GitHub |
+| Figura 20 | Job de duplicación (jscpd) del mismo flujo, con el resultado sin bloques duplicados de 80 tokens o más | acceso al repositorio en GitHub |
+| Figura 47 | Consola de Neon, rama development o production, listado de tablas del esquema public (tabla Tables o consulta con el listado de tablas), donde se vean las 36 tablas de dominio y schema_migrations | propietario del proyecto Neon |
+| Figura 48 | Consulta de la tabla de control schema_migrations en Neon (SELECT * FROM schema_migrations ORDER BY 1) con los 19 scripts registrados | propietario del proyecto Neon |
+| Figura 49 | Paso «Aplicar migraciones» del flujo de despliegue del backend en GitHub Actions, con el log de run_migrations.sh donde se vea la verificación de schema_migrations y los scripts aplicados u omitidos | acceso al repositorio en GitHub |
+| Figura 51 | Azure Boards > Boards > Backlogs, nivel "Epics", con las diez épicas E1 a E10 y su estado (nueve en Done, E9 en New) | Product Owner (David Recinos) en la organización drecinosg2, proyecto erp-contable-delta |
+| Figura 52 | Azure Boards > Backlogs, nivel "Backlog items", con la jerarquía expandida de la épica E10 hasta sus características E10-F1, E10-F2 y E10-F3 y sus historias, con las columnas Estado, Iteration Path y Effort | Product Owner |
+| Figura 55 | Azure Boards > Project Settings > Project configuration > Iterations, mostrando Sprint 1 a Sprint 4 con sus fechas de inicio y fin | Scrum Master (Alejandro Ochoa) |
+| Figura 56 | Azure Boards > Boards > Sprints > Sprint 1, vista "Analytics"/burndown de la iteración con las horas restantes por día | Scrum Master |
+| Figura 57 | Azure Boards > Boards > Queries (o Work items), lista de elementos de tipo Test Case del proyecto (TC-01 a TC-64, con TC-17 y TC-18 en estado Design y el resto en Closed) | Product Owner |
+| Figura 58 | Azure Boards > Boards > Sprints > Sprint 2 > Taskboard | Scrum Master |
+| Figura 59 | Azure Boards > Boards > Sprints > Sprint 3 > Taskboard, con las historias agrupadas por estado (el proyecto no registra elementos de tipo Task) | Scrum Master |
+| Figura 60 | Consola de Neon > proyecto erp-contable-delta > Branches, con las ramas production y development y su estado | propietario del proyecto Neon |
+| Figura 61 | Consola de Neon > rama development > Tables, o SQL Editor con una consulta que cuente tablas y vistas del esquema public y un SELECT sobre schema_migrations | propietario |
+| Figura 62 | Portal de Azure > Resource groups > grupo de recursos del proyecto (rg-delta-erp), pestaña "Overview" con la lista de recursos: entorno de Container Apps (cae-delta-erp) y aplicación de contenedor (ca-delta-erp-backend) | propietario de la suscripción de Azure |
+| Figura 64 | Portal de Azure > Container Apps > ca-delta-erp-backend > "Revisions and replicas", con la revisión activa, su estado Healthy y las revisiones anteriores | propietario de la suscripción de Azure |
+| Figura 65 | Portal de Azure > ca-delta-erp-backend > "Security" > "Secrets" (y "Environment variables" con referencias a secretos) | propietario de la suscripción |
+| Figura 66 | Panel de Vercel > proyecto delta-erp-contable > "Deployments", con el despliegue de producción más reciente en estado Ready, y la pestaña "Domains" con el dominio asignado | propietario del equipo en Vercel |
+| Figura 67 | GitHub > repositorio > pestaña "Actions", con la lista lateral de los cinco flujos de trabajo (Pruebas backend y frontend, Backend build y despliegue, Frontend alias Vercel, Migraciones prueba contra copia de producción, SonarCloud) | colaborador del repositorio |
+| Figura 68 | GitHub Actions > flujo "Backend, build y despliegue a Azure Container Apps" > última ejecución exitosa sobre `main`, con los jobs `migrate` y `build-and-deploy` y el resumen (imagen, digest, revisión, commit, health) | colaborador |
+| Figura 69 | GitHub > Pull Request hacia `main` (por ejemplo el 51) > pestaña "Checks" con el job `migrar-copia-prod` en verde y su resumen de migraciones, junto a la regla de protección de `main` (Settings > Branches) que lo exige | colaborador/administrador |
+| Figura 70 | GitHub Actions > flujo "Pruebas, backend y frontend (dev)" > ejecución exitosa más reciente, con los jobs de backend, frontend, duplicación y cobertura de líneas cambiadas y el job "Resultado de las pruebas" | colaborador |
+| Figura 71 | SonarCloud > proyecto DavidsitoPay_erp-contable-delta > rama `main` > "Overall Code", con el Quality Gate (Passed), cobertura, duplicación, issues y calificaciones | colaborador del proyecto en SonarCloud |
+| Figura 72 | SonarCloud > "Pull requests" > un Pull Request reciente con el Quality Gate aprobado y la condición de cobertura en código nuevo | colaborador |
+| Figura 73 | Aplicación desplegada en el dominio de producción del frontend (Vercel), con el usuario de demostración con perfil Contador: pantalla de factura de compra con retención de ISR, o reporte de saldos en moneda extranjera | usuario de demostración con perfil Contador |
