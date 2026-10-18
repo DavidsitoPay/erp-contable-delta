@@ -18,16 +18,21 @@ export default function MenuPrincipal({ grupos }) {
     return () => document.removeEventListener("mousedown", handleMouseDown);
   }, []);
 
-  function handleKeyDown(e) {
-    if (e.key === "Escape" && abierto) {
-      const boton = ref.current.querySelector('[aria-expanded="true"]');
-      setAbierto(null);
-      boton?.focus();
+  useEffect(() => {
+    if (abierto === null) return;
+    function handleKeyDown(e) {
+      if (e.key === "Escape") {
+        const boton = ref.current.querySelector('[aria-expanded="true"]');
+        setAbierto(null);
+        boton?.focus();
+      }
     }
-  }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [abierto]);
 
   return (
-    <nav className="menu-nav" aria-label="Principal" ref={ref} onKeyDown={handleKeyDown}>
+    <nav className="menu-nav" aria-label="Principal" ref={ref}>
       {grupos.map((g) => {
         const activo = g.items.some((i) => pathname === i.to || pathname.startsWith(i.to + "/"));
         return (
