@@ -14,6 +14,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: backend-deploy
+  cancel-in-progress: false
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}-backend
@@ -22,17 +26,21 @@ jobs:
   # Corre contra la branch "production" de Neon; si falla, build-and-deploy no arranca.
   migrate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Instalar cliente de PostgreSQL
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Instalar cliente de PostgreSQL (si falta)
+        run: command -v psql >/dev/null || (sudo apt-get update && sudo apt-get install -y postgresql-client)
 
       - name: Aplicar migraciones pendientes
-        run: bash database/run_migrations.sh "${{ secrets.NEON_PROD_CONNECTION_STRING }}" | tee migraciones.log
+        shell: bash # -eo pipefail: sin pipefail, un fallo del script queda enmascarado por tee
+        env:
+          NEON_CONN: ${{ secrets.NEON_PROD_CONNECTION_STRING }}
+        run: bash database/run_migrations.sh "$NEON_CONN" | tee migraciones.log
 
       - name: Resumen de migraciones
         if: ${{ !cancelled() }}
@@ -53,13 +61,14 @@ jobs:
   build-and-deploy:
     needs: migrate
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     permissions:
       contents: read
       packages: write
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Normalizar nombre de imagen a minúsculas
         id: image
@@ -68,17 +77,18 @@ jobs:
 
       - name: Configurar Docker Buildx
         # Necesario: el driver "docker" por defecto no soporta cache export a GHA (type=gha).
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Login en GitHub Container Registry
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build y push de la imagen del backend
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: backend
           file: devops/Dockerfile.backend
@@ -90,27 +100,54 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Login en Azure (OIDC)
-        uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Actualizar Azure Container App con la nueva imagen
-        uses: azure/CLI@9f7ce6f37c31b777ec6c6b6d1dfe7db79f497956 # v2
-        with:
-          inlineScript: |
-            az containerapp update \
-              --name ca-delta-erp-backend \
-              --resource-group rg-delta-erp \
-              --image ${{ steps.image.outputs.name }}:${{ github.sha }}
+        run: |
+          az containerapp update \
+            --name ca-delta-erp-backend \
+            --resource-group rg-delta-erp \
+            --image ${{ steps.image.outputs.name }}:${{ github.sha }}
+
+      - name: Verificar health
+        shell: bash
+        run: |
+          REV=$(az containerapp show --name ca-delta-erp-backend --resource-group rg-delta-erp --query properties.latestRevisionName -o tsv)
+          STATE=""
+          for i in $(seq 1 30); do
+            STATE=$(az containerapp revision show --name ca-delta-erp-backend --resource-group rg-delta-erp --revision "$REV" --query properties.healthState -o tsv)
+            [ "$STATE" = "Healthy" ] && break
+            echo "Intento $i: revisión $REV en estado $STATE, reintento en 10 s"
+            sleep 10
+          done
+          if [ "$STATE" != "Healthy" ]; then
+            echo "::error::La revisión $REV no llegó a Healthy (estado: $STATE)"
+            exit 1
+          fi
+          echo "- Revisión $REV: $STATE" >> "$GITHUB_STEP_SUMMARY"
+          FQDN=$(az containerapp show --name ca-delta-erp-backend --resource-group rg-delta-erp --query properties.configuration.ingress.fqdn -o tsv)
+          for i in $(seq 1 12); do
+            curl -fsS --max-time 10 "https://${FQDN}/health" && exit 0
+            echo "Intento $i: sin respuesta, reintento en 10 s"
+            sleep 10
+          done
+          echo "El backend no respondió /health tras el despliegue." >&2
+          exit 1
 
       - name: Resumen del backend desplegado
+        if: ${{ !cancelled() }}
         run: |
           FQDN=$(az containerapp show --name ca-delta-erp-backend --resource-group rg-delta-erp --query properties.configuration.ingress.fqdn -o tsv)
+          REV=$(az containerapp show --name ca-delta-erp-backend --resource-group rg-delta-erp --query properties.latestRevisionName -o tsv)
           {
             echo "## Backend desplegado"
             echo "- Imagen: \`${{ steps.image.outputs.name }}:${{ github.sha }}\`"
+            echo "- Digest: ${{ steps.build.outputs.digest }}"
+            echo "- Revisión: ${REV}"
             echo "- Commit: ${{ github.sha }}"
             echo "- Health: https://${FQDN}/health"
           } >> "$GITHUB_STEP_SUMMARY"

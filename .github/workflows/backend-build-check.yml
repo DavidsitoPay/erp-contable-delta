@@ -15,11 +15,22 @@ on:
 
 permissions:
   contents: read
-  checks: write
+
+env:
+  NODE_VERSION: "24"
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  pruebas:
+  backend:
+    name: Pruebas backend
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      checks: write
     services:
       postgres:
         image: postgres:16
@@ -38,22 +49,71 @@ jobs:
       TEST_PG_CONN: "Host=localhost;Port=5432;Database=delta_erp_test;Username=postgres;Password=postgres"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v7
 
       - name: Configurar .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "8.0.x"
+
+      - name: Cache de NuGet
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - name: Pruebas del backend (unitarias e integración)
         run: dotnet test backend/tests/DeltaERP.Tests/DeltaERP.Tests.csproj --configuration Release --logger "trx;LogFileName=backend-tests.trx" --collect:"XPlat Code Coverage"
 
-      - name: Configurar Node
-        uses: actions/setup-node@v4
+      - name: Pruebas backend
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         with:
-          node-version: "20"
+          name: Pruebas backend
+          path: backend/tests/DeltaERP.Tests/TestResults/*.trx
+          reporter: dotnet-trx
+          fail-on-error: false
+          fail-on-empty: false
+
+      - name: Cobertura total del backend
+        if: ${{ !cancelled() }}
+        run: |
+          mkdir -p cov
+          i=0
+          for f in $(find backend/tests/DeltaERP.Tests/TestResults -name coverage.cobertura.xml); do
+            cp "$f" "cov/backend-$i.xml"
+            i=$((i + 1))
+          done
+          if [ -f cov/backend-0.xml ]; then
+            PCT=$(grep -oP '<coverage[^>]*line-rate="\K[^"]+' cov/backend-0.xml | head -1 | awk '{printf "%.2f", $1 * 100}')
+            echo "- Cobertura backend (total): ${PCT}% de líneas" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Subir cobertura del backend
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: cobertura-backend
+          path: cov/backend-*.xml
+          if-no-files-found: ignore
+          retention-days: 3
+
+  frontend:
+    name: Pruebas frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Configurar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -65,19 +125,9 @@ jobs:
         working-directory: frontend
         run: npm run test:ci
 
-      - name: Pruebas backend
-        if: ${{ !cancelled() }}
-        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
-        with:
-          name: Pruebas backend
-          path: backend/tests/DeltaERP.Tests/TestResults/*.trx
-          reporter: dotnet-trx
-          fail-on-error: false
-          fail-on-empty: false
-
       - name: Pruebas frontend
         if: ${{ !cancelled() }}
-        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         with:
           name: Pruebas frontend
           path: frontend/test-results/junit.xml
@@ -85,21 +135,93 @@ jobs:
           fail-on-error: false
           fail-on-empty: false
 
-      - name: Gate de coverage (líneas cambiadas vs main)
-        run: |
-          pip install --only-binary :all: --require-hashes -r .github/requirements-ci.txt
-          diff-cover backend/tests/DeltaERP.Tests/TestResults/*/coverage.cobertura.xml frontend/coverage/cobertura-coverage.xml --compare-branch=origin/main --fail-under=80 --format markdown:diff-cover.md --exclude '**/Program.cs' --exclude '**/DeltaErpDbContext.cs' --exclude '**/Entities/*' --exclude 'frontend/src/main.jsx' --exclude '*.css' --exclude '*.config.js' --exclude '*.test.*' --exclude '*/src/test/*'
-
-      - name: Agregar reporte de coverage a GitHub
+      - name: Cobertura total del frontend
         if: ${{ !cancelled() }}
         run: |
-          [ -f diff-cover.md ] && cat diff-cover.md >> "$GITHUB_STEP_SUMMARY" || true
+          if [ -f frontend/coverage/coverage-summary.json ]; then
+            echo "- Cobertura frontend (total): $(jq '.total.lines.pct' frontend/coverage/coverage-summary.json)% de líneas" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          mkdir -p cov
+          [ -f frontend/coverage/cobertura-coverage.xml ] && cp frontend/coverage/cobertura-coverage.xml cov/frontend.xml || true
+
+      - name: Subir cobertura del frontend
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: cobertura-frontend
+          path: cov/frontend.xml
+          if-no-files-found: ignore
+          retention-days: 3
+
+  jscpd:
+    name: Gate de duplicación (jscpd)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Configurar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Gate de duplicación (jscpd)
-        if: ${{ !cancelled() }}
         run: npx --yes --ignore-scripts jscpd@4.2.4 --min-tokens 80 --exitCode 1 --format "csharp,javascript,jsx" --reporters "console,markdown" --output jscpd-report --ignore "**/bin/**,**/obj/**,**/node_modules/**,**/dist/**,**/coverage/**,**/test-results/**,backend/tests/**,**/*.test.*,frontend/src/test/**" backend/src frontend/src
 
       - name: Agregar reporte de duplicación a GitHub
         if: ${{ !cancelled() }}
         run: |
           [ -f jscpd-report/jscpd-report.md ] && cat jscpd-report/jscpd-report.md >> "$GITHUB_STEP_SUMMARY" || true
+
+  cobertura-diff:
+    name: Gate de coverage (líneas cambiadas)
+    needs: [backend, frontend]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Gate omitido
+        if: ${{ needs.backend.result != 'success' || needs.frontend.result != 'success' }}
+        run: |
+          echo "## Gate de coverage omitido: backend=${{ needs.backend.result }}, frontend=${{ needs.frontend.result }}. Sin pruebas verdes no hay cobertura completa que evaluar." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Checkout
+        if: ${{ needs.backend.result == 'success' && needs.frontend.result == 'success' }}
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Descargar coberturas
+        if: ${{ needs.backend.result == 'success' && needs.frontend.result == 'success' }}
+        uses: actions/download-artifact@v8
+        with:
+          pattern: cobertura-*
+          merge-multiple: true
+          path: cov
+
+      - name: Gate de coverage (líneas cambiadas vs main)
+        if: ${{ needs.backend.result == 'success' && needs.frontend.result == 'success' }}
+        run: |
+          pip install --only-binary :all: --require-hashes -r .github/requirements-ci.txt
+          diff-cover cov/backend-*.xml cov/frontend.xml --compare-branch=origin/main --fail-under=80 --format markdown:diff-cover.md --exclude '**/Program.cs' --exclude '**/DeltaErpDbContext.cs' --exclude '**/Entities/*' --exclude 'frontend/src/main.jsx' --exclude '*.css' --exclude '*.config.js' --exclude '*.test.*' --exclude '*/src/test/*'
+
+      - name: Agregar reporte de coverage a GitHub
+        if: ${{ !cancelled() }}
+        run: |
+          [ -f diff-cover.md ] && cat diff-cover.md >> "$GITHUB_STEP_SUMMARY" || true
+
+  resultado:
+    name: Resultado de las pruebas
+    needs: [backend, frontend, jscpd, cobertura-diff]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Fallar si algún job no fue exitoso
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for r in $RESULTS; do
+            [ "$r" = "success" ] || { echo "Resultados: $RESULTS"; exit 1; }
+          done

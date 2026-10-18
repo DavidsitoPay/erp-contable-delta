@@ -104,7 +104,7 @@ Roles (`API/Auth/Roles.cs`): GestionCatalogo, GestionTesoreria, RegistroPagos, R
 | Errores Postgres | `API/Services/ErroresPostgres.cs` (SQLSTATE -> HTTP, restricciones únicas -> mensaje (incl. `ux_enteramiento_boleta`), `TraducirProcedimientoAsync`), `ErrorValidacion.cs`, `ControllerExtensions.Fallo`; tests TU `ErroresPostgresTests` |
 | Guardado con auditoría | `GuardadoAuditado.GuardarAuditadoAsync` (usado por controllers de catálogo) |
 | Frontend base | `frontend/src/App.jsx` (rutas), `main.jsx`, `services/api.js` (un objeto `*Api` por recurso), `tema.js`, `styles/{theme,components}.css`, `test/setup.js`, `test/reportesFixtures.js`, `test/temporizadores.js`; componentes compartidos `FC/CampoFormulario`, `FC/OpcionesSelect`, `FC/FormularioMotivo` |
-| Frontend compartido | `FC/LogoMark.jsx`, `FC/ToggleTema.jsx` (+ `ToggleTema.test.jsx`), `FC/useLineas.js` (+ `useLineas.test.js`), `FU/formato.js` (+ `formato.test.js`) |
+| Frontend compartido | `FC/LogoMark.jsx`, `FC/ToggleTema.jsx` (+ `ToggleTema.test.jsx`), `FC/MenuPrincipal.jsx` (+ `MenuPrincipal.test.jsx`; nav sticky agrupado en 5 desplegables, lo usa `App.jsx`), `FC/useLineas.js` (+ `useLineas.test.js`), `FU/formato.js` (+ `formato.test.js`) |
 | Rutas frontend | `/asientos`, `/catalogo/{cuentas,centros-costo,periodos,tipos-cambio,configuracion-fiscal,impuestos,parametros-retencion}`, `/libros/{balance,diario,mayor,fiscal,retenciones}`, `/retenciones/enteramiento`, `/catalogo/feriados`, `/contrapartes`, `/cxc`, `/cxp`, `/tesoreria`, `/revaluaciones`, `/reportes/{balance-general,estado-resultados,saldos-moneda}` |
 | Migraciones | `database/NN_descripcion.sql` en orden numérico (01..19); `database/run_migrations.sh` aplica los pendientes, uno por transacción, registro en `schema_migrations`. Nunca se edita un script aplicado: corrección = archivo NN+1. Sin migraciones down. Los scripts 07/08/12/16 redefinen objetos de 03/04/05: la versión vigente es la del número mayor. |
 | Permisos de BD | `database/14_rol_api.sql` (rol `delta_api`, matriz base); toda tabla/vista/rutina nueva usada por la API declara su GRANT en su propia migración (15, 16, 18) |
@@ -116,11 +116,11 @@ Roles (`API/Auth/Roles.cs`): GestionCatalogo, GestionTesoreria, RegistroPagos, R
 
 | Archivo | Qué hace |
 |---|---|
-| `.github/workflows/backend-build-check.yml` | push a `dev`: `dotnet test` (Postgres como service container) + `npm run test:ci` + gate `diff-cover` (80% líneas cambiadas vs main) + gate `jscpd` (min-tokens 80, falla con duplicados) |
-| `.github/workflows/sonarcloud-analysis.yml` | PR y push a `main`: tests con cobertura + dotnet-sonarscanner + análisis SonarCloud; exclusiones de coverage (`Program.cs`, `DeltaErpDbContext.cs`, `Entities/**`, `main.jsx`) y de CPD (`backend/tests/**`, `*.test.*`, `frontend/src/test/**`) en el propio workflow |
-| `.github/workflows/backend-deploy.yml` | push a `main`/manual: aplica migraciones pendientes, construye y publica imagen (`devops/Dockerfile.backend`) en GHCR, actualiza Azure Container App |
-| `.github/workflows/frontend-alias.yml` | push a `main`/manual: espera el deploy de Vercel y re-apunta el alias `delta-erp-contable.vercel.app` |
-| `.github/requirements-ci.txt` | dependencias Python de CI (diff-cover) |
+| `.github/workflows/backend-build-check.yml` | push a `dev`: jobs paralelos `backend` (dotnet test + Postgres service), `frontend`, `jscpd`; `cobertura-diff` (diff-cover 80 % líneas cambiadas sobre artefactos de cobertura; omitido si fallan pruebas) y `resultado` (falla si algún job no fue success); % total de cobertura en el summary; `NODE_VERSION` único |
+| `.github/workflows/sonarcloud-analysis.yml` | PR y push a `main`: tests con cobertura + dotnet-sonarscanner + análisis SonarCloud; exclusiones de coverage (`Program.cs`, `DeltaErpDbContext.cs`, `Entities/**`, `main.jsx`) y de CPD (`backend/tests/**`, `*.test.*`, `frontend/src/test/**`) en el propio workflow; `sonar.qualitygate.wait=true`; `end` corre aunque fallen las pruebas; caché NuGet; concurrency (cancela solo en PR) |
+| `.github/workflows/backend-deploy.yml` | push a `main`/manual: aplica migraciones pendientes, construye y publica imagen (`devops/Dockerfile.backend`) en GHCR, actualiza Azure Container App; concurrency sin cancelar; migraciones con pipefail; `az` directo; health check post-deploy; resumen con digest y revisión |
+| `.github/workflows/frontend-alias.yml` | push a `main`/manual: espera el deploy de Vercel y re-apunta el alias `delta-erp-contable.vercel.app`; concurrency con cancel; tolera errores transitorios de la API de Vercel |
+| `.github/requirements-ci.txt` | dependencias Python de CI (diff-cover), usado por job `cobertura-diff` |
 | `frontend/package.json`, `frontend/vite.config.js` | script `test:ci` (vitest + coverage v8, salida cobertura/lcov/junit); `frontend/vercel.json` despliegue |
 | `devops/recreate-containerapp.sh` | recrea el Container App de Azure |
 

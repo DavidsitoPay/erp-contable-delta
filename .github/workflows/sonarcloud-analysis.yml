@@ -12,10 +12,18 @@ permissions:
   contents: read
   checks: write
 
+env:
+  NODE_VERSION: "24"
+
+concurrency:
+  group: sonar-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   sonarcloud:
     name: Build y análisis (backend .NET + frontend + SQL)
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     services:
       postgres:
         image: postgres:16
@@ -34,31 +42,38 @@ jobs:
       TEST_PG_CONN: "Host=localhost;Port=5432;Database=delta_erp_test;Username=postgres;Password=postgres"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Historial completo: SonarCloud lo necesita para blame y el "new code period".
           fetch-depth: 0
 
       - name: Configurar JDK (requerido por el scanner de SonarCloud)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: "zulu"
           java-version: "17"
 
       - name: Configurar .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "8.0.x"
 
       - name: Configurar Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Cache de NuGet
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
       - name: Cache de paquetes de SonarCloud
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
@@ -66,7 +81,7 @@ jobs:
 
       - name: Cache del dotnet-sonarscanner
         id: cache-sonar-scanner
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ./.sonar/scanner
           key: ${{ runner.os }}-sonar-scanner
@@ -78,17 +93,24 @@ jobs:
           mkdir -p ./.sonar/scanner
           dotnet tool install dotnet-sonarscanner --tool-path ./.sonar/scanner
 
-      - name: Pruebas del frontend con cobertura
+      - name: Instalar dependencias del frontend
         working-directory: frontend
-        run: |
-          npm ci --ignore-scripts
-          npm run test:ci
-          sed -i 's#^SF:src/#SF:frontend/src/#' coverage/lcov.info
+        run: npm ci --ignore-scripts
+
+      - name: Pruebas del frontend con cobertura
+        if: ${{ !cancelled() }}
+        working-directory: frontend
+        run: npm run test:ci
+
+      - name: Rutas de lcov para Sonar
+        if: ${{ !cancelled() && hashFiles('frontend/coverage/lcov.info') != '' }}
+        run: sed -i 's#^SF:src/#SF:frontend/src/#' frontend/coverage/lcov.info
 
       # begin/test/end deben ir en UN SOLO step, sin "cd" y sin "dotnet restore"
       # aparte: el scanner engancha el build vía una env var que escribe "begin";
       # separarlos rompe ese enganche. "dotnet test" compila y corre las pruebas.
       - name: SonarCloud — begin, test y end
+        if: ${{ !cancelled() }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
@@ -101,15 +123,18 @@ jobs:
             /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml" \
             /d:sonar.javascript.lcov.reportPaths="frontend/coverage/lcov.info" \
             /d:sonar.coverage.exclusions="**/Program.cs,**/DeltaErpDbContext.cs,**/Entities/**,frontend/src/main.jsx,frontend/src/**/*.css,frontend/**/*.config.js,frontend/src/test/**,**/*.test.*" \
+            /d:sonar.qualitygate.wait=true \
             /d:sonar.cpd.exclusions="backend/tests/**,frontend/**/*.test.*,frontend/src/test/**"
 
-          dotnet test backend/tests/DeltaERP.Tests/DeltaERP.Tests.csproj --configuration Release --logger "trx;LogFileName=backend-tests.trx" --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+          TEST_RC=0
+          dotnet test backend/tests/DeltaERP.Tests/DeltaERP.Tests.csproj --configuration Release --logger "trx;LogFileName=backend-tests.trx" --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover || TEST_RC=$?
 
           ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
+          exit "$TEST_RC"
 
       - name: Pruebas backend
         if: ${{ !cancelled() }}
-        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         with:
           name: Pruebas backend
           path: backend/tests/DeltaERP.Tests/TestResults/*.trx
@@ -119,7 +144,7 @@ jobs:
 
       - name: Pruebas frontend
         if: ${{ !cancelled() }}
-        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         with:
           name: Pruebas frontend
           path: frontend/test-results/junit.xml
@@ -135,8 +160,9 @@ jobs:
             FRONTEND_COV=$(jq '.total.lines.pct' frontend/coverage/coverage-summary.json)
             echo "- Frontend: ${FRONTEND_COV}% de líneas" >> "$GITHUB_STEP_SUMMARY"
           fi
-          if [ -f backend/tests/DeltaERP.Tests/TestResults/*/coverage.opencover.xml ]; then
-            BACKEND_COV=$(grep -oP 'sequenceCoverage="\K[^"]+' backend/tests/DeltaERP.Tests/TestResults/*/coverage.opencover.xml | head -1)
+          BACKEND_XML=$(find backend/tests/DeltaERP.Tests/TestResults -name coverage.opencover.xml | head -1)
+          if [ -n "$BACKEND_XML" ]; then
+            BACKEND_COV=$(grep -oP 'sequenceCoverage="\K[^"]+' "$BACKEND_XML" | head -1)
             [ -n "$BACKEND_COV" ] && echo "- Backend: ${BACKEND_COV}% de líneas" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "" >> "$GITHUB_STEP_SUMMARY"

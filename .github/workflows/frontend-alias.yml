@@ -14,9 +14,14 @@ env:
   VERCEL_PROJECT_ID: prj_Ud5Bwv3ttuXWnrTSSnVhUi9sBXA0
   ALIAS: delta-erp-contable.vercel.app
 
+concurrency:
+  group: frontend-alias
+  cancel-in-progress: true
+
 jobs:
   update-alias:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       # Vercel dispara su build por webhook casi al mismo tiempo que este
       # workflow arranca; hay que esperar a que el deployment de este commit quede READY.
@@ -28,8 +33,12 @@ jobs:
           set -euo pipefail
           SHA="${{ github.sha }}"
           for i in $(seq 1 30); do
-            RESP=$(curl -sf -H "Authorization: Bearer $VERCEL_TOKEN" \
-              "https://api.vercel.com/v7/deployments?teamId=${VERCEL_ORG_ID}&projectId=${VERCEL_PROJECT_ID}&target=production&sha=${SHA}&limit=1")
+            RESP=$(curl -sS --fail-with-body -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v7/deployments?teamId=${VERCEL_ORG_ID}&projectId=${VERCEL_PROJECT_ID}&target=production&sha=${SHA}&limit=1") || {
+              echo "Intento $i: error transitorio de la API de Vercel: $(echo "$RESP" | head -c 300)"
+              sleep 10
+              continue
+            }
 
             STATE=$(echo "$RESP" | jq -r '.deployments[0].readyState // empty')
             URL=$(echo "$RESP" | jq -r '.deployments[0].url // empty')
@@ -59,11 +68,11 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           set -euo pipefail
-          RESP=$(curl -sf -X POST \
+          RESP=$(curl -sS --fail-with-body -X POST \
             "https://api.vercel.com/v2/deployments/${{ steps.wait.outputs.url }}/aliases?teamId=${VERCEL_ORG_ID}" \
             -H "Authorization: Bearer $VERCEL_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "{\"alias\": \"${ALIAS}\"}")
+            -d "{\"alias\": \"${ALIAS}\"}") || { echo "$RESP" >&2; exit 1; }
           echo "$RESP" | jq .
 
       - name: Resumen del frontend
