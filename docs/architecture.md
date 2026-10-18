@@ -82,7 +82,7 @@ su perfil:
   (`POST api/cxc/pagos`, `POST api/cxp/pagos`) exige `Roles.RegistroPagos`
   (Administrador o Contador).
 - Reversa de asientos (RN-03, rol Administrador, `Roles.Administrador`): `POST api/asientos/{id}/reversar` recibe `{ motivo }` (obligatorio, máx. 250 caracteres; `400` si falta o excede). Responde `403` si el perfil no es Administrador (en el token o en la base de datos), `404` si el asiento no existe y `409` si no está `Confirmado`, ya es una reversa, su periodo no está `Abierto` o está vinculado a un documento CxC, CxP o movimiento de tesorería (`ReversaAsiento` centraliza estos chequeos). Ejecuta `CALL sp_reversar_asiento(id, usuario, motivo)` en una transacción, que revalida todo con bloqueo de fila y escribe la bitácora. Responde `200` con `originalId`, `originalNumero`, `reversaId` y `reversaNumero`. `GET api/libros/diario` agrega a cada asiento `estado`, `reversaDeId`, `reversaDeNumero`, `reversadoPorId`, `reversadoPorNumero` y `reversible`; el libro diario del frontend muestra el botón Reversar (solo Administrador, con diálogo de motivo) y los indicadores de estado.
-- Reportes (M7, rol Administrador o Contador, `Roles.GestionCatalogo`): `ReportesController` expone `GET api/reportes/balance-general` y `GET api/reportes/estado-resultados` (parámetro `periodoId`), de solo lectura. Lee `fn_reporte_saldos` (`database/11_reportes.sql`) con `FromSql` (entidad sin llave `SaldoReporteCuenta`) y delega en `DeltaERP.Domain/Rules/EstadosFinancieros` (pura) la sección por tipo, los totales de nivel 1, el resultado del ejercicio y el cuadre. El frontend los muestra en las pestañas Balance general y Estado de resultados (`components/Reportes/`), visibles solo para esos perfiles.
+- Reportes (M7, rol Administrador o Contador, `Roles.GestionCatalogo`): `ReportesController` expone `GET api/reportes/balance-general` y `GET api/reportes/estado-resultados` (parámetro `periodoId`), de solo lectura. Lee `fn_reporte_saldos` (`database/11_reportes.sql`) con `FromSql` (entidad sin llave `SaldoReporteCuenta`) y delega en `DeltaERP.Domain/Rules/EstadosFinancieros` (pura) la sección por tipo, los totales de nivel 1, el resultado del ejercicio y el cuadre. El frontend los muestra en el desplegable Reportes del menú principal (Balance general y Estado de resultados, `components/Reportes/`), visible solo para esos perfiles.
 - Fiscal (M10): `api/configuracion-fiscal` (`GET` con `Roles.GestionCatalogo`; `PUT` solo
   Administrador, con auditoría `actualizar_configuracion_fiscal`); `api/impuestos` (`GET`
   y `GET {id}` para cualquier usuario autenticado, porque el Vendedor factura; `POST`,
@@ -268,14 +268,20 @@ Soporte de las pruebas de integración (`Support/`):
 `cobertura` (para el gate de `diff-cover`), además de un reporte `junit`.
 
 **Dónde corren.** Ambas suites corren en GitHub Actions con un contenedor de servicio
-`postgres:16`: en cada push a `dev` (`backend-build-check.yml`) y en cada Pull Request
-y push a `main` (`sonarcloud-analysis.yml`), este último con cobertura enviada a
-SonarCloud. En los push a `dev`, `backend-build-check.yml` también exige con
-`diff-cover` al menos 80 % de cobertura en las líneas cambiadas respecto a `main` y
-aplica el gate de duplicación de `jscpd` (bloques de 80 tokens o más) sobre C#, JS y JSX
-en `backend/src` y `frontend/src`.
+`postgres:16`. `backend-build-check.yml` ejecuta en cada push a `dev` cuatro jobs en
+paralelo: `backend` (`dotnet test` con cobertura en formato Cobertura), `frontend`
+(`npm run test:ci`, que genera `junit`, `lcov` y Cobertura), `jscpd` (gate de duplicación
+de bloques de 80 tokens o más sobre C#, JS y JSX en `backend/src` y `frontend/src`) y
+`cobertura-diff`, que exige con `diff-cover` al menos 80 % de cobertura en las líneas
+cambiadas respecto a `origin/main`; este último se omite si fallan las pruebas. Un job
+`resultado` falla si alguno de los anteriores no terminó en éxito. El resumen del run
+muestra el porcentaje total de cobertura de backend y frontend, y el detalle de duplicación
+y de líneas no cubiertas. Ambos workflows usan Node 24. `sonarcloud-analysis.yml` corre
+las suites con cobertura en cada Pull Request y en cada push a `main`, con la cobertura
+enviada a SonarCloud.
 
-**Quality gate de SonarCloud.** Cobertura mínima de 80 % sobre código nuevo y
+**Quality gate de SonarCloud.** El análisis espera el resultado del quality gate
+(`sonar.qualitygate.wait=true`) y su resultado determina el estado del workflow. Cobertura mínima de 80 % sobre código nuevo y
 duplicación máxima de 3 %. Quedan fuera de la cobertura `Program.cs`,
 `DeltaErpDbContext.cs`, `Entities/`, `main.jsx`, hojas de estilo, archivos
 `*.config.js`, `frontend/src/test/` y los propios archivos de prueba. Quedan fuera de la detección de duplicación en SonarCloud `backend/tests/` y las
@@ -302,15 +308,23 @@ independientes (`.github/workflows/`):
 - `backend-deploy.yml`: en cada push a `main` (ignora los cambios que solo tocan
   `backend/tests/`), aplica las migraciones pendientes
   contra la rama `production` de Neon con el rol propietario (`run_migrations.sh` ejecuta cada script con
-  `psql --single-transaction`: si falla, se revierte completo y no se registra como aplicado) y, solo si eso funciona, construye y publica
-  la imagen del backend y actualiza Azure Container Apps.
+  `psql --single-transaction`: si falla, se revierte completo y no se registra como aplicado; el paso
+  usa `pipefail`, de modo que un fallo del script no queda enmascarado por el registro del log).
+  Solo si las migraciones terminan bien, construye y publica la imagen del backend y actualiza
+  Azure Container Apps con `az` directo. Después verifica `/health` con hasta 12 intentos
+  y deja en el resumen del run la imagen, el digest, la revisión y el commit. Los despliegues
+  no se cancelan entre sí (concurrency `backend-deploy`).
 - `frontend-alias.yml`: tras cada deploy de producción en Vercel, reapunta el
-  dominio corto del proyecto al nuevo despliegue.
+  dominio corto del proyecto al nuevo despliegue. Tolera errores transitorios de la API de
+  Vercel mientras espera el deploy; una ejecución nueva cancela la anterior.
 - `sonarcloud-analysis.yml`: en cada Pull Request y en cada push a `main` corre las
   pruebas con cobertura y analiza calidad y seguridad del código (backend y frontend)
-  en SonarCloud.
+  en SonarCloud. El paso `end` corre aunque fallen las pruebas y el código de salida de
+  las pruebas se propaga al final. Las ejecuciones anteriores de un mismo Pull Request se cancelan.
 - `backend-build-check.yml`: en cada push a `dev` corre la suite completa de pruebas
-  del backend y del frontend, antes de que el cambio llegue a un Pull Request o a `main`.
+  del backend y del frontend, el gate de duplicación y el de cobertura de líneas cambiadas,
+  antes de que el cambio llegue a un Pull Request o a `main`. Un job `resultado` al final
+  resume el estado de todos; las ejecuciones anteriores del mismo ref se cancelan.
 
 Comunicación: navegador → frontend (HTTPS) → backend (HTTPS/JSON) → base de datos
 (SQL vía Npgsql/EF Core); backend → SMTP externo (notificaciones, diseñado, no

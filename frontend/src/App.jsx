@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { NavLink, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { checkHealth } from "./services/api";
 import Login from "./components/Login";
 import LogoMark from "./components/LogoMark";
 import ToggleTema from "./components/ToggleTema";
+import MenuPrincipal from "./components/MenuPrincipal";
 import CuentasContables from "./components/Catalogo/CuentasContables";
 import CentrosCosto from "./components/Catalogo/CentrosCosto";
 import PeriodosContables from "./components/Catalogo/PeriodosContables";
@@ -28,14 +29,6 @@ import TiposCambio from "./components/TiposCambio/TiposCambio";
 import Revaluaciones from "./components/Revaluaciones/Revaluaciones";
 import SaldosMoneda from "./components/Reportes/SaldosMoneda";
 import { puedeAdministrarConfiguracionFiscal, puedeGestionarFiscal, puedeGestionarTesoreria } from "./utils/perfiles";
-
-function TabLink({ to, children }) {
-  return (
-    <NavLink className={({ isActive }) => "tab-link" + (isActive ? " active" : "")} to={to}>
-      {children}
-    </NavLink>
-  );
-}
 
 function Restringida({ permitido, perfil, seccion, children }) {
   return permitido ? children : <p>No autorizado: tu perfil ({perfil}) no puede acceder a {seccion}.</p>;
@@ -75,53 +68,88 @@ function App() {
   const esAdmin = puedeAdministrarConfiguracionFiscal(usuario.perfil);
   const gestionaFiscal = puedeGestionarFiscal(usuario.perfil);
 
+  const si = (condicion, item) => (condicion ? [item] : []);
+  const grupos = [
+    {
+      id: "catalogo",
+      titulo: "Catálogo",
+      items: [
+        { to: "/catalogo/cuentas", texto: "Cuentas contables" },
+        { to: "/catalogo/centros-costo", texto: "Centros de costo" },
+        { to: "/catalogo/periodos", texto: "Periodos" },
+        ...si(esAdminOContador, { to: "/catalogo/tipos-cambio", texto: "Tipos de cambio" }),
+      ],
+    },
+    {
+      id: "operaciones",
+      titulo: "Operaciones",
+      items: [
+        ...si(esAdminOContador, { to: "/asientos", texto: "Registrar asiento" }),
+        { to: "/contrapartes", texto: "Clientes y proveedores" },
+        { to: "/cxc", texto: "Cuentas por cobrar" },
+        ...si(esAdminOContador, { to: "/cxp", texto: "Cuentas por pagar" }),
+        ...si(esAdminOContador, { to: "/tesoreria", texto: "Tesorería" }),
+        ...si(esAdminOContador, { to: "/revaluaciones", texto: "Revaluación" }),
+      ],
+    },
+    {
+      id: "libros",
+      titulo: "Libros",
+      items: [
+        { to: "/libros/balance", texto: "Balance de saldos" },
+        { to: "/libros/diario", texto: "Libro diario" },
+        { to: "/libros/mayor", texto: "Libro mayor" },
+      ],
+    },
+    {
+      id: "fiscal",
+      titulo: "Fiscal",
+      items: [
+        ...si(esAdmin, { to: "/catalogo/configuracion-fiscal", texto: "Configuración fiscal" }),
+        ...si(gestionaFiscal, { to: "/catalogo/impuestos", texto: "Impuestos" }),
+        ...si(gestionaFiscal, { to: "/catalogo/parametros-retencion", texto: "Parámetros de retención" }),
+        ...si(gestionaFiscal, { to: "/libros/fiscal", texto: "Compras y ventas" }),
+        ...si(gestionaFiscal, { to: "/libros/retenciones", texto: "Retenciones" }),
+        ...si(gestionaFiscal, { to: "/retenciones/enteramiento", texto: "Enteramiento ISR" }),
+        ...si(gestionaFiscal, { to: "/catalogo/feriados", texto: "Feriados" }),
+      ],
+    },
+    {
+      id: "reportes",
+      titulo: "Reportes",
+      items: [
+        ...si(esAdminOContador, { to: "/reportes/balance-general", texto: "Balance general" }),
+        ...si(esAdminOContador, { to: "/reportes/estado-resultados", texto: "Estado de resultados" }),
+        ...si(esAdminOContador, { to: "/reportes/saldos-moneda", texto: "Saldos en moneda" }),
+      ],
+    },
+  ].filter((g) => g.items.length);
+
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <div className="logo-badge">
-            <LogoMark size={36} />
+      <div className="app-chrome">
+        <header className="topbar">
+          <div className="brand">
+            <div className="logo-badge">
+              <LogoMark size={36} />
+            </div>
+            <span className="wordmark">Delta</span>
           </div>
-          <span className="wordmark">Delta</span>
-        </div>
 
-        <div className="topbar-right">
-          <span className="status-pill" data-status={statusVariant}>{status}</span>
-          <ToggleTema />
-          <div className="user-chip">
-            <span>
-              <strong>{usuario.nombre}</strong> <span className="user-role">({usuario.perfil})</span>
-            </span>
-            <button className="btn btn-outline btn-sm" onClick={handleLogout}>Cerrar sesión</button>
+          <div className="topbar-right">
+            <span className="status-pill" data-status={statusVariant}>{status}</span>
+            <ToggleTema />
+            <div className="user-chip">
+              <span>
+                <strong>{usuario.nombre}</strong> <span className="user-role">({usuario.perfil})</span>
+              </span>
+              <button className="btn btn-outline btn-sm" onClick={handleLogout}>Cerrar sesión</button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <nav className="tab-nav">
-        {esAdminOContador && <TabLink to="/asientos">Registrar asiento</TabLink>}
-        <TabLink to="/catalogo/cuentas">Cuentas contables</TabLink>
-        <TabLink to="/catalogo/centros-costo">Centros de costo</TabLink>
-        <TabLink to="/catalogo/periodos">Periodos</TabLink>
-        {esAdminOContador && <TabLink to="/catalogo/tipos-cambio">Tipos de cambio</TabLink>}
-        {esAdmin && <TabLink to="/catalogo/configuracion-fiscal">Configuración fiscal</TabLink>}
-        {gestionaFiscal && <TabLink to="/catalogo/impuestos">Impuestos</TabLink>}
-        {gestionaFiscal && <TabLink to="/catalogo/parametros-retencion">Parámetros de retención</TabLink>}
-        <TabLink to="/libros/balance">Balance de saldos</TabLink>
-        <TabLink to="/libros/diario">Libro diario</TabLink>
-        <TabLink to="/libros/mayor">Libro mayor</TabLink>
-        {gestionaFiscal && <TabLink to="/libros/fiscal">Compras y ventas</TabLink>}
-        {gestionaFiscal && <TabLink to="/libros/retenciones">Retenciones</TabLink>}
-        {gestionaFiscal && <TabLink to="/retenciones/enteramiento">Enteramiento ISR</TabLink>}
-        {gestionaFiscal && <TabLink to="/catalogo/feriados">Feriados</TabLink>}
-        <TabLink to="/contrapartes">Clientes y proveedores</TabLink>
-        <TabLink to="/cxc">Cuentas por cobrar</TabLink>
-        {esAdminOContador && <TabLink to="/cxp">Cuentas por pagar</TabLink>}
-        {esAdminOContador && <TabLink to="/tesoreria">Tesorería</TabLink>}
-        {esAdminOContador && <TabLink to="/revaluaciones">Revaluación</TabLink>}
-        {esAdminOContador && <TabLink to="/reportes/balance-general">Balance general</TabLink>}
-        {esAdminOContador && <TabLink to="/reportes/estado-resultados">Estado de resultados</TabLink>}
-        {esAdminOContador && <TabLink to="/reportes/saldos-moneda">Saldos en moneda</TabLink>}
-      </nav>
+        <MenuPrincipal grupos={grupos} />
+      </div>
 
       <main className="content">
         <Routes>
