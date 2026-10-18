@@ -164,6 +164,7 @@ public class BanguatSoapClientTests
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
+            ct.ThrowIfCancellationRequested();
             Llamadas++;
             UltimoMetodo = request.Method;
             UltimoSoapAction = request.Headers.TryGetValues("SOAPAction", out var valores) ? valores.Single() : null;

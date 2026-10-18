@@ -184,13 +184,14 @@ public class CxCControllerTests
         var cuenta = await _pg.Data.CrearCuentaBancariaAsync();
         var client = _pg.CreateApiClient(e.UsuarioId);
         var documentoId = await CrearFacturaAsync(client, e, e.ClienteId);
-        await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 50m, cuenta.Id));
+        var creado = await client.PostAsJsonAsync("/api/cxc/pagos", PayloadPago(e.ClienteId, documentoId, 50m, cuenta.Id));
+        var reciboId = (await creado.LeerJsonAsync()).GetProperty("id").GetInt32();
 
         var response = await client.GetFromJsonAsync<JsonElement>("/api/cxc/pagos");
 
         var pagos = response.EnumerateArray().ToList();
         Assert.NotEmpty(pagos);
-        var pago = pagos[0];
+        var pago = pagos.First(p => p.GetProperty("id").GetInt32() == reciboId);
         Assert.True(pago.GetProperty("clienteNombre").GetString()!.Length > 0);
         Assert.Equal(50m, pago.GetProperty("montoTotal").GetDecimal());
     }

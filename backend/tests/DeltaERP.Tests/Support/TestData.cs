@@ -112,7 +112,9 @@ public sealed class TestData
         {
             command.Parameters.Add(new NpgsqlParameter { Value = arg });
         }
-        return (T)(await command.ExecuteScalarAsync())!;
+        await using var reader = await command.ExecuteReaderAsync();
+        await reader.ReadAsync();
+        return await reader.GetFieldValueAsync<T>(0);
     }
 
     public async Task<int> CrearUsuarioAsync(string perfil = "Contador")
