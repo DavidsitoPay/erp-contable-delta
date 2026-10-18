@@ -11,7 +11,7 @@ Delta ERP Contable (DEC) se estructura en tres capas desacopladas:
 el usuario y la validación de forma. No contiene reglas de negocio ni acceso directo
 a la base de datos.
 
-**Capa de lógica y servicios.** API REST en C# sobre ASP.NET Core. Concentra las
+**Capa de lógica y servicios.** API REST en C# sobre ASP.NET Core 10 (.NET 10 LTS). Concentra las
 reglas de negocio (RN-01 partida doble, RN-02 bloqueo de periodos cerrados, RN-03
 reversión en vez de eliminación, RN-05 límites de aplicación de pagos, RN-08 registro
 en bitácora de auditoría, RN-09 control de acceso por perfil, entre otras). Autenticación
