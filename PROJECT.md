@@ -18,9 +18,9 @@ Fase 1: uso interno. Fase 2 (futura): comercialización SaaS B2B a PyMEs guatema
 | Capa | Tecnología |
 |---|---|
 | Frontend | React 18 + Vite (SPA), desplegado en Vercel |
-| Backend / API | C# con ASP.NET Core 8 (API REST) + EF Core/Npgsql, imagen Docker desplegada en Azure Container Apps |
+| Backend / API | C# con ASP.NET Core 10 (.NET 10 LTS, API REST) + EF Core/Npgsql, imagen Docker desplegada en Azure Container Apps |
 | Base de datos | PostgreSQL 16 en Neon (ramas `production` y `development`) |
-| CI/CD | GitHub Actions (`backend-build-check`, `sonarcloud-analysis`, `backend-deploy`, `frontend-alias`) |
+| CI/CD | GitHub Actions (`backend-build-check`, `sonarcloud-analysis`, `backend-deploy`, `frontend-alias`, `migrations-check`) |
 | Calidad | SonarCloud (análisis, cobertura y duplicación) |
 | Gestión de proyecto | Azure Boards y Azure Test Plans |
 | Control de versiones | GitHub |
@@ -29,8 +29,8 @@ Fase 1: uso interno. Fase 2 (futura): comercialización SaaS B2B a PyMEs guatema
 ## Artefactos ya entregados (referencia)
 
 - `docs/architecture.md` — Arquitectura de 3 capas
-- `docs/data-dictionary.md` — Diccionario de datos completo, 33 tablas
-- `docs/business-rules.md` — Reglas de negocio RN-01 a RN-28, con la columna "Dónde se aplica"
+- `docs/data-dictionary.md` — Diccionario de datos completo, 36 tablas
+- `docs/business-rules.md` — Reglas de negocio RN-01 a RN-36, con la columna "Dónde se aplica"
 - `docs/diagrams/` — Diagramas de clases (1/2 y 2/2), componentes, secuencia, contexto, arquitectura
 
 ## Módulos funcionales (Product Backlog de alto nivel)
@@ -46,7 +46,7 @@ Fase 1: uso interno. Fase 2 (futura): comercialización SaaS B2B a PyMEs guatema
 | M7 | Reportes y estados financieros | Alta | Implementado (balance general y estado de resultados) |
 | M8 | Seguridad y auditoría | Alta | Implementado (login, JWT, roles, bitácora de auditoría) |
 | M9 | Carga inicial e importación | Media | Diseñado |
-| M10 | Cumplimiento fiscal y multimoneda | Alta | En curso (parámetros fiscales e IVA, registro de DTE de FEL, notas de crédito, libro de compras y ventas e incrementos I2 de retenciones ISR/IVA e I3a de multimoneda con tipo de cambio de Banguat, diferencial cambiario y revaluación implementados; retención a no residentes, ajuste de retención por nota de crédito y enteramiento pendientes en I3b; la retención de IVA como agente está fuera de alcance porque Delta no es agente de retención de IVA) |
+| M10 | Cumplimiento fiscal y multimoneda | Alta | En curso (parámetros fiscales e IVA, registro de DTE de FEL, notas de crédito, libro de compras y ventas, retenciones ISR/IVA (I2), multimoneda con tipo de cambio de Banguat, diferencial cambiario y revaluación (I3a), y retención a no residentes (I3b-1), ajuste de retención por nota de crédito y enteramiento a SAT (I3b-2) implementados; la retención de IVA como agente está fuera de alcance porque Delta no es agente de retención de IVA) |
 
 ## Etapas del ciclo de desarrollo (SDLC) aplicadas al proyecto
 
@@ -73,13 +73,13 @@ Scripts numerados en `database/`, aplicados en orden por `database/run_migration
 - [x] `01_tables.sql` — DDL base
 - [x] `02_functions.sql`, `03_triggers.sql`, `04_procedures.sql`, `05_views.sql` — funciones, disparadores (partida doble, periodo cerrado, no eliminación de asientos, límites de pago, inmutabilidad de auditoría y saldos), procedimientos y vistas
 - [x] `06_seed_dev.sql` — usuarios de prueba por perfil
-- [x] `07` a `16` — perfil autorizado, correcciones de balance y cierre, tesorería, balance jerárquico, reportes, reversa de asientos, parámetros fiscales e IVA (M10), rol `delta_api` de mínimo privilegio, retenciones ISR/IVA (M10, I2) y multimoneda (M10, I3a)
-- [x] `database/demo/` — datos de demostración
+- [x] `07` a `19` — perfil autorizado, correcciones de balance y cierre, tesorería, balance jerárquico, reportes, reversa de asientos, parámetros fiscales e IVA (M10), rol `delta_api` de mínimo privilegio, retenciones ISR/IVA (M10, I2), multimoneda (M10, I3a), retención a no residentes (M10, I3b-1), enteramiento, ajuste de retención y feriados (M10, I3b-2) y feriados SAT 2026 (`19`)
+- [x] `database/demo/` — datos de demostración: tesorería, corrección de saldos padre, producción y lote fiscal y multimoneda (`datos_demo_fiscal_multimoneda.sql`)
 
 ### Etapa 3 — Backend (completada para M1–M8; M10 en curso)
 Orden seguido, según la dependencia entre módulos:
 
-1. ✅ **M8 Seguridad** — `AuthController`, JWT, roles (`Administrador`, `Contador`, `Vendedor`, `Tecnico`), bitácora de auditoría desde la API.
+1. ✅ **M8 Seguridad** — `AuthController`, JWT, roles (`Administrador del sistema`, `Contador`, `Vendedor`, `Técnico`), bitácora de auditoría desde la API.
 2. ✅ **M1 Catálogo** — cuentas contables, centros de costo y periodos.
 3. ✅ **M2 Transacciones** — registro de asientos (RN-01/RN-02/RN-08) y reversión (RN-03, `POST api/asientos/{id}/reversar`). No existe `GET /api/asientos`: la consulta se hace por el libro diario.
 4. ✅ **M3 Libros** — balance de saldos, libro diario y libro mayor jerárquicos, calculados en tiempo real.
@@ -92,10 +92,10 @@ Orden seguido, según la dependencia entre módulos:
 ### Etapa 4 — Frontend
 Por módulo, cada pantalla consume un endpoint ya probado del backend.
 
-✅ Implementado: login, catálogo de cuentas contables, centros de costo, periodos contables, registro y reversión de asientos, balance de saldos, libro diario y libro mayor, clientes/proveedores, facturación y pagos de CxC y CxP, tesorería (cuentas bancarias, movimientos, conciliación), reportes (balance general, estado de resultados), configuración fiscal, catálogo de impuestos y libro fiscal de compras y ventas. Tema sobrio con modo oscuro conmutable.
+✅ Implementado: login, catálogo de cuentas contables, centros de costo, periodos contables, registro y reversión de asientos, balance de saldos, libro diario y libro mayor, clientes/proveedores, facturación y pagos de CxC y CxP, tesorería (cuentas bancarias, movimientos, conciliación), reportes (balance general, estado de resultados), configuración fiscal, catálogo de impuestos, libro fiscal de compras y ventas, retenciones (parámetros, libro de retenciones, enteramiento a SAT, ajustes por nota de crédito y feriados), multimoneda (tipos de cambio de Banguat, revaluaciones y reporte de saldos en moneda extranjera). Tema sobrio con modo oscuro conmutable.
 
 ### Etapa 5 — DevOps 2 (completada)
-Integración continua en GitHub Actions: pruebas del backend (xUnit contra un servicio PostgreSQL) y del frontend (Vitest), SonarCloud con puerta de calidad, cobertura mínima en el código modificado y control de duplicación. Plan de pruebas en `docs/plan-de-pruebas-inicial.md`.
+Integración continua en GitHub Actions: pruebas del backend (xUnit contra un servicio PostgreSQL) y del frontend (Vitest), SonarCloud con puerta de calidad, cobertura mínima en el código modificado y control de duplicación. Gate de migraciones: en cada PR a `main`, `migrations-check.yml` aplica las migraciones pendientes sobre una rama temporal de Neon creada desde `production`. Plan de pruebas en `docs/plan-de-pruebas-inicial.md`.
 
 ### Etapa 6 — Manual de usuario y cierre
 Documentación de usuario final, código terminado, documento integrado y presentación.

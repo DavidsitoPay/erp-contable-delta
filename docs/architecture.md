@@ -9,7 +9,7 @@ Delta ERP Contable (DEC) se estructura en tres capas desacopladas:
 
 **Capa de presentación.** SPA en React. Responsable únicamente de la interacción con
 el usuario y la validación de forma. No contiene reglas de negocio ni acceso directo
-a la base de datos.
+a la base de datos. El menú principal (`MenuPrincipal`) es una barra de navegación fija (sticky) que agrupa las pantallas en cinco desplegables.
 
 **Capa de lógica y servicios.** API REST en C# sobre ASP.NET Core 10 (.NET 10 LTS). Concentra las
 reglas de negocio (RN-01 partida doble, RN-02 bloqueo de periodos cerrados, RN-03
@@ -355,7 +355,7 @@ de datos:
   (`database/14_rol_api.sql`, `NOLOGIN` y sin contraseña en el repo; `LOGIN` y contraseña se
   asignan por rama con `ALTER ROLE`), por lo que no es miembro de `neon_superuser`.
 - Permisos de `delta_api` (mínimo privilegio): `CONNECT` y `USAGE` en `public`; DML solo en
-  31 de las 33 tablas; sin `UPDATE` en las tablas inmutables
+  34 de las 36 tablas (`plantillaasiento` y `lineaplantillaasiento` no tienen GRANT); sin `UPDATE` en las tablas inmutables
   (`bitacoraauditoria`, `saldocuentaperiodo`, `movimientotesoreria`, `lineaasiento`, `retencion`, `revaluacionpartida`, pagos,
   aplicaciones y detalles); `DELETE` solo en `detalleconciliacion`; `bitacoraauditoria` y
   `saldocuentaperiodo` solo con `INSERT` (se escriben vía procedimientos y triggers y se

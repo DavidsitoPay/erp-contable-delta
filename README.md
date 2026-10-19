@@ -15,7 +15,7 @@ de Neon (un espacio de trabajo separado del que usa el backend desplegado — ve
 "Entornos desplegados" abajo). La connection string está en `CREDENTIALS.md`, que no se
 sube al repo — pídesela a un compañero.
 
-**Backend:**
+**Backend** (requiere .NET SDK 10):
 
 ```bash
 cd backend/src/DeltaERP.Api
@@ -29,7 +29,7 @@ La API debe conectarse con el rol `delta_api` (mínimo privilegio; `database/14_
 `appsettings.json`, que solo trae el valor de ejemplo local). Backend disponible en
 `http://localhost:5000` (Swagger en `/swagger`).
 
-**Frontend:**
+**Frontend** (requiere Node 24):
 
 ```bash
 cd frontend
@@ -54,7 +54,7 @@ arriba), no la usa nada desplegado ni el pipeline.
 
 ## Migraciones y pruebas
 
-`database/run_migrations.sh` aplica los scripts numerados (01–16) en orden, cada uno con
+`database/run_migrations.sh` aplica los scripts numerados (01–19) en orden, cada uno con
 `psql -v ON_ERROR_STOP=1 --single-transaction`. Un script ya aplicado no se edita: las
 correcciones van en un archivo nuevo.
 
@@ -84,7 +84,7 @@ delta-erp-contable/
 ├── docs/                   # Arquitectura, reglas de negocio, diccionario de datos, diagramas
 ├── backend/                # API REST en ASP.NET Core (Api / Domain / Infrastructure)
 ├── frontend/                # SPA en React
-├── database/                # Scripts SQL numerados 01–16 (tablas, funciones, triggers, procedimientos, vistas, tesorería, reportes, fiscal, rol de la API, retenciones, multimoneda) y datos demo
+├── database/                # Scripts SQL numerados 01–19 (tablas, funciones, triggers, procedimientos, vistas, tesorería, reportes, fiscal, rol de la API, retenciones, multimoneda, retención a no residentes, enteramiento, ajuste de retención, feriados y feriados SAT 2026) y datos demo
 ├── devops/                  # Dockerfile.backend (Azure Container Apps)
-└── .github/workflows/       # backend-build-check, sonarcloud-analysis, backend-deploy, frontend-alias
+└── .github/workflows/       # backend-build-check, sonarcloud-analysis, backend-deploy, frontend-alias, migrations-check
 ```
