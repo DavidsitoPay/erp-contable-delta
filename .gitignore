@@ -29,6 +29,8 @@ docs/entregables/
 # Claude
 .claude/
 CLAUDE.md
+.atl/
+
 .neon
 
 # Credenciales (dev/demo) — ver CREDENTIALS.md
